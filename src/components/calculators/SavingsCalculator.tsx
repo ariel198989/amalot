@@ -30,13 +30,15 @@ const SavingsCalculator: React.FC = () => {
   ];
 
   const handleSubmit = (data: any) => {
+    const amount = Number(data.amount);
+    
     const newClient: SavingsClient = {
       date: new Date().toLocaleDateString('he-IL'),
       name: data.name,
       company: data.company,
-      amount: Number(data.amount),
-      scopeCommission: Number(data.amount) * 0.015, // Example calculation
-      monthlyCommission: Number(data.amount) * 0.0008 // Example calculation
+      amount: amount,
+      scopeCommission: amount * 0.03, // 3% עמלת היקף
+      monthlyCommission: amount * 0.02 // 2% עמלה חודשית
     };
     setClients([...clients, newClient]);
   };

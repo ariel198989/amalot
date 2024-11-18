@@ -47,8 +47,8 @@ export interface InvestmentCompanyData {
 
 export interface CompanyRates {
   [key: string]: {
-    scope: number;
-    accumulation: number;
+    scopeRate: number;
+    monthlyRate: number;
   };
 }
 
@@ -62,3 +62,30 @@ export interface PolicyClient {
   oneTimeCommission: number;
   monthlyCommission: number;
 }
+
+export interface CombinedClient {
+  id?: string;
+  date: string;
+  name: string;
+  company: string;
+  selectedProducts: string;
+  pensionScopeCommission: number;
+  pensionAccumulationCommission: number;
+  insuranceOneTimeCommission: number;
+  insuranceMonthlyCommission: number;
+  investmentCommission: number;
+  policyScopeCommission: number;
+  totalCommission: number;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
+export const COMPANY_RATES: CompanyRates = {
+  'harel': { scopeRate: 6000, monthlyRate: 0.00025 },
+  'migdal': { scopeRate: 7000, monthlyRate: 0.00025 },
+  'clal': { scopeRate: 7000, monthlyRate: 0.00025 },
+  'phoenix': { scopeRate: 6500, monthlyRate: 0.00025 },
+  'more': { scopeRate: 4000, monthlyRate: 0.00025 },
+  'yelin': { scopeRate: 4000, monthlyRate: 0.00025 }
+};
