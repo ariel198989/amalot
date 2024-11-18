@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Calculator, 
   LayoutDashboard, 
@@ -7,12 +7,14 @@ import {
   Settings, 
   Bell, 
   User,
-  Menu
+  Menu,
+  LogOut
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   children: React.ReactNode;
+  onLogout: () => void;
 }
 
 const navItems = [
@@ -42,9 +44,15 @@ const navItems = [
   }
 ];
 
-const Header: React.FC<HeaderProps> = ({ children }) => {
+const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+  const handleLogout = () => {
+    onLogout();
+    navigate('/login', { replace: true });
+  };
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -63,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ children }) => {
     <div className="flex h-screen">
       {/* Sidebar */}
       <aside className={sidebarClasses}>
-        <div className="p-6">
+        <div className="p-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
               <Calculator className="h-8 w-8 text-blue-600" />
@@ -81,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ children }) => {
             </Button>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="space-y-1 flex-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -97,6 +105,18 @@ const Header: React.FC<HeaderProps> = ({ children }) => {
               </Link>
             ))}
           </nav>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center px-6 py-3 mt-4 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors border-t border-gray-100"
+          >
+            <LogOut className="h-5 w-5 ml-3" />
+            <div>
+              <div className="font-medium">התנתק</div>
+              <div className="text-xs text-gray-500">יציאה מהמערכת</div>
+            </div>
+          </button>
         </div>
       </aside>
 
