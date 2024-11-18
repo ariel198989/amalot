@@ -9,6 +9,7 @@ import ResultsTable from './ResultsTable';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
+import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 
 interface ProductSelection {
   pension: boolean;
@@ -108,7 +109,7 @@ const CustomerJourney: React.FC = () => {
       companies: ['הראל', 'מגדל', 'כלל', 'הפניקס', 'מנורה', 'איילון'] }
   ];
 
-  // פונקציות חישוב מכל המחשבונים
+  // פונקציות חישוב מכל המחבונים
   const calculatePensionCommissions = (data: any, company: string) => {
     const salary = Number(data.pensionSalary);
     const accumulation = Number(data.pensionAccumulation);
@@ -181,6 +182,104 @@ const CustomerJourney: React.FC = () => {
       monthlyCommission,
       totalCommission: oneTimeCommission + (monthlyCommission * 12)
     };
+  };
+
+  const generatePDF = (journey: any) => {
+    try {
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="color: #1a365d; text-align: center; margin-bottom: 30px;">דוח מסע לקוח</h1>
+          
+          <div style="margin-bottom: 20px;">
+            <h2 style="color: #2c5282;">פרטי לקוח</h2>
+            <p>תאריך: ${journey.journey_date}</p>
+            <p>שם לקוח: ${journey.client_name}</p>
+            <p>טלפון: ${journey.client_phone || ''}</p>
+          </div>
+
+          ${journey.commission_details?.pension?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">פנסיה</h2>
+              ${Object.entries(journey.commission_details.pension.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>עמלת צבירה: ${details.accumulationCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות פנסיה: ${journey.commission_details.pension.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${journey.commission_details?.insurance?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">ביטוח</h2>
+              ${Object.entries(journey.commission_details.insurance.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלה חד פעמית: ${details.oneTimeCommission.toLocaleString()} ₪</p>
+                    <p>עמלה חודשית: ${details.monthlyCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות ביטוח: ${journey.commission_details.insurance.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${journey.commission_details?.investment?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">השקעות</h2>
+              ${Object.entries(journey.commission_details.investment.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות השקעות: ${journey.commission_details.investment.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${journey.commission_details?.policy?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">פוליסת חיסכון</h2>
+              ${Object.entries(journey.commission_details.policy.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 30px; border-top: 2px solid #2c5282; padding-top: 20px;">
+            <h2 style="color: #2c5282;">סיכום עמלות</h2>
+            <p style="font-size: 1.2em;"><strong>סה"כ עמלות: ${journey.total_commission.toLocaleString()} ₪</strong></p>
+          </div>
+        </div>
+      `;
+
+      const opt = {
+        margin: 10,
+        filename: `דוח_מסע_לקוח_${journey.client_name}_${journey.journey_date}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(element).set(opt).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('אירעה שגיאה ביצירת הדוח');
+    }
   };
 
   const onSubmit = async (data: any) => {
@@ -326,9 +425,8 @@ const CustomerJourney: React.FC = () => {
     loadJourneys();
   }, []);
 
-  const generatePDF = (journey: any) => {
+  const handleDownloadPDF = (journey: any) => {
     try {
-      // יצירת אלמנט HTML זמני
       const element = document.createElement('div');
       element.innerHTML = `
         <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
@@ -346,14 +444,14 @@ const CustomerJourney: React.FC = () => {
               <h2 style="color: #2c5282;">פנסיה</h2>
               ${Object.entries(journey.commission_details.pension.companies)
                 .map(([company, details]: [string, any]) => `
-                  <div style="margin-right: 20px; margin-bottom: 15px;">
-                    <h3 style="color: #4a5568;">${company}</h3>
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
                     <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
                     <p>עמלת צבירה: ${details.accumulationCommission.toLocaleString()} ₪</p>
                     <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
-              <p style="font-weight: bold;">סה"כ עמלות פנסיה: ${journey.commission_details.pension.total.toLocaleString()} ₪</p>
+              <p><strong>סה"כ עמלות פנסיה: ${journey.commission_details.pension.total.toLocaleString()} ₪</strong></p>
             </div>
           ` : ''}
 
@@ -362,14 +460,14 @@ const CustomerJourney: React.FC = () => {
               <h2 style="color: #2c5282;">ביטוח</h2>
               ${Object.entries(journey.commission_details.insurance.companies)
                 .map(([company, details]: [string, any]) => `
-                  <div style="margin-right: 20px; margin-bottom: 15px;">
-                    <h3 style="color: #4a5568;">${company}</h3>
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
                     <p>עמלה חד פעמית: ${details.oneTimeCommission.toLocaleString()} ₪</p>
                     <p>עמלה חודשית: ${details.monthlyCommission.toLocaleString()} ₪</p>
                     <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
-              <p style="font-weight: bold;">סה"כ עמלות ביטוח: ${journey.commission_details.insurance.total.toLocaleString()} ₪</p>
+              <p><strong>סה"כ עמלות ביטוח: ${journey.commission_details.insurance.total.toLocaleString()} ₪</strong></p>
             </div>
           ` : ''}
 
@@ -378,13 +476,13 @@ const CustomerJourney: React.FC = () => {
               <h2 style="color: #2c5282;">השקעות</h2>
               ${Object.entries(journey.commission_details.investment.companies)
                 .map(([company, details]: [string, any]) => `
-                  <div style="margin-right: 20px; margin-bottom: 15px;">
-                    <h3 style="color: #4a5568;">${company}</h3>
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
                     <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
                     <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
-              <p style="font-weight: bold;">סה"כ עמלות השקעות: ${journey.commission_details.investment.total.toLocaleString()} ₪</p>
+              <p><strong>סה"כ עמלות השקעות: ${journey.commission_details.investment.total.toLocaleString()} ₪</strong></p>
             </div>
           ` : ''}
 
@@ -393,79 +491,71 @@ const CustomerJourney: React.FC = () => {
               <h2 style="color: #2c5282;">פוליסת חיסכון</h2>
               ${Object.entries(journey.commission_details.policy.companies)
                 .map(([company, details]: [string, any]) => `
-                  <div style="margin-right: 20px; margin-bottom: 15px;">
-                    <h3 style="color: #4a5568;">${company}</h3>
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
                     <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
                     <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
-              <p style="font-weight: bold;">סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</p>
+              <p><strong>סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</strong></p>
             </div>
           ` : ''}
 
           <div style="margin-top: 30px; border-top: 2px solid #2c5282; padding-top: 20px;">
             <h2 style="color: #2c5282;">סיכום עמלות</h2>
-            <p style="font-size: 1.2em; font-weight: bold;">סה"כ עמלות: ${journey.total_commission.toLocaleString()} ₪</p>
+            <p style="font-size: 1.2em;"><strong>סה"כ עמלות: ${journey.total_commission.toLocaleString()} ₪</strong></p>
           </div>
         </div>
       `;
 
-      // הגדרות ה-PDF
       const opt = {
         margin: 10,
         filename: `דוח_מסע_לקוח_${journey.client_name}_${journey.journey_date}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: false
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait'
-        }
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // יצירת ה-PDF
       html2pdf().from(element).set(opt).save();
-
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('אירעה שגיאה ביצירת הדוח');
     }
   };
 
-  const handleDownload = () => {
+  const handleDownloadExcel = () => {
     if (journeys.length === 0) {
       toast.error('אין נתונים להורדה');
       return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,מוצרים,עמלות פנסיה,עמלות ביטוח,עמלות השקעות,עמלות פוליסה,סה\"כ עמלות\n";
+    const worksheet = XLSXUtils.json_to_sheet(
+      journeys.map(journey => ({
+        תאריך: journey.journey_date,
+        'שם לקוח': journey.client_name,
+        טלפון: journey.client_phone || '',
+        'מוצרים שנבחרו': journey.selected_products.join(', '),
+        'עמלות פנסיה': journey.commission_details.pension.total,
+        'עמלות ביטוח': journey.commission_details.insurance.total,
+        'עמלות השקעות': journey.commission_details.investment.total,
+        'עמלות פוליסה': journey.commission_details.policy.total,
+        'סה"כ עמלות': journey.total_commission
+      }))
+    );
+
+    const workbook = XLSXUtils.book_new();
+    XLSXUtils.book_append_sheet(workbook, worksheet, "מסעות לקוח");
     
-    journeys.forEach((journey) => {
-      const row = [
-        journey.journey_date,
-        journey.client_name,
-        journey.selected_products.join('; '),
-        journey.commission_details.pension.total,
-        journey.commission_details.insurance.total,
-        journey.commission_details.investment.total,
-        journey.commission_details.policy.total,
-        journey.total_commission
-      ].join(",");
-      csvContent += row + "\n";
-    });
+    // הגדרת כיוון RTL
+    worksheet['!dir'] = 'rtl';
+
+    const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "דוח_סע_לקוח.csv");
-    document.body.appendChild(link);
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(data);
+    link.download = 'דוח_מסעות_לקוח.xlsx';
     link.click();
-    document.body.removeChild(link);
   };
 
   const handleShare = () => {
@@ -690,11 +780,11 @@ const CustomerJourney: React.FC = () => {
           { key: 'commission_details.policy.total', label: 'עמלות פוליסה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
           { key: 'total_commission', label: 'סה"כ עמלות', format: (value: number) => `₪${value.toLocaleString()}` }
         ]}
-        onDownload={handleDownload}
+        onDownload={handleDownloadExcel}
         onShare={() => {
           const lastJourney = journeys[journeys.length - 1];
           if (lastJourney) {
-            generatePDF(lastJourney);
+            handleDownloadPDF(lastJourney);
           } else {
             toast.error('אין נתונים ליצירת דוח');
           }
@@ -717,7 +807,7 @@ const CustomerJourney: React.FC = () => {
             onClick={() => {
               const lastJourney = journeys[journeys.length - 1];
               if (lastJourney) {
-                generatePDF(lastJourney);
+                handleDownloadPDF(lastJourney);
               } else {
                 toast.error('אין נתונים ליצירת דוח');
               }
