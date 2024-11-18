@@ -29,7 +29,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   }
 
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl">תוצאות החישוב</CardTitle>
         <div className="flex gap-2">
@@ -60,7 +60,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
               {data.map((row, rowIndex) => (
                 <tr key={rowIndex} className="border-b hover:bg-gray-50">
                   {columns.map((column) => (
-                    <td key={column.key} className="p-3">
+                    <td key={column.key} className="p-3 text-right">
                       {column.format ? column.format(row[column.key]) : row[column.key]}
                     </td>
                   ))}

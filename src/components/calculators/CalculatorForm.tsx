@@ -23,41 +23,51 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
   const { register, handleSubmit, setValue } = useForm();
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6" dir="rtl">
       <CardHeader>
-        <CardTitle className="text-xl">{title}</CardTitle>
+        <CardTitle className="text-xl text-right">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {fields.map((field) => (
-            <div key={field.name} className="space-y-2">
-              <label className="text-sm font-medium">{field.label}</label>
-              {field.type === 'select' ? (
-                <Select
-                  onValueChange={(value) => setValue(field.name, value)}
-                  {...register(field.name)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={`בחר ${field.label}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {field.options?.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  type={field.type}
-                  {...register(field.name, { required: field.required })}
-                  className="w-full"
-                />
-              )}
-            </div>
-          ))}
-          <Button type="submit" className="w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <label className="text-sm font-medium block text-right">
+                  {field.label}
+                  {field.required && <span className="text-red-500 mr-1">*</span>}
+                </label>
+                {field.type === 'select' ? (
+                  <Select
+                    onValueChange={(value) => setValue(field.name, value)}
+                    {...register(field.name)}
+                  >
+                    <SelectTrigger className="w-full text-right">
+                      <SelectValue placeholder={`בחר ${field.label}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((option) => (
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value}
+                          className="text-right"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    type={field.type}
+                    {...register(field.name, { required: field.required })}
+                    className="w-full text-right"
+                    placeholder={`הזן ${field.label}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <Button type="submit" className="w-full mt-6">
             חשב עמלות
           </Button>
         </form>
