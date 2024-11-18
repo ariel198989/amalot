@@ -4,6 +4,7 @@ import Header from './components/layout/Header';
 import Dashboard from './components/dashboard/Dashboard';
 import CalculatorSelector from './components/calculators';
 import LoginForm from './components/auth/LoginForm';
+import { Toaster } from 'react-hot-toast';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <div className="h-screen" dir="rtl">
+        <Toaster position="top-center" />
         <Routes>
           <Route 
             path="/login" 

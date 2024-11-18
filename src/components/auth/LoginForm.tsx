@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Lock, Mail, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface LoginFormProps {
   onLogin: () => void;
@@ -19,11 +21,85 @@ interface LoginFormData {
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, watch, formState: { errors } } = useForm<LoginFormData>();
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log(data);
-    onLogin();
+  const handleAuth = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      if (isLogin) {
+        // Login
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('שם משתמש או סיסמה שגויים');
+          }
+          throw error;
+        }
+
+        // Update last login
+        const { error: updateError } = await supabase
+          .from('users')
+          .upsert({ 
+            id: authData.user?.id,
+            email: data.email,
+            last_login: new Date().toISOString()
+          }, { 
+            onConflict: 'id'
+          });
+
+        if (updateError) throw updateError;
+
+        toast.success('התחברת בהצלחה!');
+        onLogin();
+      } else {
+        // Register
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            data: {
+              full_name: data.fullName,
+            }
+          }
+        });
+
+        if (signUpError) {
+          if (signUpError.message.includes('User already registered')) {
+            throw new Error('משתמש כבר קיים במערכת');
+          }
+          throw signUpError;
+        }
+
+        // Create/Update user profile
+        if (authData?.user) {
+          const { error: profileError } = await supabase
+            .from('users')
+            .upsert({
+              id: authData.user.id,
+              email: data.email,
+              full_name: data.fullName,
+              created_at: new Date().toISOString(),
+            }, {
+              onConflict: 'id'
+            });
+
+          if (profileError) throw profileError;
+        }
+
+        toast.success('נרשמת בהצלחה! אנא התחבר למערכת');
+        setIsLogin(true); // Switch to login form after successful registration
+      }
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      toast.error(error.message || 'אירעה שגיאה');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -40,7 +116,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(handleAuth)} className="space-y-5">
             {!isLogin && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
@@ -157,8 +233,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             <Button
               type="submit"
               className="w-full h-11 text-base bg-blue-600 hover:bg-blue-700"
+              disabled={isLoading}
             >
-              {isLogin ? 'התחברות' : 'הרשמה'}
+              {isLoading ? 'טוען...' : (isLogin ? 'התחברות' : 'הרשמה')}
             </Button>
 
             <div className="text-center space-y-3">
