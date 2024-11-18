@@ -7,15 +7,14 @@ import CalculatorSelector from './components/calculators';
 const App: React.FC = () => {
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100" dir="rtl">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <div className="h-screen" dir="rtl">
+        <Header>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/calculators" element={<CalculatorSelector />} />
             {/* נוסיף routes נוספים בהמשך */}
           </Routes>
-        </main>
+        </Header>
       </div>
     </Router>
   );
