@@ -1,62 +1,68 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Field {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options?: { value: string; label: string; }[];
+}
 
 interface CalculatorFormProps {
   onSubmit: (data: any) => void;
-  fields: {
-    name: string;
-    label: string;
-    type: string;
-    options?: { value: string; label: string }[];
-    required?: boolean;
-  }[];
+  fields: Field[];
   title: string;
 }
 
 const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title }) => {
-  const { register, handleSubmit, reset } = useForm();
-
-  const onFormSubmit = (data: any) => {
-    onSubmit(data);
-    reset();
-  };
+  const { register, handleSubmit, setValue } = useForm();
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="bg-white p-6 rounded-lg shadow mb-6">
-      <h2 className="text-xl font-bold mb-4">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {fields.map((field) => (
-          <div key={field.name}>
-            <label className="block text-sm font-medium mb-1">{field.label}</label>
-            {field.type === 'select' ? (
-              <select
-                {...register(field.name)}
-                className="select-field"
-                required={field.required}
-              >
-                {field.options?.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={field.type}
-                {...register(field.name)}
-                className="input-field"
-                required={field.required}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="mt-4">
-        <button type="submit" className="btn btn-primary">
-          חשב עמלות
-        </button>
-      </div>
-    </form>
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-xl">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {fields.map((field) => (
+            <div key={field.name} className="space-y-2">
+              <label className="text-sm font-medium">{field.label}</label>
+              {field.type === 'select' ? (
+                <Select
+                  onValueChange={(value) => setValue(field.name, value)}
+                  {...register(field.name)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={`בחר ${field.label}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {field.options?.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  type={field.type}
+                  {...register(field.name, { required: field.required })}
+                  className="w-full"
+                />
+              )}
+            </div>
+          ))}
+          <Button type="submit" className="w-full">
+            חשב עמלות
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

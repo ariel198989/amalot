@@ -1,13 +1,17 @@
 import React from 'react';
-import { Download, Send, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download, Share2, Trash2 } from 'lucide-react';
+
+interface Column {
+  key: string;
+  label: string;
+  format?: (value: any) => string;
+}
 
 interface ResultsTableProps {
   data: any[];
-  columns: {
-    key: string;
-    label: string;
-    format?: (value: any) => string;
-  }[];
+  columns: Column[];
   onDownload: () => void;
   onShare: () => void;
   onClear: () => void;
@@ -18,64 +22,55 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   columns,
   onDownload,
   onShare,
-  onClear,
+  onClear
 }) => {
-  if (data.length === 0) return null;
+  if (data.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">תוצאות החישוב</h2>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-xl">תוצאות החישוב</CardTitle>
         <div className="flex gap-2">
-          <button
-            onClick={onDownload}
-            className="btn btn-primary flex items-center"
-          >
-            <Download className="w-4 h-4 ml-2" />
-            ייצוא לאקסל
-          </button>
-          <button
-            onClick={onShare}
-            className="btn btn-primary flex items-center"
-          >
-            <Send className="w-4 h-4 ml-2" />
-            שיתוף בוואטסאפ
-          </button>
-          <button
-            onClick={onClear}
-            className="btn btn-secondary flex items-center"
-          >
-            <Trash2 className="w-4 h-4 ml-2" />
-            נקה
-          </button>
+          <Button variant="outline" size="icon" onClick={onDownload} title="ייצא לאקסל">
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={onShare} title="שתף בוואטסאפ">
+            <Share2 className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={onClear} title="נקה טבלה">
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gray-50">
-              {columns.map((column) => (
-                <th key={column.key} className="px-4 py-2 text-right">
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, index) => (
-              <tr key={index} className="border-t">
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b bg-gray-50">
                 {columns.map((column) => (
-                  <td key={column.key} className="px-4 py-2">
-                    {column.format ? column.format(row[column.key]) : row[column.key]}
-                  </td>
+                  <th key={column.key} className="p-3 text-right font-medium text-gray-600">
+                    {column.label}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            </thead>
+            <tbody>
+              {data.map((row, rowIndex) => (
+                <tr key={rowIndex} className="border-b hover:bg-gray-50">
+                  {columns.map((column) => (
+                    <td key={column.key} className="p-3">
+                      {column.format ? column.format(row[column.key]) : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -51,3 +51,14 @@ export interface CompanyRates {
     accumulation: number;
   };
 }
+
+export interface PolicyClient {
+  date: string;
+  name: string;
+  company: string;
+  policyType: string;
+  depositAmount: number;
+  totalDeposit: number;
+  oneTimeCommission: number;
+  monthlyCommission: number;
+}
