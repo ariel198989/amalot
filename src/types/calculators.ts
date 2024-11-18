@@ -81,6 +81,47 @@ export interface CombinedClient {
   user_id?: string;
 }
 
+export interface Journey {
+  id?: string;
+  journey_date: string;
+  client_name: string;
+  client_phone?: string;
+  selected_products: string[];
+  selected_companies: {
+    pension: string[];
+    insurance: string[];
+    investment: string[];
+    policy: string[];
+  };
+  commissions: {
+    pension: number;
+    insurance: number;
+    investment: number;
+    policy: number;
+  };
+  total_commission: number;
+  details: {
+    pension?: {
+      salary: number;
+      accumulation: number;
+      provision: number;
+    };
+    insurance?: {
+      type: string;
+      premium: number;
+    };
+    investment?: {
+      amount: number;
+    };
+    policy?: {
+      amount: number;
+      period?: number;
+    };
+  };
+  created_at?: string;
+  user_id?: string;
+}
+
 export const COMPANY_RATES: CompanyRates = {
   'harel': { scopeRate: 6000, monthlyRate: 0.00025 },
   'migdal': { scopeRate: 7000, monthlyRate: 0.00025 },

@@ -1,13 +1,20 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calculator, Briefcase, Shield, PiggyBank, FileText } from 'lucide-react';
+import { Calculator, Briefcase, Shield, PiggyBank, FileText, User } from 'lucide-react';
 import InvestmentCalculator from './InvestmentCalculator';
 import InsuranceCalculator from './InsuranceCalculator';
 import PensionCalculator from './PensionCalculator';
 import PolicyCalculator from './PolicyCalculator';
+import CustomerJourney from './CustomerJourney';
 
 const calculatorTabs = [
+  {
+    value: "journey",
+    title: "מסע לקוח",
+    icon: User,
+    description: "מפגש לקוח וסגירת עסקה"
+  },
   {
     value: "investment",
     title: "גמל והשתלמות",
@@ -35,7 +42,7 @@ const calculatorTabs = [
 ];
 
 const CalculatorSelector: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState("investment");
+  const [activeTab, setActiveTab] = React.useState("journey");
 
   return (
     <div className="p-6">
@@ -53,7 +60,7 @@ const CalculatorSelector: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 gap-4 p-1 bg-gray-50 rounded-lg">
+            <TabsList className="grid w-full grid-cols-5 gap-4 p-1 bg-gray-50 rounded-lg">
               {calculatorTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -72,6 +79,9 @@ const CalculatorSelector: React.FC = () => {
             </TabsList>
             
             <div className="bg-gray-50 p-6 rounded-lg">
+              <TabsContent value="journey" className="mt-0">
+                <CustomerJourney />
+              </TabsContent>
               <TabsContent value="investment" className="mt-0">
                 <InvestmentCalculator />
               </TabsContent>

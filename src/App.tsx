@@ -4,6 +4,7 @@ import Header from './components/layout/Header';
 import Dashboard from './components/dashboard/Dashboard';
 import CalculatorSelector from './components/calculators';
 import LoginForm from './components/auth/LoginForm';
+import CustomerJourney from './components/calculators/CustomerJourney';
 import { Toaster } from 'react-hot-toast';
 
 const App: React.FC = () => {
@@ -30,6 +31,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/calculators" element={<CalculatorSelector />} />
+              <Route path="/journey" element={<CustomerJourney />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Header>

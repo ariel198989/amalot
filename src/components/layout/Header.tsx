@@ -37,6 +37,12 @@ const navItems = [
     description: 'ניהול ומעקב אחר לקוחות'
   },
   { 
+    title: 'מסע לקוח', 
+    path: '/journey', 
+    icon: User,
+    description: 'ניהול פגישות ומכירות ללקוח'
+  },
+  { 
     title: 'הגדרות', 
     path: '/settings', 
     icon: Settings,
