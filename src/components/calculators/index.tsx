@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calculator, Briefcase, Shield, PiggyBank, FileText } from 'lucide-react';
 import InvestmentCalculator from './InvestmentCalculator';
 import InsuranceCalculator from './InsuranceCalculator';
-import SavingsCalculator from './SavingsCalculator';
+import PensionCalculator from './PensionCalculator';
 import PolicyCalculator from './PolicyCalculator';
 
 const calculatorTabs = [
@@ -21,10 +21,10 @@ const calculatorTabs = [
     description: "חישוב עמלות מוצרי ביטוח"
   },
   {
-    value: "savings",
-    title: "חיסכון",
+    value: "pension",
+    title: "פנסיה",
     icon: PiggyBank,
-    description: "חישוב עמלות תוכניות חיסכון"
+    description: "חישוב עמלות פנסיה"
   },
   {
     value: "policy",
@@ -78,8 +78,8 @@ const CalculatorSelector: React.FC = () => {
               <TabsContent value="insurance" className="mt-0">
                 <InsuranceCalculator />
               </TabsContent>
-              <TabsContent value="savings" className="mt-0">
-                <SavingsCalculator />
+              <TabsContent value="pension" className="mt-0">
+                <PensionCalculator />
               </TabsContent>
               <TabsContent value="policy" className="mt-0">
                 <PolicyCalculator />

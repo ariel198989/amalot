@@ -1,92 +1,73 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { addPensionClient } from '../../store/calculatorsSlice';
-import { RootState } from '../../store';
+import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
+import { PensionClient } from '../../types/calculators';
 
 const PensionCalculator: React.FC = () => {
-  const dispatch = useDispatch();
-  const clients = useSelector((state: RootState) => state.calculators.pension);
+  const [clients, setClients] = React.useState<PensionClient[]>([]);
 
   const fields = [
-    { name: 'date', label: 'תאריך', type: 'date', required: true },
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
-    {
-      name: 'company',
-      label: 'חברת ביטוח',
-      type: 'select',
+    { name: 'company', label: 'חברה', type: 'select', required: true,
       options: [
-        { value: 'כלל', label: 'כלל' },
-        { value: 'הראל', label: 'הראל' },
-        { value: 'מגדל', label: 'מגדל' },
-        { value: 'הפניקס', label: 'הפניקס' },
-        { value: 'מיטב דש', label: 'מיטב דש' },
-        { value: 'מור', label: 'מור' },
-      ],
-      required: true,
+        { value: 'migdal', label: 'מגדל' },
+        { value: 'menora', label: 'מנורה' },
+        { value: 'clal', label: 'כלל' },
+        { value: 'harel', label: 'הראל' }
+      ]
     },
-    { name: 'salary', label: 'שכר חודשי', type: 'number', required: true },
-    { name: 'accumulation', label: 'סכום צבירה', type: 'number', required: true },
-    {
-      name: 'provision',
-      label: 'אחוז הפרשה',
-      type: 'select',
-      options: [
-        { value: '18.5', label: '18.5% (6+6.5+6)' },
-        { value: '19.5', label: '19.5% (7+6.5+6)' },
-        { value: '20.5', label: '20.5% (7+7.5+6)' },
-        { value: '20.83', label: '20.83% (6+6.5+8.33)' },
-        { value: '21.83', label: '21.83% (7+6.5+8.33)' },
-        { value: '22.83', label: '22.83% (7+7.5+8.33)' },
-      ],
-      required: true,
-    },
+    { name: 'salary', label: 'שכר ברוטו', type: 'number', required: true },
+    { name: 'accumulation', label: 'אחוז צבירה', type: 'number', required: true },
+    { name: 'provision', label: 'הפרשות מעסיק', type: 'number', required: true }
   ];
 
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברת ביטוח' },
-    { key: 'salary', label: 'שכר חודשי', format: (value: number) => `${value.toLocaleString()} ₪` },
-    { key: 'accumulation', label: 'סכום צבירה', format: (value: number) => `${value.toLocaleString()} ₪` },
-    { key: 'provision', label: 'אחוז הפרשה', format: (value: number) => `${value}%` },
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `${value.toLocaleString()} ₪` },
-    { key: 'accumulationCommission', label: 'עמלת צבירה', format: (value: number) => `${value.toLocaleString()} ₪` },
-    { key: 'totalCommission', label: 'סה"כ עמלה', format: (value: number) => `${value.toLocaleString()} ₪` },
+    { key: 'company', label: 'חברה' },
+    { key: 'salary', label: 'שכר ברוטו', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'accumulation', label: 'אחוז צבירה', format: (value: number) => `${value}%` },
+    { key: 'provision', label: 'הפרשות מעסיק', format: (value: number) => `${value}%` },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'accumulationCommission', label: 'עמלת צבירה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'totalCommission', label: 'סה"כ עמלות', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
   const handleSubmit = (data: any) => {
     const salary = Number(data.salary);
     const accumulation = Number(data.accumulation);
     const provision = Number(data.provision);
-
-    // Calculate commissions based on the rates
-    const scopeCommission = salary * 12 * 0.09 * (provision / 100);
-    const accumulationCommission = (accumulation / 1000000) * 3000;
+    
+    const scopeCommission = salary * 0.03; // 3% עמלת היקף
+    const accumulationCommission = (salary * (accumulation + provision) / 100) * 0.02; // 2% עמלת צבירה
     const totalCommission = scopeCommission + accumulationCommission;
 
-    dispatch(addPensionClient({
-      ...data,
-      salary,
-      accumulation,
-      provision,
-      scopeCommission,
-      accumulationCommission,
-      totalCommission,
-    }));
+    const newClient: PensionClient = {
+      date: new Date().toLocaleDateString('he-IL'),
+      name: data.name,
+      company: data.company,
+      salary: salary,
+      accumulation: accumulation,
+      provision: provision,
+      scopeCommission: scopeCommission,
+      accumulationCommission: accumulationCommission,
+      totalCommission: totalCommission
+    };
+
+    setClients([...clients, newClient]);
   };
 
   const handleDownload = () => {
-    // Implementation for downloading Excel file
+    // TODO: Implement Excel export
   };
 
   const handleShare = () => {
-    // Implementation for WhatsApp sharing
+    // TODO: Implement WhatsApp sharing
   };
 
   const handleClear = () => {
-    // Implementation for clearing results
+    setClients([]);
   };
 
   return (
