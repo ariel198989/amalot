@@ -25,31 +25,20 @@ const App: React.FC = () => {
     <Router>
       <div className="h-screen" dir="rtl">
         <Toaster position="top-center" />
-        <Routes>
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated ? 
-                <Navigate to="/" replace /> : 
-                <LoginForm onLogin={handleLogin} />
-            } 
-          />
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
-                <Header onLogout={handleLogout}>
-                  <Routes>
-                    <Route index element={<Dashboard />} />
-                    <Route path="calculators" element={<CalculatorSelector />} />
-                  </Routes>
-                </Header>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        </Routes>
+        {isAuthenticated ? (
+          <Header onLogout={handleLogout}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/calculators" element={<CalculatorSelector />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Header>
+        ) : (
+          <Routes>
+            <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        )}
       </div>
     </Router>
   );
