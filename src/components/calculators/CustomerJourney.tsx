@@ -93,6 +93,10 @@ interface Journey {
   user_id?: string;
 }
 
+const formatDate = (date: Date) => {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 const CustomerJourney: React.FC = () => {
   const [selectedProducts, setSelectedProducts] = React.useState<ProductSelection>({
     pension: false,
@@ -284,68 +288,68 @@ const CustomerJourney: React.FC = () => {
             <p>שם לקוח: ${data.clientName}</p>
           </div>
 
-          ${data.pensionDetails.length > 0 ? `
+          ${data.pensionDetails?.length > 0 ? `
             <div style="background: #f0f9ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bae6fd;">
               <h2 style="color: #0369a1; margin-bottom: 15px;">פנסיה</h2>
               ${data.pensionDetails.map(detail => `
                 <div style="margin-bottom: 15px; padding-right: 20px;">
                   <h3 style="color: #0284c7;">${detail.company}</h3>
-                  <p>עמלת היקף: ${detail.scopeCommission.toLocaleString()} ₪</p>
-                  <p>עמלת צבירה: ${detail.accumulationCommission.toLocaleString()} ₪</p>
-                  <p>סה"כ: ${detail.totalCommission.toLocaleString()} ₪</p>
+                  <p>עמלת היקף: ${detail.scopeCommission?.toLocaleString() || 0} ₪</p>
+                  <p>עמלת צבירה: ${detail.accumulationCommission?.toLocaleString() || 0} ₪</p>
+                  <p>סה"כ: ${detail.totalCommission?.toLocaleString() || 0} ₪</p>
                 </div>
               `).join('')}
               <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות פנסיה: ${
-                data.pensionDetails.reduce((sum, detail) => sum + detail.totalCommission, 0).toLocaleString()
+                data.pensionDetails.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0).toLocaleString()
               } ₪</p>
             </div>
           ` : ''}
 
-          ${data.insuranceDetails.length > 0 ? `
+          ${data.insuranceDetails?.length > 0 ? `
             <div style="background: #fdf2f8; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #fbcfe8;">
               <h2 style="color: #9d174d; margin-bottom: 15px;">ביטוח</h2>
               ${data.insuranceDetails.map(detail => `
                 <div style="margin-bottom: 15px; padding-right: 20px;">
                   <h3 style="color: #be185d;">${detail.company}</h3>
-                  <p>עמלה חד פעמית: ${detail.oneTimeCommission.toLocaleString()} ₪</p>
-                  <p>עמלה חודשית: ${detail.monthlyCommission.toLocaleString()} ₪</p>
-                  <p>סה"כ: ${detail.totalCommission.toLocaleString()} ₪</p>
+                  <p>עמלה חד פעמית: ${detail.oneTimeCommission?.toLocaleString() || 0} ₪</p>
+                  <p>עמלה חודשית: ${detail.monthlyCommission?.toLocaleString() || 0} ₪</p>
+                  <p>סה"כ: ${detail.totalCommission?.toLocaleString() || 0} ₪</p>
                 </div>
               `).join('')}
               <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות ביטוח: ${
-                data.insuranceDetails.reduce((sum, detail) => sum + detail.totalCommission, 0).toLocaleString()
+                data.insuranceDetails.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0).toLocaleString()
               } ₪</p>
             </div>
           ` : ''}
 
-          ${data.investmentDetails.length > 0 ? `
+          ${data.investmentDetails?.length > 0 ? `
             <div style="background: #f0fdf4; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bbf7d0;">
               <h2 style="color: #166534; margin-bottom: 15px;">השקעות</h2>
               ${data.investmentDetails.map(detail => `
                 <div style="margin-bottom: 15px; padding-right: 20px;">
                   <h3 style="color: #15803d;">${detail.company}</h3>
-                  <p>סכום: ${detail.amount.toLocaleString()} ₪</p>
-                  <p>עמלה: ${detail.commission.toLocaleString()} ₪</p>
+                  <p>סכום: ${detail.amount?.toLocaleString() || 0} ₪</p>
+                  <p>עמלה: ${detail.commission?.toLocaleString() || 0} ₪</p>
                 </div>
               `).join('')}
               <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות השקעות: ${
-                data.investmentDetails.reduce((sum, detail) => sum + detail.commission, 0).toLocaleString()
+                data.investmentDetails.reduce((sum, detail) => sum + (detail.commission || 0), 0).toLocaleString()
               } ₪</p>
             </div>
           ` : ''}
 
-          ${data.policyDetails.length > 0 ? `
+          ${data.policyDetails?.length > 0 ? `
             <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
               <h2 style="color: #1e40af; margin-bottom: 15px;">פוליסות חיסכון</h2>
               ${data.policyDetails.map(detail => `
                 <div style="margin-bottom: 15px; padding-right: 20px;">
                   <h3 style="color: #1e3a8a;">${detail.company}</h3>
-                  <p>סכום: ${detail.amount.toLocaleString()} ₪</p>
-                  <p>עמלה: ${detail.commission.toLocaleString()} ₪</p>
+                  <p>סכום: ${detail.amount?.toLocaleString() || 0} ₪</p>
+                  <p>עמלה: ${detail.commission?.toLocaleString() || 0} ₪</p>
                 </div>
               `).join('')}
               <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות פוליסות: ${
-                data.policyDetails.reduce((sum, detail) => sum + detail.commission, 0).toLocaleString()
+                data.policyDetails.reduce((sum, detail) => sum + (detail.commission || 0), 0).toLocaleString()
               } ₪</p>
             </div>
           ` : ''}
@@ -353,10 +357,10 @@ const CustomerJourney: React.FC = () => {
           <div style="background: #047857; color: white; padding: 20px; border-radius: 10px; margin-top: 30px;">
             <h2 style="margin: 0 0 15px 0;">סיכום עמלות</h2>
             <p style="font-size: 1.2em; font-weight: bold;">סה"כ עמלות: ${(
-              data.pensionDetails.reduce((sum, detail) => sum + detail.totalCommission, 0) +
-              data.insuranceDetails.reduce((sum, detail) => sum + detail.totalCommission, 0) +
-              data.investmentDetails.reduce((sum, detail) => sum + detail.commission, 0) +
-              data.policyDetails.reduce((sum, detail) => sum + detail.commission, 0)
+              (data.pensionDetails?.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0) || 0) +
+              (data.insuranceDetails?.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0) || 0) +
+              (data.investmentDetails?.reduce((sum, detail) => sum + (detail.commission || 0), 0) || 0) +
+              (data.policyDetails?.reduce((sum, detail) => sum + (detail.commission || 0), 0) || 0)
             ).toLocaleString()} ₪</p>
           </div>
         </div>
@@ -478,48 +482,32 @@ const CustomerJourney: React.FC = () => {
       if (userError) throw userError;
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // יצירת רשומת מסע לקוח ראשית
-      const journeyData = {
-        user_id: user.id,
-        client_name: data.clientName,
-        client_phone: data.clientPhone,
-        selected_products: Object.entries(selectedProducts)
-          .filter(([_, value]) => value)
-          .map(([key]) => key),
-        total_commission: 0,
-        journey_date: new Date().toISOString(),
-        commission_details: {}
-      };
-
-      const { data: journey, error: journeyError } = await supabase
-        .from('customer_journeys')
-        .insert([journeyData])
-        .select()
-        .single();
-
-      if (journeyError) throw journeyError;
-
+      const currentDate = formatDate(new Date());
       let totalCommissions = 0;
+      const commissionDetails: any = {};
 
       // שמירת נתוני פנסיה
       if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
+        commissionDetails.pension = { companies: {}, total: 0 };
         for (const company of selectedCompanies.pension) {
           const result = await calculatePensionCommissions(data, company);
           totalCommissions += result.totalCommission;
+          commissionDetails.pension.companies[company] = result;
+          commissionDetails.pension.total += result.totalCommission;
 
           const pensionData = {
-            journey_id: journey.id,
-            date: new Date().toISOString(),
+            date: currentDate,
             client_name: data.clientName,
             client_phone: data.clientPhone,
-            company,
+            company: company,
             salary: Number(data.pensionSalary),
             accumulation: Number(data.pensionAccumulation),
             provision: Number(data.pensionProvision),
             scope_commission: result.scopeCommission,
             accumulation_commission: result.accumulationCommission,
             total_commission: result.totalCommission,
-            user_id: user.id
+            user_id: user.id,
+            created_at: currentDate
           };
 
           const { error: pensionError } = await supabase
@@ -532,22 +520,25 @@ const CustomerJourney: React.FC = () => {
 
       // שמירת נתוני ביטוח
       if (selectedProducts.insurance && selectedCompanies.insurance.length > 0) {
+        commissionDetails.insurance = { companies: {}, total: 0 };
         for (const company of selectedCompanies.insurance) {
           const result = await calculateInsuranceCommissions(data, company);
           totalCommissions += result.totalCommission;
+          commissionDetails.insurance.companies[company] = result;
+          commissionDetails.insurance.total += result.totalCommission;
 
           const insuranceData = {
-            journey_id: journey.id,
-            date: new Date().toISOString(),
+            date: currentDate,
             client_name: data.clientName,
             client_phone: data.clientPhone,
-            company,
+            company: company,
             insurance_type: data.insuranceType,
             monthly_premium: Number(data.insurancePremium),
             one_time_commission: result.oneTimeCommission,
             monthly_commission: result.monthlyCommission,
             total_commission: result.totalCommission,
-            user_id: user.id
+            user_id: user.id,
+            created_at: currentDate
           };
 
           const { error: insuranceError } = await supabase
@@ -560,20 +551,23 @@ const CustomerJourney: React.FC = () => {
 
       // שמירת נתוני השקעות
       if (selectedProducts.investment && selectedCompanies.investment.length > 0) {
+        commissionDetails.investment = { companies: {}, total: 0 };
         for (const company of selectedCompanies.investment) {
           const result = await calculateInvestmentCommissions(data, company);
           totalCommissions += result.totalCommission;
+          commissionDetails.investment.companies[company] = result;
+          commissionDetails.investment.total += result.totalCommission;
 
           const investmentData = {
-            journey_id: journey.id,
-            date: new Date().toISOString(),
+            date: currentDate,
             client_name: data.clientName,
             client_phone: data.clientPhone,
-            company,
+            company: company,
             amount: Number(data.investmentAmount),
             scope_commission: result.scopeCommission,
             total_commission: result.totalCommission,
-            user_id: user.id
+            user_id: user.id,
+            created_at: currentDate
           };
 
           const { error: investmentError } = await supabase
@@ -586,21 +580,24 @@ const CustomerJourney: React.FC = () => {
 
       // שמירת נתוני פוליסות
       if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
+        commissionDetails.policy = { companies: {}, total: 0 };
         for (const company of selectedCompanies.policy) {
           const result = await calculatePolicyCommissions(data, company);
           totalCommissions += result.totalCommission;
+          commissionDetails.policy.companies[company] = result;
+          commissionDetails.policy.total += result.totalCommission;
 
           const policyData = {
-            journey_id: journey.id,
-            date: new Date().toISOString(),
+            date: currentDate,
             client_name: data.clientName,
             client_phone: data.clientPhone,
-            company,
+            company: company,
             amount: Number(data.policyAmount),
             period: Number(data.policyPeriod),
             scope_commission: result.scopeCommission,
             total_commission: result.totalCommission,
-            user_id: user.id
+            user_id: user.id,
+            created_at: currentDate
           };
 
           const { error: policyError } = await supabase
@@ -611,13 +608,26 @@ const CustomerJourney: React.FC = () => {
         }
       }
 
-      // עדכון סך העמלות במסע הלקוח
-      const { error: updateError } = await supabase
-        .from('customer_journeys')
-        .update({ total_commission: totalCommissions })
-        .eq('id', journey.id);
+      // שמירת מסע הלקוח
+      const journeyData = {
+        journey_date: currentDate,
+        client_name: data.clientName,
+        client_phone: data.clientPhone,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: selectedCompanies,
+        commission_details: commissionDetails,
+        total_commission: totalCommissions,
+        user_id: user.id,
+        created_at: currentDate
+      };
 
-      if (updateError) throw updateError;
+      const { error: journeyError } = await supabase
+        .from('customer_journeys')
+        .insert([journeyData]);
+
+      if (journeyError) throw journeyError;
 
       toast.success('הנתונים נשמרו בהצלחה!');
       
@@ -634,6 +644,30 @@ const CustomerJourney: React.FC = () => {
         investment: [],
         policy: []
       });
+
+      // יצירת PDF
+      const reportData = {
+        date: currentDate,
+        clientName: data.clientName,
+        pensionDetails: selectedProducts.pension ? selectedCompanies.pension.map(company => ({
+          company,
+          ...commissionDetails.pension.companies[company]
+        })) : [],
+        insuranceDetails: selectedProducts.insurance ? selectedCompanies.insurance.map(company => ({
+          company,
+          ...commissionDetails.insurance.companies[company]
+        })) : [],
+        investmentDetails: selectedProducts.investment ? selectedCompanies.investment.map(company => ({
+          company,
+          ...commissionDetails.investment.companies[company]
+        })) : [],
+        policyDetails: selectedProducts.policy ? selectedCompanies.policy.map(company => ({
+          company,
+          ...commissionDetails.policy.companies[company]
+        })) : []
+      };
+
+      generatePDF(reportData);
 
     } catch (error: any) {
       console.error('Error saving data:', error);
@@ -810,7 +844,7 @@ const CustomerJourney: React.FC = () => {
       {/* כותרת ראשית */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">מסע לקוח</h1>
-        <p className="text-gray-600">ניהול פגישת לקוח וחישוב עמלות</p>
+        <p className="text-gray-600">ניהול פגישת לק��ח וחישוב עמלות</p>
       </div>
 
       {/* פרטי לקוח */}
