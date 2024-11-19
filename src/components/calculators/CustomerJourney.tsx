@@ -486,7 +486,7 @@ const CustomerJourney: React.FC = () => {
       let totalCommissions = 0;
       const commissionDetails: any = {};
 
-      // שמירת נתוני פנסיה
+      // חישוב עמלות פנסיה
       if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
         commissionDetails.pension = { companies: {}, total: 0 };
         for (const company of selectedCompanies.pension) {
@@ -629,8 +629,17 @@ const CustomerJourney: React.FC = () => {
 
       if (journeyError) throw journeyError;
 
-      toast.success('הנתונים נשמרו בהצלחה!');
-      
+      toast.success('הנתונים נשמרו בהצלחה!', {
+        duration: 5000,
+        position: 'top-center',
+        icon: '✅',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+
       // ניקוי הטופס
       setSelectedProducts({
         pension: false,
@@ -644,30 +653,6 @@ const CustomerJourney: React.FC = () => {
         investment: [],
         policy: []
       });
-
-      // יצירת PDF
-      const reportData = {
-        date: currentDate,
-        clientName: data.clientName,
-        pensionDetails: selectedProducts.pension ? selectedCompanies.pension.map(company => ({
-          company,
-          ...commissionDetails.pension.companies[company]
-        })) : [],
-        insuranceDetails: selectedProducts.insurance ? selectedCompanies.insurance.map(company => ({
-          company,
-          ...commissionDetails.insurance.companies[company]
-        })) : [],
-        investmentDetails: selectedProducts.investment ? selectedCompanies.investment.map(company => ({
-          company,
-          ...commissionDetails.investment.companies[company]
-        })) : [],
-        policyDetails: selectedProducts.policy ? selectedCompanies.policy.map(company => ({
-          company,
-          ...commissionDetails.policy.companies[company]
-        })) : []
-      };
-
-      generatePDF(reportData);
 
     } catch (error: any) {
       console.error('Error saving data:', error);
@@ -844,7 +829,7 @@ const CustomerJourney: React.FC = () => {
       {/* כותרת ראשית */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">מסע לקוח</h1>
-        <p className="text-gray-600">ניהול פגישת לק��ח וחישוב עמלות</p>
+        <p className="text-gray-600">ניהול פגישת לקוח וחישוב עמלות</p>
       </div>
 
       {/* פרטי לקוח */}
