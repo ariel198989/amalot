@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank, TrendingUp, DollarSign, CreditCard, BarChart2, Wallet, LineChart, PieChart, Percent, Trash2 } from 'lucide-react';
+import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank, TrendingUp, DollarSign, CreditCard, BarChart2, Wallet, LineChart, PieChart, Percent, Trash2, ArrowUpRight, Users, SlidersHorizontal } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import html2pdf from 'html2pdf.js';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { saveAs } from 'file-saver';
+import { Select } from "@/components/ui/select";
 
 const Reports: React.FC = () => {
   const [pensionSales, setPensionSales] = React.useState<any[]>([]);
@@ -62,7 +63,7 @@ const Reports: React.FC = () => {
   }, []);
 
   const tableClasses = {
-    container: "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden",
+    container: "bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden",
     header: "bg-gradient-to-r p-6",
     headerPension: "from-blue-50 to-white border-b",
     headerInsurance: "from-purple-50 to-white border-b",
@@ -71,7 +72,7 @@ const Reports: React.FC = () => {
     table: "w-full border-collapse",
     th: "bg-gray-50 text-right p-4 border-b border-gray-200 font-medium text-gray-600 text-sm",
     td: "p-4 border-b border-gray-200 text-gray-800",
-    tr: "hover:bg-gray-50 transition-colors",
+    tr: "hover:bg-gray-50 transition-colors duration-150",
     summary: "bg-gray-50 font-medium"
   };
 
@@ -206,7 +207,7 @@ const Reports: React.FC = () => {
                   { name: 'פנסיה', sales: pensionSales, color: '#0369a1' },
                   { name: 'ביטוח', sales: insuranceSales, color: '#9333ea' },
                   { name: 'גמל והשתלמות', sales: investmentSales, color: '#059669' },
-                  { name: 'פוליסות ��יסכון', sales: policySales, color: '#0284c7' }
+                  { name: 'פוליסות יסכון', sales: policySales, color: '#0284c7' }
                 ].map(product => {
                   const total = product.sales.reduce((sum, sale) => sum + sale.total_commission, 0);
                   const grandTotal = pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
@@ -410,9 +411,64 @@ const Reports: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">דוחות מכירות</h1>
-        <p className="text-gray-500 mt-1">סקירה מקיפה של כל המכירות והעמלות שלך</p>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-8 text-white mb-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">דוחות מכירות</h1>
+            <p className="mt-2 text-blue-100">סקירה מקיפה של כל המכירות והעמלות שלך</p>
+          </div>
+          <div className="flex gap-4">
+            <Button 
+              onClick={generateMonthlySummaryPDF}
+              className="bg-white/10 hover:bg-white/20 text-white flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              הורד דוח מסכם (PDF)
+            </Button>
+            <Button 
+              onClick={downloadMonthlyExcel}
+              className="bg-white/10 hover:bg-white/20 text-white flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              הורד דוח מסכם (Excel)
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+          <div className="bg-white/10 rounded-lg p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-blue-100">סה"כ מכירות</p>
+                <h3 className="text-2xl font-bold mt-1">
+                  {(pensionSales.length + insuranceSales.length + 
+                    investmentSales.length + policySales.length).toLocaleString()}
+                </h3>
+              </div>
+              <div className="bg-blue-500/20 p-2 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-100" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 rounded-lg p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-blue-100">סה"כ עמלות</p>
+                <h3 className="text-2xl font-bold mt-1">
+                  ₪{(
+                    pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                    insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                    investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                    policySales.reduce((sum, sale) => sum + sale.total_commission, 0)
+                  ).toLocaleString()}
+                </h3>
+              </div>
+              <div className="bg-green-500/20 p-2 rounded-lg">
+                <DollarSign className="h-5 w-5 text-green-300" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Card className={tableClasses.container}>
@@ -420,21 +476,19 @@ const Reports: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-xl text-blue-900 flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                דוח מכירות פנסי
+                <PiggyBank className="h-5 w-5" />
+                דוח מכירות פנסיה
               </CardTitle>
               <CardDescription className="mt-2">
                 <span className="font-medium">סך מכירות: </span>
                 <span className="text-blue-600">{pensionSales.length}</span>
                 <span className="mx-2">|</span>
                 <span className="font-medium">סך עמלות: </span>
-                <span className="text-green-600">₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
+                <span className="text-green-600">
+                  ₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+                </span>
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              ייצא לאקסל
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -451,7 +505,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלת צבירה</th>
                   <th className={tableClasses.th}>סה"כ</th>
-                  <th className={tableClasses.th}>פעולה</th>
+                  <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -467,9 +521,13 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('pension', sale.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete('pension', sale.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
                         <Trash2 className="h-4 w-4" />
-                        מחיקה
                       </Button>
                     </td>
                   </tr>
@@ -485,6 +543,7 @@ const Reports: React.FC = () => {
                   <td className={tableClasses.td}>
                     ₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
                   </td>
+                  <td className={tableClasses.td}></td>
                 </tr>
               </tbody>
             </table>
@@ -505,13 +564,11 @@ const Reports: React.FC = () => {
                 <span className="text-purple-600">{insuranceSales.length}</span>
                 <span className="mx-2">|</span>
                 <span className="font-medium">סך עמלות: </span>
-                <span className="text-green-600">₪{insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
+                <span className="text-green-600">
+                  ₪{insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+                </span>
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              ייצא לאקסל
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -523,11 +580,9 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
                   <th className={tableClasses.th}>סוג ביטוח</th>
-                  <th className={tableClasses.th}>פרמיה חודשית</th>
-                  <th className={tableClasses.th}>עמלה חד פעמית</th>
-                  <th className={tableClasses.th}>עמלה חודשית</th>
-                  <th className={tableClasses.th}>סה"כ</th>
-                  <th className={tableClasses.th}>פעולה</th>
+                  <th className={tableClasses.th}>פרמיה</th>
+                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -537,14 +592,16 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.insurance_type}</td>
-                    <td className={tableClasses.td}>{sale.monthly_premium?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.premium?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('insurance', sale.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete('insurance', sale.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
                         <Trash2 className="h-4 w-4" />
-                        מחיקה
                       </Button>
                     </td>
                   </tr>
@@ -560,21 +617,19 @@ const Reports: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-xl text-green-900 flex items-center gap-2">
-                <PiggyBank className="h-5 w-5" />
-                דוח מכירות גמל והשתלמת
+                <LineChart className="h-5 w-5" />
+                דוח מכירות השקעות
               </CardTitle>
               <CardDescription className="mt-2">
                 <span className="font-medium">סך מכירות: </span>
                 <span className="text-green-600">{investmentSales.length}</span>
                 <span className="mx-2">|</span>
                 <span className="font-medium">סך עמלות: </span>
-                <span className="text-green-600">₪{investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
+                <span className="text-green-600">
+                  ₪{investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+                </span>
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              ייצא לאקסל
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -585,10 +640,10 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>סכום ניוד</th>
-                  <th className={tableClasses.th}>עמלת היקף</th>
-                  <th className={tableClasses.th}>סה"כ עמלה</th>
-                  <th className={tableClasses.th}>פעולה</th>
+                  <th className={tableClasses.th}>סוג השקעה</th>
+                  <th className={tableClasses.th}>סכום השקעה</th>
+                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -597,13 +652,17 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.date}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.investment_type}</td>
+                    <td className={tableClasses.td}>{sale.investment_amount?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('investment', sale.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete('investment', sale.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
                         <Trash2 className="h-4 w-4" />
-                        מחיקה
                       </Button>
                     </td>
                   </tr>
@@ -620,20 +679,18 @@ const Reports: React.FC = () => {
             <div>
               <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                דוח מכירות פוליסות חיסכון
+                דוח מכירות פוליסות
               </CardTitle>
               <CardDescription className="mt-2">
                 <span className="font-medium">סך מכירות: </span>
                 <span className="text-indigo-600">{policySales.length}</span>
                 <span className="mx-2">|</span>
                 <span className="font-medium">סך עמלות: </span>
-                <span className="text-green-600">₪{policySales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
+                <span className="text-green-600">
+                  ₪{policySales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+                </span>
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              ייצא לאקסל
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -644,10 +701,10 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>סכום הפקדה</th>
-                  <th className={tableClasses.th}>עמלת היקף</th>
-                  <th className={tableClasses.th}>סה"כ עמלה</th>
-                  <th className={tableClasses.th}>פעולה</th>
+                  <th className={tableClasses.th}>סוג הפוליסות</th>
+                  <th className={tableClasses.th}>סכום הפוליסות</th>
+                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -656,13 +713,17 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.date}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.policy_type}</td>
+                    <td className={tableClasses.td}>{sale.policy_amount?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('policy', sale.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete('policy', sale.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
                         <Trash2 className="h-4 w-4" />
-                        מחיקה
                       </Button>
                     </td>
                   </tr>
@@ -672,24 +733,6 @@ const Reports: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex gap-4 justify-end">
-        <Button 
-          onClick={generateMonthlySummaryPDF}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          <FileText className="h-4 w-4" />
-          הורד דוח מסכם חודשי (PDF)
-        </Button>
-        <Button 
-          onClick={downloadMonthlyExcel}
-          className="flex items-center gap-2"
-          variant="outline"
-        >
-          <Download className="h-4 w-4" />
-          הורד דוח מסכם חודשי (Excel)
-        </Button>
-      </div>
     </div>
   );
 };
