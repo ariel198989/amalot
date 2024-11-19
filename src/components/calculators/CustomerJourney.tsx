@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
+import { saveAs } from 'file-saver';
 
 interface ProductSelection {
   pension: boolean;
@@ -606,7 +607,7 @@ const CustomerJourney: React.FC = () => {
           const amount = Number(data.policyAmount) || 0;
           const period = Number(data.policyPeriod) || 0;
           
-          // חישוב עמלת היקף לפי חברה
+          // חישוב עמלת היקף לפי חבר
           let scopeCommissionRate = 0;
           switch (company) {
             case 'כלל':
@@ -802,38 +803,38 @@ const CustomerJourney: React.FC = () => {
   };
 
   const handleDownloadExcel = () => {
-    if (journeys.length === 0) {
+    if (!currentJourney) {
       toast.error('אין נתונים להורדה');
       return;
     }
 
-    const worksheet = XLSXUtils.json_to_sheet(
-      journeys.map(journey => ({
-        תאריך: journey.journey_date,
-        'שם לקוח': journey.client_name,
-        טלפון: journey.client_phone || '',
-        'מוצרים שנבחרו': journey.selected_products.join(', '),
-        'עמלות פנסיה': journey.commission_details.pension.total,
-        'עמלות ביטוח': journey.commission_details.insurance.total,
-        'עמלות השקעות': journey.commission_details.investment.total,
-        'עמלות פוליסה': journey.commission_details.policy.total,
-        'סה"כ עמלות': journey.total_commission
-      }))
-    );
+    try {
+      const worksheet = XLSXUtils.json_to_sheet([{
+        תאריך: currentJourney.journey_date,
+        'שם לקוח': currentJourney.clientName,
+        טלפון: currentJourney.clientPhone || '',
+        'מוצרים שנבחרו': currentJourney.selectedProducts.join(', '),
+        'עמלות פנסיה': currentJourney.commission_details.pension.total,
+        'עמלות ביטוח': currentJourney.commission_details.insurance.total,
+        'עמלות השקעות': currentJourney.commission_details.investment.total,
+        'עמלות פוליסה': currentJourney.commission_details.policy.total,
+        'סה"כ עמלות': currentJourney.total_commission
+      }]);
 
-    const workbook = XLSXUtils.book_new();
-    XLSXUtils.book_append_sheet(workbook, worksheet, "מסעות לקוח");
-    
-    // הגדרת כיוון RTL
-    worksheet['!dir'] = 'rtl';
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "מסע לקוח");
+      
+      // הגדרת כיוון RTL
+      worksheet['!dir'] = 'rtl';
 
-    const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(data);
-    link.download = 'דוח_מסעות_לקוח.xlsx';
-    link.click();
+      const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      saveAs(data, `דוח_מסע_לקוח_${currentJourney.clientName}_${currentJourney.journey_date}.xlsx`);
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      toast.error('אירעה שגיאה ביצירת הקובץ');
+    }
   };
 
   const handleShare = () => {
