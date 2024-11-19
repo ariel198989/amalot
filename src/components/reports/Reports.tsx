@@ -429,6 +429,12 @@ const Reports: React.FC = () => {
     }
   };
 
+  // פונקציה להמרת פורמט התאריך
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return `${day}-${month}-${year}`;
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-8 text-white mb-8">
@@ -531,7 +537,7 @@ const Reports: React.FC = () => {
               <tbody>
                 {pensionSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
@@ -608,7 +614,7 @@ const Reports: React.FC = () => {
               <tbody>
                 {insuranceSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.insurance_type}</td>
@@ -669,7 +675,7 @@ const Reports: React.FC = () => {
               <tbody>
                 {investmentSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.investment_type}</td>
@@ -730,7 +736,7 @@ const Reports: React.FC = () => {
               <tbody>
                 {policySales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.policy_type}</td>

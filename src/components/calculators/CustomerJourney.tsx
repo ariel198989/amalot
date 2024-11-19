@@ -792,9 +792,12 @@ const CustomerJourney: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // פורמט התאריך לפורמט ISO (YYYY-MM-DD)
+      // פורמט התאריך בכיוון ההפוך (DD-MM-YYYY)
       const today = new Date();
-      const formattedDate = today.toISOString().split('T')[0];
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const formattedDate = `${day}-${month}-${year}`;
       const formattedDateTime = today.toISOString();
 
       // בדיקה אם הלקוח כבר קיים
