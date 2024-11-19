@@ -22,12 +22,12 @@ interface CalculatorFormProps {
   description?: string;
 }
 
-const CalculatorForm: React.FC<CalculatorFormProps> = ({ 
+const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({ 
   onSubmit, 
   fields, 
   title,
   description = "הזן את הפרטים הנדרשים לחישוב העמלות" 
-}) => {
+}, ref) => {
   const { register, handleSubmit, setValue } = useForm();
 
   const getFieldIcon = (type: string) => {
@@ -44,8 +44,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({
   };
 
   return (
-    <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300" dir="rtl">
-      <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+    <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-white rounded-lg shadow-sm">
             <Calculator className="h-6 w-6 text-blue-600" />
@@ -57,7 +57,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form ref={ref} onSubmit={handleSubmit(onSubmit)} className="space-y-6" dir="rtl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {fields.map((field) => {
               const Icon = field.icon || getFieldIcon(field.type);
@@ -72,31 +72,34 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({
                   </label>
                   <div className="relative">
                     {field.type === 'select' ? (
-                      <Select
-                        onValueChange={(value) => setValue(field.name, value)}
-                        {...register(field.name)}
-                      >
-                        <SelectTrigger className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-right">
-                          <SelectValue placeholder={`בחר ${field.label}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map((option) => (
-                            <SelectItem 
-                              key={option.value} 
-                              value={option.value}
-                              className="hover:bg-blue-50 text-right"
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div>
+                        <Select
+                          onValueChange={(value) => setValue(field.name, value)}
+                        >
+                          <SelectTrigger className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100">
+                            <SelectValue placeholder={`בחר ${field.label}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options?.map((option) => (
+                              <SelectItem 
+                                key={option.value} 
+                                value={option.value}
+                                className="text-right"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <input type="hidden" {...register(field.name)} />
+                      </div>
                     ) : (
                       <Input
                         type={field.type}
                         {...register(field.name, { required: field.required })}
-                        className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-right"
+                        className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                         placeholder={`הזן ${field.label}`}
+                        dir="rtl"
                       />
                     )}
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors">
@@ -109,7 +112,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({
           </div>
           <Button 
             type="submit" 
-            className="w-full h-12 text-lg bg-gradient-to-l from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 group"
+            className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 group"
           >
             <Calculator className="h-5 w-5 ml-2 group-hover:scale-110 transition-transform" />
             חשב עמלות
@@ -118,6 +121,8 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+CalculatorForm.displayName = "CalculatorForm";
 
 export default CalculatorForm;
