@@ -2,7 +2,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger, 
+  DialogFooter,
+  DialogDescription 
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   Users, Plus, Search, Filter, MoreVertical, Phone, Mail, Calendar,
@@ -19,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface Client {
   id: string;
@@ -42,6 +51,15 @@ interface ClientActivity {
   status: string;
 }
 
+interface NewClientData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  status: 'active' | 'inactive' | 'lead';
+  notes?: string;
+}
+
 const ClientsTable: React.FC = () => {
   const [clients, setClients] = React.useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = React.useState<Client | null>(null);
@@ -50,6 +68,14 @@ const ClientsTable: React.FC = () => {
   const [filterStatus, setFilterStatus] = React.useState('all');
   const [isAddingClient, setIsAddingClient] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [newClientData, setNewClientData] = React.useState<NewClientData>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    status: 'active',
+    notes: ''
+  });
 
   // טעינת נתוני לקוחות
   React.useEffect(() => {
@@ -145,22 +171,39 @@ const ClientsTable: React.FC = () => {
     }
   };
 
-  const handleAddClient = async (formData: any) => {
+  const handleAddClient = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      const { error } = await supabase
         .from('clients')
-        .insert([formData])
-        .select()
-        .single();
+        .insert([
+          {
+            ...newClientData,
+            user_id: user.id,
+            created_at: new Date().toISOString(),
+            last_contact: new Date().toISOString().split('T')[0]
+          }
+        ]);
 
       if (error) throw error;
-      
-      setClients(prev => [data, ...prev]);
-      toast.success('לקוח נוסף בהצלחה');
+
+      toast.success('הלקוח נוסף בהצלחה');
       setIsAddingClient(false);
+      setNewClientData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        status: 'active',
+        notes: ''
+      });
+      loadClients(); // טעינה מחדש של רשימת הלקוחות
+
     } catch (error) {
       console.error('Error adding client:', error);
-      toast.error('שגיאה בהוספת לקוח');
+      toast.error('אירעה שגיאה בהוספת הלקוח');
     }
   };
 
@@ -409,11 +452,96 @@ const ClientsTable: React.FC = () => {
 
       {/* Add Client Dialog */}
       <Dialog open={isAddingClient} onOpenChange={setIsAddingClient}>
-        <DialogContent>
+        <DialogContent className="bg-white sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>הוספת לקוח חדש</DialogTitle>
+            <DialogTitle className="text-xl font-bold">הוספת לקוח חדש</DialogTitle>
+            <DialogDescription>הזן את פרטי הלקוח החדש</DialogDescription>
           </DialogHeader>
-          {/* Add Client Form */}
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">שם פרטי</label>
+                <Input
+                  value={newClientData.first_name}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, first_name: e.target.value }))}
+                  placeholder="הכנס שם פרטי"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">שם משפחה</label>
+                <Input
+                  value={newClientData.last_name}
+                  onChange={(e) => setNewClientData(prev => ({ ...prev, last_name: e.target.value }))}
+                  placeholder="הכנס שם משפחה"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">אימייל</label>
+              <Input
+                type="email"
+                value={newClientData.email}
+                onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="הכנס כתובת אימייל"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">טלפון</label>
+              <Input
+                value={newClientData.phone}
+                onChange={(e) => setNewClientData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="הכנס מספר טלפון"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">סטטוס</label>
+              <Select
+                value={newClientData.status}
+                onValueChange={(value: 'active' | 'inactive' | 'lead') => 
+                  setNewClientData(prev => ({ ...prev, status: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר סטטוס" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">פעיל</SelectItem>
+                  <SelectItem value="inactive">לא פעיל</SelectItem>
+                  <SelectItem value="lead">ליד</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">הערות</label>
+              <textarea
+                value={newClientData.notes}
+                onChange={(e) => setNewClientData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="הכנס הערות"
+                className="w-full p-2 border rounded-md"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddingClient(false)}
+            >
+              ביטול
+            </Button>
+            <Button
+              onClick={handleAddClient}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              הוסף לקוח
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
