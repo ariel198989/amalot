@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank } from 'lucide-react';
+import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank, TrendingUp, DollarSign, CreditCard, BarChart2, Wallet, LineChart, PieChart, Percent } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import html2pdf from 'html2pdf.js';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -77,94 +77,252 @@ const Reports: React.FC = () => {
 
   const generateMonthlySummaryPDF = () => {
     try {
-      const element = document.createElement('div');
       const currentDate = new Date().toLocaleDateString('he-IL');
-      const totalPensionCommission = pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0);
-      const totalInsuranceCommission = insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0);
-      const totalInvestmentCommission = investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0);
-      const totalPolicyCommission = policySales.reduce((sum, sale) => sum + sale.total_commission, 0);
-
+      const element = document.createElement('div');
       element.innerHTML = `
-        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-            <h1 style="text-align: center; margin: 0; font-size: 28px;">דוח מסכם חודשי</h1>
-            <p style="text-align: center; margin-top: 10px;">${currentDate}</p>
+        <div dir="rtl" style="
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          font-size: 12px; /* הקטנת גודל הפונט */
+          max-width: 800px;
+          margin: 0 auto;
+        ">
+          <!-- כותרת מעוצבת -->
+          <div style="
+            text-align: center;
+            background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%);
+            padding: 40px 20px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+          ">
+            <!-- אייקונים פיננסיים ברקע -->
+            <div style="
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              opacity: 0.1;
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: space-around;
+              padding: 20px;
+            ">
+              <div style="font-size: 24px;">₪</div>
+              <div style="font-size: 24px;">$</div>
+              <div style="font-size: 24px;">€</div>
+              <div style="font-size: 24px;">📈</div>
+              <div style="font-size: 24px;">📊</div>
+              <div style="font-size: 24px;">💹</div>
+              <div style="font-size: 24px;">📉</div>
+              <div style="font-size: 24px;">🏦</div>
+            </div>
+
+            <!-- תוכן הכותרת -->
+            <div style="position: relative;">
+              <h1 style="
+                color: white;
+                font-size: 42px;
+                margin: 0;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                letter-spacing: 2px;
+                font-weight: bold;
+              ">דוח מסכם חודשי</h1>
+              <p style="
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 20px;
+                margin: 15px 0 0 0;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+              ">${currentDate}</p>
+              
+              <!-- קו מפריד דקורטיבי -->
+              <div style="
+                width: 100px;
+                height: 4px;
+                background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+                margin: 20px auto;
+                border-radius: 2px;
+              "></div>
+            </div>
           </div>
 
-          <div style="background: #f0f9ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <h2 style="color: #0369a1; border-bottom: 2px solid #38bdf8; padding-bottom: 10px;">סיכום מכירות פנסיה</h2>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-              <tr style="background: #e0f2fe;">
-                <th style="padding: 12px; text-align: right; border: 1px solid #bae6fd;">חברה</th>
-                <th style="padding: 12px; text-align: right; border: 1px solid #bae6fd;">מספר מכירות</th>
-                <th style="padding: 12px; text-align: right; border: 1px solid #bae6fd;">סה"כ עמלות</th>
-              </tr>
-              ${Object.entries(
-                pensionSales.reduce((acc, sale) => {
-                  acc[sale.company] = acc[sale.company] || { count: 0, total: 0 };
-                  acc[sale.company].count++;
-                  acc[sale.company].total += sale.total_commission;
-                  return acc;
-                }, {} as Record<string, { count: number; total: number }>)
-              ).map(([company, data]) => `
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #bae6fd;">${company}</td>
-                  <td style="padding: 12px; border: 1px solid #bae6fd;">${data.count}</td>
-                  <td style="padding: 12px; border: 1px solid #bae6fd;">₪${data.total.toLocaleString()}</td>
+          <!-- תוכן הדוח -->
+          <div style="
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+          ">
+            <!-- כותרת משנית -->
+            <div style="
+              display: flex;
+              align-items: center;
+              margin-bottom: 30px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #e2e8f0;
+            ">
+              <div style="
+                width: 40px;
+                height: 40px;
+                background: #2563eb;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-left: 15px;
+              ">
+                <span style="color: white; font-size: 20px;">📊</span>
+              </div>
+              <div>
+                <h2 style="
+                  color: #1e40af;
+                  margin: 0;
+                  font-size: 24px;
+                  font-weight: bold;
+                ">סיכום מכירות ועמלות</h2>
+                <p style="
+                  color: #64748b;
+                  margin: 5px 0 0 0;
+                  font-size: 14px;
+                ">פירוט מלא לפי סוגי מוצרים וחברות</p>
+              </div>
+            </div>
+
+            <!-- טבלת נתונים -->
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 30px;">
+              <thead>
+                <tr style="background: #f8fafc;">
+                  <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e2e8f0;">מוצר</th>
+                  <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e2e8f0;">מספר מכירות</th>
+                  <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e2e8f0;">סה"כ עמלות</th>
+                  <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e2e8f0;">אחוז מסה"כ</th>
                 </tr>
-              `).join('')}
-              <tr style="background: #e0f2fe; font-weight: bold;">
-                <td style="padding: 12px; border: 1px solid #bae6fd;">סה"כ</td>
-                <td style="padding: 12px; border: 1px solid #bae6fd;">${pensionSales.length}</td>
-                <td style="padding: 12px; border: 1px solid #bae6fd;">₪${totalPensionCommission.toLocaleString()}</td>
-              </tr>
+              </thead>
+              <tbody>
+                ${[
+                  { name: 'פנסיה', sales: pensionSales, color: '#0369a1' },
+                  { name: 'ביטוח', sales: insuranceSales, color: '#9333ea' },
+                  { name: 'גמל והשתלמות', sales: investmentSales, color: '#059669' },
+                  { name: 'פוליסות חיסכון', sales: policySales, color: '#0284c7' }
+                ].map(product => {
+                  const total = product.sales.reduce((sum, sale) => sum + sale.total_commission, 0);
+                  const grandTotal = pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                                   insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                                   investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                                   policySales.reduce((sum, sale) => sum + sale.total_commission, 0);
+                  const percentage = (total / grandTotal * 100).toFixed(1);
+                  
+                  return `
+                    <tr>
+                      <td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center;">
+                          <div style="width: 12px; height: 12px; border-radius: 50%; background: ${product.color}; margin-left: 8px;"></div>
+                          ${product.name}
+                        </div>
+                      </td>
+                      <td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">${product.sales.length}</td>
+                      <td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">₪${total.toLocaleString()}</td>
+                      <td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                        <div style="
+                          width: 200px;
+                          height: 24px;
+                          background: #f1f5f9;
+                          border-radius: 12px;
+                          overflow: hidden;
+                          position: relative;
+                        ">
+                          <div style="
+                            width: ${percentage}%;
+                            height: 100%;
+                            background: ${product.color};
+                            opacity: 0.2;
+                          "></div>
+                          <div style="
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            font-weight: bold;
+                            white-space: nowrap;
+                          ">${percentage}%</div>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
             </table>
+
+            <!-- סיכום -->
+            <div style="
+              background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+              color: white;
+              padding: 20px;
+              border-radius: 10px;
+              margin-top: 30px;
+            ">
+              <h2 style="margin: 0 0 15px 0; font-size: 24px;">סיכום כללי</h2>
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+              ">
+                <div>
+                  <p style="margin: 0; font-size: 18px;">סך כל המכירות: ${
+                    pensionSales.length + insuranceSales.length + 
+                    investmentSales.length + policySales.length
+                  }</p>
+                  <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold;">
+                    סה"כ עמלות: ₪${(
+                      pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                      insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                      investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
+                      policySales.reduce((sum, sale) => sum + sale.total_commission, 0)
+                    ).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Similar sections for insurance, investments, and policies -->
-
-          <div style="background: #047857; color: white; padding: 20px; border-radius: 10px; margin-top: 30px;">
-            <h2 style="margin: 0 0 15px 0; border-bottom: 2px solid white; padding-bottom: 10px;">סיכום כללי</h2>
-            <table style="width: 100%; color: white;">
-              <tr>
-                <td style="padding: 8px;">סה"כ עמלות פנסיה:</td>
-                <td style="padding: 8px; text-align: left;">₪${totalPensionCommission.toLocaleString()}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px;">סה"כ עמלות ביטוח:</td>
-                <td style="padding: 8px; text-align: left;">₪${totalInsuranceCommission.toLocaleString()}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px;">סה"כ עמלות השקעות:</td>
-                <td style="padding: 8px; text-align: left;">₪${totalInvestmentCommission.toLocaleString()}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px;">סה"כ עמלות פוליסות:</td>
-                <td style="padding: 8px; text-align: left;">₪${totalPolicyCommission.toLocaleString()}</td>
-              </tr>
-              <tr style="font-size: 1.2em; font-weight: bold;">
-                <td style="padding: 8px;">סה"כ עמלות:</td>
-                <td style="padding: 8px; text-align: left;">₪${(
-                  totalPensionCommission +
-                  totalInsuranceCommission +
-                  totalInvestmentCommission +
-                  totalPolicyCommission
-                ).toLocaleString()}</td>
-              </tr>
-            </table>
+          <!-- חתימה -->
+          <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 12px;">
+            <p style="margin: 0;">הופק באמצעות מערכת ניהול העמלות</p>
+            <p style="margin: 5px 0 0 0;">${new Date().toLocaleDateString('he-IL')}</p>
           </div>
         </div>
       `;
 
       const opt = {
-        margin: 10,
+        margin: [5, 5, 5, 5], // הקטנת שוליים
         filename: `דוח_מסכם_חודשי_${currentDate}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true,
+          hotfixes: ["px_scaling"]
+        },
+        pagebreak: { mode: 'avoid-all' } // מניעת שבירת עמודים אוטומטית
       };
 
-      html2pdf().from(element).set(opt).save();
+      html2pdf()
+        .from(element)
+        .set(opt)
+        .save();
+
+      toast.success('הדוח נוצר בהצלחה!');
     } catch (error) {
       console.error('Error generating monthly summary PDF:', error);
       toast.error('אירעה שגיאה ביצירת הדוח');
@@ -175,7 +333,7 @@ const Reports: React.FC = () => {
     try {
       const summaryData = [
         {
-          'סוג מו��ר': 'פנסיה',
+          'סוג מוצר': 'פנסיה',
           'מספר מכירות': pensionSales.length,
           'סה"כ עמלות': pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0)
         },
@@ -198,7 +356,7 @@ const Reports: React.FC = () => {
 
       const worksheet = XLSXUtils.json_to_sheet(summaryData);
       const workbook = XLSXUtils.book_new();
-      XLSXUtils.book_append_sheet(workbook, worksheet, "סיכום חודשי");
+      XLSXUtils.book_append_sheet(workbook, worksheet, "סיכום חודי");
       
       const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
       const currentDate = new Date().toLocaleDateString('he-IL');
@@ -227,7 +385,7 @@ const Reports: React.FC = () => {
             <div>
               <CardTitle className="text-xl text-blue-900 flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                דוח מכירות פנסיה
+                דוח מכירות פנסי
               </CardTitle>
               <CardDescription className="mt-2">
                 <span className="font-medium">סך מכירות: </span>
@@ -353,7 +511,7 @@ const Reports: React.FC = () => {
             <div>
               <CardTitle className="text-xl text-green-900 flex items-center gap-2">
                 <PiggyBank className="h-5 w-5" />
-                דוח מכירות גמל והשתלמ��ת
+                דוח מכירות גמל והשתלמת
               </CardTitle>
               <CardDescription className="mt-2">
                 <span className="font-medium">סך מכירות: </span>
