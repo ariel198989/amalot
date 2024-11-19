@@ -208,7 +208,7 @@ const CustomerJourney: React.FC = () => {
   const calculateInsuranceCommissions = async (data: any, company: string) => {
     try {
       if (!defaultRates.insurance[company]) {
-        throw new Error(`לא נמצאו נתוני עמלות עבור חברת ${company}`);
+        throw new Error(`א נמצאו נתוני עמלות עבור חברת ${company}`);
       }
 
       const rates = defaultRates.insurance[company];
@@ -733,7 +733,7 @@ const CustomerJourney: React.FC = () => {
         טלפון: currentJourney.clientPhone || '',
         'מוצרים שנבחרו': currentJourney.selectedProducts.join(', '),
         'עמלות פנסיה': currentJourney.commission_details.pension.total,
-        'עמלות ביטוח': currentJourney.commission_details.insurance.total,
+        'עלות ביטוח': currentJourney.commission_details.insurance.total,
         'עמלות השקעות': currentJourney.commission_details.investment.total,
         'עמלות פוליסה': currentJourney.commission_details.policy.total,
         'סה"כ עמלות': currentJourney.total_commission
@@ -784,6 +784,72 @@ const CustomerJourney: React.FC = () => {
     
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // פורמט התאריך לפורמט ISO (YYYY-MM-DD)
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0];
+      const formattedDateTime = today.toISOString();
+
+      // בדיקה אם הלקוח כבר קיים
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('first_name', formData.firstName)
+        .eq('last_name', formData.lastName)
+        .single();
+
+      // אם הלקוח לא קיים, נוסיף אותו
+      if (!existingClient) {
+        const clientData = {
+          user_id: user.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          status: 'active',
+          created_at: formattedDateTime,
+          last_contact: formattedDate
+        };
+
+        const { error: clientError } = await supabase
+          .from('clients')
+          .insert([clientData]);
+
+        if (clientError) throw clientError;
+      }
+
+      // הוספת המכירה לטבלה המתאימה
+      const saleData = {
+        user_id: user.id,
+        client_name: `${formData.firstName} ${formData.lastName}`,
+        client_phone: formData.phone,
+        company: formData.company,
+        date: formattedDate,
+        created_at: formattedDateTime,
+        // ... שאר השדות
+      };
+
+      const { data, error } = await supabase
+        .from('pension_sales')
+        .insert([saleData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('הנתונים נשמרו בהצלחה');
+
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('אירעה שגיאה בשמירת הנתונים');
+    }
   };
 
   return (

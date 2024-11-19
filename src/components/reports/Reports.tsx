@@ -375,32 +375,52 @@ const Reports: React.FC = () => {
 
   const handleDelete = async (type: string, id: string) => {
     try {
+      if (!window.confirm('האם אתה בטוח שברצונך למחוק דוח זה?')) {
+        return;
+      }
+
       let tableName = '';
       switch (type) {
         case 'pension':
           tableName = 'pension_sales';
-          setPensionSales(prev => prev.filter(sale => sale.id !== id));
           break;
         case 'insurance':
           tableName = 'insurance_sales';
-          setInsuranceSales(prev => prev.filter(sale => sale.id !== id));
           break;
         case 'investment':
           tableName = 'investment_sales';
-          setInvestmentSales(prev => prev.filter(sale => sale.id !== id));
           break;
         case 'policy':
           tableName = 'policy_sales';
-          setPolicySales(prev => prev.filter(sale => sale.id !== id));
           break;
       }
 
+      // קודם נמחק מהדאטהבייס
       const { error } = await supabase
         .from(tableName)
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
+      // רק אם המחיקה הצליחה, נעדכן את ה-state
+      switch (type) {
+        case 'pension':
+          setPensionSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'insurance':
+          setInsuranceSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'investment':
+          setInvestmentSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'policy':
+          setPolicySales(prev => prev.filter(sale => sale.id !== id));
+          break;
+      }
+
       toast.success('הדוח נמחק בהצלחה');
 
     } catch (error: any) {
