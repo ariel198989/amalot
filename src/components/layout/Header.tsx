@@ -9,7 +9,8 @@ import {
   User,
   Menu,
   LogOut,
-  FileText
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
@@ -38,10 +39,10 @@ const navItems = [
     description: 'דוחות מכירות ועמלות'
   },
   { 
-    title: 'לקוחות', 
-    path: '/clients', 
-    icon: Users,
-    description: 'ניהול ומעקב אחר לקוחות'
+    title: 'הסכמי סוכן', 
+    path: '/agreements', 
+    icon: ClipboardList,
+    description: 'ניהול הסכמי עמלות מול חברות'
   },
   { 
     title: 'מסע לקוח', 

@@ -7,6 +7,8 @@ import LoginForm from './components/auth/LoginForm';
 import CustomerJourney from './components/calculators/CustomerJourney';
 import { Toaster } from 'react-hot-toast';
 import Reports from './components/reports/Reports';
+import AgentAgreements from './components/settings/AgentAgreements';
+import Settings from './components/settings/Settings';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -33,7 +35,9 @@ const App: React.FC = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/calculators" element={<CalculatorSelector />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/agreements" element={<AgentAgreements />} />
               <Route path="/journey" element={<CustomerJourney />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Header>
