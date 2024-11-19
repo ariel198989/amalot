@@ -8,7 +8,8 @@ import {
   Bell, 
   User,
   Menu,
-  LogOut
+  LogOut,
+  FileText
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +30,12 @@ const navItems = [
     path: '/calculators', 
     icon: Calculator,
     description: 'חישוב עמלות לפי סוגי מוצרים'
+  },
+  { 
+    title: 'דוחות', 
+    path: '/reports', 
+    icon: FileText,
+    description: 'דוחות מכירות ועמלות'
   },
   { 
     title: 'לקוחות', 
