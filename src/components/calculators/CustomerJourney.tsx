@@ -113,16 +113,27 @@ const CustomerJourney: React.FC = () => {
   const calculatePensionCommissions = async (data: any, company: string) => {
     try {
       // קבלת הסכם הסוכן הספציפי
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
       const { data: agreementData, error } = await supabase
         .from('agent_agreements')
         .select('agreement_details')
+        .eq('user_id', user.id)
         .eq('company', company)
         .eq('product_type', 'pension')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching agreement:', error);
+        // אם אין הסכם, נשתמש בערכי ברירת מחדל
+        return {
+          scopeCommission: Number(data.pensionSalary) * 12 * 0.06 * (Number(data.pensionProvision) / 100),
+          accumulationCommission: (Number(data.pensionAccumulation) / 1000000) * 2500,
+          totalCommission: 0 // יחושב בהמשך
+        };
+      }
 
-      // שימוש בערכי ברירת מחדל אם אין הסכם
       const agreement = agreementData?.agreement_details?.pension || {
         scopeRate: 0.06,
         accumulationRate: 2500
@@ -134,15 +145,16 @@ const CustomerJourney: React.FC = () => {
 
       const scopeCommission = salary * 12 * agreement.scopeRate * provision;
       const accumulationCommission = (accumulation / 1000000) * agreement.accumulationRate;
+      const totalCommission = scopeCommission + accumulationCommission;
 
       return {
         scopeCommission,
         accumulationCommission,
-        totalCommission: scopeCommission + accumulationCommission
+        totalCommission
       };
     } catch (error) {
       console.error('Error calculating pension commissions:', error);
-      // החזרת ערכי ברירת מחדל במקרה של שגיאה
+      // במקרה של שגיאה, נחזיר ערכי ברירת מחדל
       return {
         scopeCommission: 0,
         accumulationCommission: 0,
@@ -154,16 +166,27 @@ const CustomerJourney: React.FC = () => {
   // פונקציה לחישוב עמלות ביטוח
   const calculateInsuranceCommissions = async (data: any, company: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
       const { data: agreementData, error } = await supabase
         .from('agent_agreements')
         .select('agreement_details')
+        .eq('user_id', user.id)
         .eq('company', company)
         .eq('product_type', 'insurance')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching agreement:', error);
+        // ערכי ברירת מחדל אם אין הסכם
+        return {
+          oneTimeCommission: Number(data.insurancePremium) * 12 * 0.65,
+          monthlyCommission: Number(data.insurancePremium) * 0.2,
+          totalCommission: (Number(data.insurancePremium) * 12 * 0.65) + (Number(data.insurancePremium) * 0.2 * 12)
+        };
+      }
 
-      // שימוש בערכי ברירת מחדל אם אין הסכם
       const agreement = agreementData?.agreement_details?.insurance || {
         oneTimeRate: 65,
         monthlyRate: {
@@ -176,16 +199,17 @@ const CustomerJourney: React.FC = () => {
         }
       };
 
-      const monthlyPremium = Number(data.insurancePremium);
-      const insuranceType = data.insuranceType;
+      const monthlyPremium = Number(data.insurancePremium) || 0;
+      const insuranceType = data.insuranceType || 'risk';
 
       const oneTimeCommission = monthlyPremium * 12 * (agreement.oneTimeRate / 100);
       const monthlyCommission = monthlyPremium * (agreement.monthlyRate[insuranceType] / 100);
+      const totalCommission = oneTimeCommission + (monthlyCommission * 12);
 
       return {
         oneTimeCommission,
         monthlyCommission,
-        totalCommission: oneTimeCommission + (monthlyCommission * 12)
+        totalCommission
       };
     } catch (error) {
       console.error('Error calculating insurance commissions:', error);
