@@ -651,7 +651,7 @@ const CustomerJourney: React.FC = () => {
                   <div style="margin-left: 20px;">
                     <h3>${company}</h3>
                     <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ ��חברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
               <p><strong>סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</strong></p>
@@ -1100,12 +1100,12 @@ const CustomerJourney: React.FC = () => {
                 <tbody>
                   {investmentSales.map((sale, index) => (
                     <tr key={index}>
-                      <td>{sale.date}</td>
-                      <td>{sale.clientName}</td>
-                      <td>{sale.company}</td>
-                      <td>{sale.amount.toLocaleString()} ₪</td>
-                      <td>{sale.scopeCommission.toLocaleString()} ₪</td>
-                      <td>{sale.totalCommission.toLocaleString()} ₪</td>
+                      <td>{sale?.date || '-'}</td>
+                      <td>{sale?.clientName || '-'}</td>
+                      <td>{sale?.company || '-'}</td>
+                      <td>{sale?.amount ? `₪${sale.amount.toLocaleString()}` : '-'}</td>
+                      <td>{sale?.scopeCommission ? `₪${sale.scopeCommission.toLocaleString()}` : '-'}</td>
+                      <td>{sale?.totalCommission ? `₪${sale.totalCommission.toLocaleString()}` : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1136,12 +1136,12 @@ const CustomerJourney: React.FC = () => {
                 <tbody>
                   {policySales.map((sale, index) => (
                     <tr key={index}>
-                      <td>{sale.date}</td>
-                      <td>{sale.clientName}</td>
-                      <td>{sale.company}</td>
-                      <td>{sale.amount.toLocaleString()} ₪</td>
-                      <td>{sale.scopeCommission.toLocaleString()} ₪</td>
-                      <td>{sale.totalCommission.toLocaleString()} ₪</td>
+                      <td>{sale?.date || '-'}</td>
+                      <td>{sale?.clientName || '-'}</td>
+                      <td>{sale?.company || '-'}</td>
+                      <td>{sale?.amount ? `₪${sale.amount.toLocaleString()}` : '-'}</td>
+                      <td>{sale?.scopeCommission ? `₪${sale.scopeCommission.toLocaleString()}` : '-'}</td>
+                      <td>{sale?.totalCommission ? `₪${sale.totalCommission.toLocaleString()}` : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
