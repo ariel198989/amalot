@@ -4,18 +4,19 @@ import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PensionClient } from '../../types/calculators';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const PensionCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<PensionClient[]>([]);
 
-  // נתוני עמלות לפי חברה
+  // עדכון נתוני העמלות לפי חברה - ערכים מציאותיים יותר
   const companyRates = {
-    'clal': { scope: 0.09, accumulation: 3000 },
-    'harel': { scope: 0.06, accumulation: 0 },
-    'migdal': { scope: 0.07, accumulation: 2500 },
-    'phoenix': { scope: 0.06, accumulation: 0 },
-    'meitav': { scope: 0.03, accumulation: 2500 },
-    'more': { scope: 0.06, accumulation: 1760 }
+    'clal': { scope: 0.0025, accumulation: 0.0015 },    // 0.25% מהיקף, 0.15% מצבירה
+    'harel': { scope: 0.0023, accumulation: 0.0014 },   // 0.23% מהיקף, 0.14% מצבירה
+    'migdal': { scope: 0.0024, accumulation: 0.0015 },  // 0.24% מהיקף, 0.15% מצבירה
+    'phoenix': { scope: 0.0022, accumulation: 0.0013 }, // 0.22% מהיקף, 0.13% מצבירה
+    'meitav': { scope: 0.0021, accumulation: 0.0012 },  // 0.21% מהיקף, 0.12% מצבירה
+    'more': { scope: 0.0020, accumulation: 0.0011 }     // 0.20% מהיקף, 0.11% מצבירה
   };
 
   const fields = [
@@ -62,9 +63,9 @@ const PensionCalculator: React.FC = () => {
     const provision = Number(data.provision) / 100;
     const rates = companyRates[data.company];
 
-    // חישוב העמלות
-    const scopeCommission = salary * 12 * rates.scope * provision;
-    const accumulationCommission = (accumulation / 1000000) * rates.accumulation;
+    // חישוב העמלות עם הערכים החדשים
+    const scopeCommission = salary * 12 * rates.scope * provision;  // עמלת היקף שנתית
+    const accumulationCommission = accumulation * rates.accumulation;  // עמלת צבירה שנתית
     const totalCommission = scopeCommission + accumulationCommission;
     
     const newClient: PensionClient = {
@@ -74,9 +75,9 @@ const PensionCalculator: React.FC = () => {
       salary: salary,
       accumulation: accumulation,
       provision: Number(data.provision),
-      scopeCommission: scopeCommission,
-      accumulationCommission: accumulationCommission,
-      totalCommission: totalCommission
+      scopeCommission: Math.round(scopeCommission * 100) / 100,
+      accumulationCommission: Math.round(accumulationCommission * 100) / 100,
+      totalCommission: Math.round(totalCommission * 100) / 100
     };
 
     setClients([...clients, newClient]);
@@ -141,6 +142,28 @@ const PensionCalculator: React.FC = () => {
     setClients([]);
   };
 
+  const handleDeleteRow = async (index: number, rowData: any) => {
+    try {
+      // מחיקה מהדאטהבייס
+      const { error } = await supabase
+        .from('pension_sales')
+        .delete()
+        .eq('date', rowData.date)
+        .eq('client_name', rowData.name)
+        .eq('company', rowData.company);
+
+      if (error) throw error;
+
+      // מחיקה מהסטייט המקומי
+      setClients(prevClients => prevClients.filter((_, i) => i !== index));
+      toast.success('הדוח נמחק בהצלחה');
+
+    } catch (error: any) {
+      console.error('Error deleting row:', error);
+      toast.error('אירעה שגיאה במחיקת הדוח');
+    }
+  };
+
   return (
     <div>
       <CalculatorForm
@@ -154,6 +177,7 @@ const PensionCalculator: React.FC = () => {
         onDownload={handleDownload}
         onShare={handleShare}
         onClear={handleClear}
+        onDeleteRow={handleDeleteRow}
       />
     </div>
   );

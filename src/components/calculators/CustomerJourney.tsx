@@ -129,16 +129,36 @@ const CustomerJourney: React.FC = () => {
   // ערכי ברירת מחדל לכל סוגי המוצרים
   const defaultRates = {
     pension: {
-      'מגדל': { scopeRate: 0.07, accumulationRate: 2500 },
-      'הראל': { scopeRate: 0.06, accumulationRate: 0 },
-      'כלל': { scopeRate: 0.09, accumulationRate: 3000 },
-      'הפניקס': { scopeRate: 0.06, accumulationRate: 0 },
-      'מנורה': { scopeRate: 0.03, accumulationRate: 2500 },
-      'מור': { scopeRate: 0.06, accumulationRate: 1760 }
+      'מגדל': { scopeRate: 0.0025, accumulationRate: 0.0015 },  // 0.25% מהיקף, 0.15% מצבירה
+      'הראל': { scopeRate: 0.0023, accumulationRate: 0.0014 },  // 0.23% מהיקף, 0.14% מצבירה
+      'כלל': { scopeRate: 0.0024, accumulationRate: 0.0015 },   // 0.24% מהיקף, 0.15% מצבירה
+      'הפניקס': { scopeRate: 0.0022, accumulationRate: 0.0013 }, // 0.22% מהיקף, 0.13% מצבירה
+      'מנורה': { scopeRate: 0.0021, accumulationRate: 0.0012 },  // 0.21% מהיקף, 0.12% מצבירה
+      'מור': { scopeRate: 0.0020, accumulationRate: 0.0011 }     // 0.20% מהיקף, 0.11% מצבירה
     },
     insurance: {
-      'איילון': { oneTimeRate: 67, monthlyRates: { risk: 20, mortgage_risk: 14, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
-      'הראל': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
+      'איילון': { 
+        oneTimeRate: 0.35,  // 35% עמלת היקף חד פעמית
+        monthlyRates: { 
+          risk: 0.15,       // 15% עמלת נפרעים חודשית
+          mortgage_risk: 0.12, 
+          health: 0.20, 
+          critical_illness: 0.18, 
+          service_letter: 0.10, 
+          disability: 0.15 
+        } 
+      },
+      'הראל': { 
+        oneTimeRate: 0.33, 
+        monthlyRates: { 
+          risk: 0.14, 
+          mortgage_risk: 0.11, 
+          health: 0.19, 
+          critical_illness: 0.17, 
+          service_letter: 0.09, 
+          disability: 0.14 
+        } 
+      },
       'מגדל': { oneTimeRate: 67, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
       'הפניקס': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
       'מנורה': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
@@ -146,20 +166,20 @@ const CustomerJourney: React.FC = () => {
       'הכשרה': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } }
     },
     investment: {
-      'הראל': { scopeRate: 0.006 },
-      'מגדל': { scopeRate: 0.007 },
-      'כלל': { scopeRate: 0.007 },
-      'הפניקס': { scopeRate: 0.0065 },
-      'מור': { scopeRate: 0.004 },
-      'ילין לפידות': { scopeRate: 0.004 }
+      'הראל': { scopeRate: 0.0015 },    // 0.15% מהצבירה
+      'מגדל': { scopeRate: 0.0016 },    // 0.16% מהצבירה
+      'כלל': { scopeRate: 0.0015 },     // 0.15% מהצבירה
+      'הפניקס': { scopeRate: 0.0014 },  // 0.14% מהצבירה
+      'מור': { scopeRate: 0.0013 },     // 0.13% מהצבירה
+      'ילין לפידות': { scopeRate: 0.0012 } // 0.12% מהצבירה
     },
     policy: {
-      'הראל': { shortTermRate: 0.006, longTermRate: 0.007 },
-      'מגדל': { shortTermRate: 0.006, longTermRate: 0.007 },
-      'כלל': { shortTermRate: 0.006, longTermRate: 0.007 },
-      'הפניקס': { shortTermRate: 0.006, longTermRate: 0.007 },
-      'מנורה': { shortTermRate: 0.006, longTermRate: 0.007 },
-      'איילון': { shortTermRate: 0.006, longTermRate: 0.007 }
+      'הראל': { shortTermRate: 0.0018, longTermRate: 0.0022 },    // 0.18% לטווח קצר, 0.22% לטווח ארוך
+      'מגדל': { shortTermRate: 0.0019, longTermRate: 0.0023 },
+      'כלל': { shortTermRate: 0.0018, longTermRate: 0.0022 },
+      'הפניקס': { shortTermRate: 0.0017, longTermRate: 0.0021 },
+      'מנורה': { shortTermRate: 0.0016, longTermRate: 0.0020 },
+      'איילון': { shortTermRate: 0.0015, longTermRate: 0.0019 }
     }
   };
 
@@ -278,90 +298,32 @@ const CustomerJourney: React.FC = () => {
       const element = document.createElement('div');
       element.innerHTML = `
         <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-            <h1 style="text-align: center; margin: 0; font-size: 28px;">דוח מסע לקוח</h1>
-          </div>
-          
-          <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #1e3a8a; margin-bottom: 15px;">פרטי לקוח</h2>
-            <p>תאריך: ${data.date}</p>
-            <p>שם לקוח: ${data.clientName}</p>
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #1e3a8a; font-size: 28px; margin: 0;">דוח מסע לקוח</h1>
+            <p style="color: #64748b; margin: 10px 0;">תאריך: ${data.date}</p>
+            <p style="color: #64748b; margin: 10px 0;">שם לקוח: ${data.clientName}</p>
           </div>
 
-          ${data.pensionDetails?.length > 0 ? `
-            <div style="background: #f0f9ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bae6fd;">
-              <h2 style="color: #0369a1; margin-bottom: 15px;">פנסיה</h2>
-              ${data.pensionDetails.map(detail => `
-                <div style="margin-bottom: 15px; padding-right: 20px;">
-                  <h3 style="color: #0284c7;">${detail.company}</h3>
-                  <p>עמלת היקף: ${detail.scopeCommission?.toLocaleString() || 0} ₪</p>
-                  <p>עמלת צבירה: ${detail.accumulationCommission?.toLocaleString() || 0} ₪</p>
-                  <p>סה"כ: ${detail.totalCommission?.toLocaleString() || 0} ₪</p>
-                </div>
-              `).join('')}
-              <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות פנסיה: ${
-                data.pensionDetails.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0).toLocaleString()
-              } ₪</p>
+          <div style="background: #1e40af; color: white; padding: 20px; border-radius: 10px; margin-top: 30px;">
+            <h2 style="margin: 0 0 15px 0; font-size: 20px;">סיכום עמלות</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+              <div>
+                <p style="color: #93c5fd; margin: 0 0 5px 0;">סה"כ עמלות חד פעמיות</p>
+                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${
+                  (data.pensionDetails?.reduce((sum, detail) => sum + detail.scopeCommission, 0) || 0) +
+                  (data.insuranceDetails?.reduce((sum, detail) => sum + detail.oneTimeCommission, 0) || 0)
+                }.toLocaleString()} ₪</p>
+              </div>
+              <div>
+                <p style="color: #93c5fd; margin: 0 0 5px 0;">סה"כ עמלות שוטפות (שנתי)</p>
+                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${
+                  (data.pensionDetails?.reduce((sum, detail) => sum + detail.accumulationCommission, 0) || 0) +
+                  (data.insuranceDetails?.reduce((sum, detail) => sum + (detail.monthlyCommission * 12), 0) || 0) +
+                  (data.investmentDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0) +
+                  (data.policyDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0)
+                }.toLocaleString()} ₪</p>
+              </div>
             </div>
-          ` : ''}
-
-          ${data.insuranceDetails?.length > 0 ? `
-            <div style="background: #fdf2f8; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #fbcfe8;">
-              <h2 style="color: #9d174d; margin-bottom: 15px;">ביטוח</h2>
-              ${data.insuranceDetails.map(detail => `
-                <div style="margin-bottom: 15px; padding-right: 20px;">
-                  <h3 style="color: #be185d;">${detail.company}</h3>
-                  <p>עמלה חד פעמית: ${detail.oneTimeCommission?.toLocaleString() || 0} ₪</p>
-                  <p>עמלה חודשית: ${detail.monthlyCommission?.toLocaleString() || 0} ₪</p>
-                  <p>סה"כ: ${detail.totalCommission?.toLocaleString() || 0} ₪</p>
-                </div>
-              `).join('')}
-              <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות ביטוח: ${
-                data.insuranceDetails.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0).toLocaleString()
-              } ₪</p>
-            </div>
-          ` : ''}
-
-          ${data.investmentDetails?.length > 0 ? `
-            <div style="background: #f0fdf4; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bbf7d0;">
-              <h2 style="color: #166534; margin-bottom: 15px;">השקעות</h2>
-              ${data.investmentDetails.map(detail => `
-                <div style="margin-bottom: 15px; padding-right: 20px;">
-                  <h3 style="color: #15803d;">${detail.company}</h3>
-                  <p>סכום: ${detail.amount?.toLocaleString() || 0} ₪</p>
-                  <p>עמלה: ${detail.commission?.toLocaleString() || 0} ₪</p>
-                </div>
-              `).join('')}
-              <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות השקעות: ${
-                data.investmentDetails.reduce((sum, detail) => sum + (detail.commission || 0), 0).toLocaleString()
-              } ₪</p>
-            </div>
-          ` : ''}
-
-          ${data.policyDetails?.length > 0 ? `
-            <div style="background: #eff6ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
-              <h2 style="color: #1e40af; margin-bottom: 15px;">פוליסות חיסכון</h2>
-              ${data.policyDetails.map(detail => `
-                <div style="margin-bottom: 15px; padding-right: 20px;">
-                  <h3 style="color: #1e3a8a;">${detail.company}</h3>
-                  <p>סכום: ${detail.amount?.toLocaleString() || 0} ₪</p>
-                  <p>עמלה: ${detail.commission?.toLocaleString() || 0} ₪</p>
-                </div>
-              `).join('')}
-              <p style="font-weight: bold; margin-top: 15px;">סה"כ עמלות פוליסות: ${
-                data.policyDetails.reduce((sum, detail) => sum + (detail.commission || 0), 0).toLocaleString()
-              } ₪</p>
-            </div>
-          ` : ''}
-
-          <div style="background: #047857; color: white; padding: 20px; border-radius: 10px; margin-top: 30px;">
-            <h2 style="margin: 0 0 15px 0;">סיכום עמלות</h2>
-            <p style="font-size: 1.2em; font-weight: bold;">סה"כ עמלות: ${(
-              (data.pensionDetails?.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0) || 0) +
-              (data.insuranceDetails?.reduce((sum, detail) => sum + (detail.totalCommission || 0), 0) || 0) +
-              (data.investmentDetails?.reduce((sum, detail) => sum + (detail.commission || 0), 0) || 0) +
-              (data.policyDetails?.reduce((sum, detail) => sum + (detail.commission || 0), 0) || 0)
-            ).toLocaleString()} ₪</p>
           </div>
         </div>
       `;
@@ -786,7 +748,7 @@ const CustomerJourney: React.FC = () => {
       const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
       const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
-      saveAs(data, `דוח_מסע_לקוח_${currentJourney.clientName}_${currentJourney.journey_date}.xlsx`);
+      saveAs(data, `דח_מסע_לקוח_${currentJourney.clientName}_${currentJourney.journey_date}.xlsx`);
     } catch (error) {
       console.error('Error generating Excel:', error);
       toast.error('אירעה שגיאה ביצירת הקובץ');

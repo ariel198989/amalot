@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank, TrendingUp, DollarSign, CreditCard, BarChart2, Wallet, LineChart, PieChart, Percent } from 'lucide-react';
+import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank, TrendingUp, DollarSign, CreditCard, BarChart2, Wallet, LineChart, PieChart, Percent, Trash2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import html2pdf from 'html2pdf.js';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
@@ -206,7 +206,7 @@ const Reports: React.FC = () => {
                   { name: 'פנסיה', sales: pensionSales, color: '#0369a1' },
                   { name: 'ביטוח', sales: insuranceSales, color: '#9333ea' },
                   { name: 'גמל והשתלמות', sales: investmentSales, color: '#059669' },
-                  { name: 'פוליסות חיסכון', sales: policySales, color: '#0284c7' }
+                  { name: 'פוליסות ��יסכון', sales: policySales, color: '#0284c7' }
                 ].map(product => {
                   const total = product.sales.reduce((sum, sale) => sum + sale.total_commission, 0);
                   const grandTotal = pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0) +
@@ -372,6 +372,42 @@ const Reports: React.FC = () => {
     }
   };
 
+  const handleDelete = async (type: string, id: string) => {
+    try {
+      let tableName = '';
+      switch (type) {
+        case 'pension':
+          tableName = 'pension_sales';
+          setPensionSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'insurance':
+          tableName = 'insurance_sales';
+          setInsuranceSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'investment':
+          tableName = 'investment_sales';
+          setInvestmentSales(prev => prev.filter(sale => sale.id !== id));
+          break;
+        case 'policy':
+          tableName = 'policy_sales';
+          setPolicySales(prev => prev.filter(sale => sale.id !== id));
+          break;
+      }
+
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('הדוח נמחק בהצלחה');
+
+    } catch (error: any) {
+      console.error('Error deleting report:', error);
+      toast.error('אירעה שגיאה במחיקת הדוח');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -415,6 +451,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלת צבירה</th>
                   <th className={tableClasses.th}>סה"כ</th>
+                  <th className={tableClasses.th}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -429,6 +466,12 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('pension', sale.id)}>
+                        <Trash2 className="h-4 w-4" />
+                        מחיקה
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 <tr className={tableClasses.summary}>
@@ -484,6 +527,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>עמלה חד פעמית</th>
                   <th className={tableClasses.th}>עמלה חודשית</th>
                   <th className={tableClasses.th}>סה"כ</th>
+                  <th className={tableClasses.th}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -497,6 +541,12 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('insurance', sale.id)}>
+                        <Trash2 className="h-4 w-4" />
+                        מחיקה
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -538,6 +588,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>סכום ניוד</th>
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>סה"כ עמלה</th>
+                  <th className={tableClasses.th}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -549,6 +600,12 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('investment', sale.id)}>
+                        <Trash2 className="h-4 w-4" />
+                        מחיקה
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -590,6 +647,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>סכום הפקדה</th>
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>סה"כ עמלה</th>
+                  <th className={tableClasses.th}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -601,6 +659,12 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleDelete('policy', sale.id)}>
+                        <Trash2 className="h-4 w-4" />
+                        מחיקה
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

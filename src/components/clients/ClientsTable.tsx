@@ -1,8 +1,8 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { Eye, FileText, Mail, Phone } from 'lucide-react';
+import { Eye, FileText, Mail, Phone, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 interface Client {
@@ -34,31 +34,68 @@ const ClientsTable: React.FC = () => {
 
       // מיזוג לקוחות כפולים ואיחוד הפעולות שלהם
       const mergedClients = data.reduce((acc: { [key: string]: Client }, curr) => {
-        if (!acc[curr.client_name]) {
-          acc[curr.client_name] = curr;
+        const key = `${curr.client_name}_${curr.client_phone}`; // מפתח ייחודי המבוסס על שם וטלפון
+
+        if (!acc[key]) {
+          // יצירת רשומה חדשה
+          acc[key] = {
+            ...curr,
+            total_commission: Number(curr.total_commission) || 0,
+            selected_products: Array.isArray(curr.selected_products) ? curr.selected_products : []
+          };
         } else {
-          // עדכון המוצרים הנבחרים אם יש חדשים
-          const existingProducts = new Set(acc[curr.client_name].selected_products);
-          curr.selected_products.forEach(product => existingProducts.add(product));
-          acc[curr.client_name].selected_products = Array.from(existingProducts);
+          // עדכון רשומה קיימת
+          const existingProducts = new Set(acc[key].selected_products);
+          const newProducts = Array.isArray(curr.selected_products) ? curr.selected_products : [];
+          newProducts.forEach(product => existingProducts.add(product));
           
-          // עדכון העמלות הכוללות
-          acc[curr.client_name].total_commission += curr.total_commission;
+          acc[key].selected_products = Array.from(existingProducts);
+          acc[key].total_commission = (
+            Number(acc[key].total_commission) + 
+            Number(curr.total_commission)
+          ) || 0;
           
           // שמירת התאריך האחרון
-          if (new Date(curr.journey_date) > new Date(acc[curr.client_name].journey_date)) {
-            acc[curr.client_name].journey_date = curr.journey_date;
+          if (new Date(curr.journey_date) > new Date(acc[key].journey_date)) {
+            acc[key].journey_date = curr.journey_date;
           }
         }
         return acc;
       }, {});
 
-      setClients(Object.values(mergedClients));
+      // המרת התאריכים לפורמט מתאים ועיגול המספרים
+      const formattedClients = Object.values(mergedClients).map(client => ({
+        ...client,
+        journey_date: new Date(client.journey_date).toLocaleDateString('he-IL'),
+        total_commission: Math.round(Number(client.total_commission) * 100) / 100
+      }));
+
+      setClients(formattedClients);
     } catch (error: any) {
       console.error('Error loading clients:', error);
       toast.error('אירעה שגיאה בטעינת הלקוחות');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (clientId: string) => {
+    try {
+      // מחיקת הלקוח מסופאבייס
+      const { error } = await supabase
+        .from('customer_journeys')
+        .delete()
+        .eq('id', clientId);
+
+      if (error) throw error;
+
+      // עדכון המצב המקומי
+      setClients(clients.filter(client => client.id !== clientId));
+      toast.success('הלקוח נמחק בהצלחה');
+
+    } catch (error: any) {
+      console.error('Error deleting client:', error);
+      toast.error('אירעה שגיאה במחיקת הלקוח');
     }
   };
 
@@ -84,51 +121,55 @@ const ClientsTable: React.FC = () => {
     <div className="p-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl">לקוחות</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => loadClients()}>
-              רענן נתונים
-            </Button>
+          <div>
+            <CardTitle>לקוחות</CardTitle>
+            <CardDescription>רשימת כל הלקוחות והמכירות שלהם</CardDescription>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={() => loadClients()}
+            className="flex items-center gap-2"
+          >
+            רענן נתונים
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full">
               <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="p-3 text-right font-medium text-gray-600">שם הלקוח</th>
-                  <th className="p-3 text-right font-medium text-gray-600">טלפון</th>
-                  <th className="p-3 text-right font-medium text-gray-600">מוצרים</th>
-                  <th className="p-3 text-right font-medium text-gray-600">סה"כ עמלות</th>
-                  <th className="p-3 text-right font-medium text-gray-600">תאריך אחרון</th>
-                  <th className="p-3 text-right font-medium text-gray-600">פעולות</th>
+                <tr className="border-b">
+                  <th className="text-right p-3">שם הלקוח</th>
+                  <th className="text-right p-3">טלפון</th>
+                  <th className="text-right p-3">מוצרים</th>
+                  <th className="text-right p-3">סה"כ עמלות</th>
+                  <th className="text-right p-3">תאריך אחרון</th>
+                  <th className="text-right p-3">פעולות</th>
                 </tr>
               </thead>
               <tbody>
                 {clients.map((client) => (
-                  <tr key={client.id} className="border-b hover:bg-gray-50">
+                  <tr 
+                    key={client.id} 
+                    className="border-b hover:bg-gray-50 transition-colors"
+                  >
                     <td className="p-3">{client.client_name}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        {client.client_phone || 'לא הוזן'}
-                      </div>
-                    </td>
-                    <td className="p-3">{formatProducts(client.selected_products)}</td>
+                    <td className="p-3">{client.client_phone || 'לא הוזן'}</td>
+                    <td className="p-3">{client.selected_products.join(', ')}</td>
                     <td className="p-3">₪{client.total_commission.toLocaleString()}</td>
                     <td className="p-3">{client.journey_date}</td>
                     <td className="p-3">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" title="צפה בפרטים">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="שלח דוח">
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="שלח מייל">
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (window.confirm('האם אתה בטוח שברצונך למחוק לקוח זה?')) {
+                            handleDelete(client.id!);
+                          }
+                        }}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </td>
                   </tr>
                 ))}

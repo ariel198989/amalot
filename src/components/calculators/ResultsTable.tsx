@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Share2, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
+import { toast } from 'react-hot-toast';
 
 interface Column {
   key: string;
@@ -17,6 +18,7 @@ interface ResultsTableProps {
   onDownload: () => void;
   onShare: () => void;
   onClear: () => void;
+  onDeleteRow?: (index: number, rowData: any) => void;
 }
 
 const ResultsTable: React.FC<ResultsTableProps> = ({
@@ -24,104 +26,45 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   columns,
   onDownload,
   onShare,
-  onClear
+  onClear,
+  onDeleteRow
 }) => {
-  const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      data.map(row => {
-        const formattedRow: any = {};
-        columns.forEach(column => {
-          formattedRow[column.label] = column.format 
-            ? column.format(row[column.key])
-            : row[column.key];
-        });
-        return formattedRow;
-      })
-    );
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "תוצאות");
-    
-    // הגדרת כיוון RTL
-    worksheet['!cols'] = columns.map(() => ({ wch: 15 }));
-    worksheet['!dir'] = 'rtl';
-
-    XLSX.writeFile(workbook, "דוח_עמלות.xlsx");
-  };
-
-  const downloadPDF = () => {
-    const element = document.createElement('div');
-    element.innerHTML = `
-      <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
-        <h1 style="color: #1a365d; text-align: center; margin-bottom: 30px;">דוח עמלות</h1>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #f8fafc;">
-              ${columns.map(column => `
-                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0;">
-                  ${column.label}
-                </th>
-              `).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(row => `
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                ${columns.map(column => `
-                  <td style="padding: 12px; text-align: right;">
-                    ${column.format ? column.format(row[column.key]) : row[column.key]}
-                  </td>
-                `).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    const opt = {
-      margin: 10,
-      filename: 'דוח_עמלות.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        logging: false
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: 'landscape'
-      }
-    };
-
-    html2pdf().from(element).set(opt).save();
-  };
-
   if (data.length === 0) {
     return null;
   }
 
   return (
-    <Card dir="rtl">
+    <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-xl">תוצאות החישוב</CardTitle>
+        <div className="flex items-center gap-4">
+          <CardTitle>תוצאות החישוב</CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              סה"כ: ₪{data.reduce((sum, row) => sum + row.totalCommission, 0).toLocaleString()}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (window.confirm('האם אתה בטוח שברצונך למחוק את כל התוצאות?')) {
+                  onClear();
+                  toast.success('כל התוצאות נמחקו בהצלחה');
+                }
+              }}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
             size="icon" 
-            onClick={downloadExcel} 
+            onClick={onDownload} 
             title="ייצא לאקסל"
           >
             <Download className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={downloadPDF} 
-            title="ייצא ל-PDF"
-          >
-            <FileText className="h-4 w-4" />
           </Button>
           <Button 
             variant="outline" 
@@ -130,14 +73,6 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
             title="שתף"
           >
             <Share2 className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={onClear} 
-            title="נקה טבלה"
-          >
-            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
@@ -151,6 +86,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
                     {column.label}
                   </th>
                 ))}
+                <th className="p-3 text-right font-medium text-gray-600">פעולות</th>
               </tr>
             </thead>
             <tbody>
@@ -161,6 +97,21 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
                       {column.format ? column.format(row[column.key]) : row[column.key]}
                     </td>
                   ))}
+                  <td className="p-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (window.confirm('האם אתה בטוח שברצונך למחוק רשומה זו?')) {
+                          onDeleteRow?.(rowIndex, row);
+                          toast.success('הרשומה נמחקה בהצלחה');
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
