@@ -45,6 +45,12 @@ const navItems = [
     description: 'ניהול הסכמי עמלות מול חברות'
   },
   { 
+    title: 'לקוחות', 
+    path: '/clients', 
+    icon: Users,
+    description: 'ניהול לקוחות ופעולות'
+  },
+  { 
     title: 'מסע לקוח', 
     path: '/journey', 
     icon: User,

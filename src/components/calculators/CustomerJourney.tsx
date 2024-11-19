@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,18 @@ import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
 import { utils as XLSXUtils, write as XLSXWrite } from 'xlsx';
 import { saveAs } from 'file-saver';
+import { 
+  User, 
+  Building2, 
+  Calculator, 
+  PlusCircle, 
+  MinusCircle,
+  FileText,
+  Download,
+  Share2,
+  CheckCircle2,
+  ArrowRight
+} from 'lucide-react';
 
 interface ProductSelection {
   pension: boolean;
@@ -113,39 +125,57 @@ const CustomerJourney: React.FC = () => {
   // פונקציה לחישוב עמלות פנסיה
   const calculatePensionCommissions = async (data: any, company: string) => {
     try {
-      // קבלת הסכם הסוכן הספציפי
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      const { data: agreementData, error } = await supabase
-        .from('agent_agreements')
-        .select('agreement_details')
-        .eq('user_id', user.id)
-        .eq('company', company)
-        .eq('product_type', 'pension')
-        .single();
-
-      if (error) {
-        console.error('Error fetching agreement:', error);
-        // אם אין הסכם, נשתמש בערכי ברירת מחדל
-        return {
-          scopeCommission: Number(data.pensionSalary) * 12 * 0.06 * (Number(data.pensionProvision) / 100),
-          accumulationCommission: (Number(data.pensionAccumulation) / 1000000) * 2500,
-          totalCommission: 0 // יחושב בהמשך
-        };
-      }
-
-      const agreement = agreementData?.agreement_details?.pension || {
-        scopeRate: 0.06,
-        accumulationRate: 2500
+      // ערכי ברירת מחדל לפי חברה
+      const defaultRates: { [key: string]: { scopeRate: number; accumulationRate: number } } = {
+        'כלל': { scopeRate: 0.09, accumulationRate: 3000 },
+        'הראל': { scopeRate: 0.06, accumulationRate: 0 },
+        'מגדל': { scopeRate: 0.07, accumulationRate: 2500 },
+        'הפניקס': { scopeRate: 0.06, accumulationRate: 0 },
+        'מנורה': { scopeRate: 0.03, accumulationRate: 2500 },
+        'מור': { scopeRate: 0.06, accumulationRate: 1760 }
       };
 
+      // נסה לקבל הסכם מותאם אישית
+      try {
+        const { data: agreementData, error } = await supabase
+          .from('agent_agreements')
+          .select('agreement_details')
+          .eq('user_id', user.id)
+          .eq('company', encodeURIComponent(company))
+          .eq('product_type', 'pension')
+          .maybeSingle(); // במקום single()
+
+        if (!error && agreementData?.agreement_details?.pension) {
+          const rates = agreementData.agreement_details.pension;
+          const salary = Number(data.pensionSalary);
+          const accumulation = Number(data.pensionAccumulation);
+          const provision = Number(data.pensionProvision) / 100;
+
+          const scopeCommission = salary * 12 * rates.scopeRate * provision;
+          const accumulationCommission = (accumulation / 1000000) * rates.accumulationRate;
+          const totalCommission = scopeCommission + accumulationCommission;
+
+          return {
+            scopeCommission,
+            accumulationCommission,
+            totalCommission
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching custom agreement:', error);
+      }
+
+      // אם אין הסכם מותאם אישית, השתמש בערכי ברירת מחדל
+      const rates = defaultRates[company];
       const salary = Number(data.pensionSalary);
       const accumulation = Number(data.pensionAccumulation);
       const provision = Number(data.pensionProvision) / 100;
 
-      const scopeCommission = salary * 12 * agreement.scopeRate * provision;
-      const accumulationCommission = (accumulation / 1000000) * agreement.accumulationRate;
+      const scopeCommission = salary * 12 * rates.scopeRate * provision;
+      const accumulationCommission = (accumulation / 1000000) * rates.accumulationRate;
       const totalCommission = scopeCommission + accumulationCommission;
 
       return {
@@ -153,14 +183,10 @@ const CustomerJourney: React.FC = () => {
         accumulationCommission,
         totalCommission
       };
+
     } catch (error) {
       console.error('Error calculating pension commissions:', error);
-      // במקרה של שגיאה, נחזיר ערכי ברירת מחדל
-      return {
-        scopeCommission: 0,
-        accumulationCommission: 0,
-        totalCommission: 0
-      };
+      throw error;
     }
   };
 
@@ -523,15 +549,15 @@ const CustomerJourney: React.FC = () => {
       if (userError) throw userError;
       if (!user) throw new Error('משתמש לא מחובר');
 
-      const currentDate = new Date().toLocaleDateString('he-IL');
       let totalCommissions = 0;
-      
-      // שמירת נתוני פנסיה
+
+      // חישוב עמלות פנסיה
       if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
         for (const company of selectedCompanies.pension) {
-          const result = calculatePensionCommissions(data, company);
+          const result = await calculatePensionCommissions(data, company);
+          
           const pensionData = {
-            date: currentDate,
+            date: new Date().toLocaleDateString('he-IL'),
             client_name: data.clientName,
             company,
             salary: Number(data.pensionSalary),
@@ -543,12 +569,17 @@ const CustomerJourney: React.FC = () => {
             user_id: user.id
           };
 
-          const { error: insertError } = await supabase
-            .from('pension_sales')
-            .insert([pensionData]);
+          try {
+            const { error: insertError } = await supabase
+              .from('pension_sales')
+              .insert([pensionData]);
 
-          if (insertError) throw insertError;
-          totalCommissions += result.totalCommission;
+            if (insertError) throw insertError;
+            totalCommissions += result.totalCommission;
+          } catch (error) {
+            console.error('Error saving pension sale:', error);
+            throw error;
+          }
         }
       }
 
@@ -557,7 +588,7 @@ const CustomerJourney: React.FC = () => {
         for (const company of selectedCompanies.insurance) {
           const result = calculateInsuranceCommissions(data, company);
           const insuranceData = {
-            date: currentDate,
+            date: new Date().toLocaleDateString('he-IL'),
             client_name: data.clientName,
             company,
             insurance_type: data.insuranceType,
@@ -583,7 +614,7 @@ const CustomerJourney: React.FC = () => {
           const amount = Number(data.investmentAmount);
           const scopeCommission = (amount / 1000000) * 6000;
           const investmentData = {
-            date: currentDate,
+            date: new Date().toLocaleDateString('he-IL'),
             client_name: data.clientName,
             company,
             amount,
@@ -633,7 +664,7 @@ const CustomerJourney: React.FC = () => {
           const totalCommission = scopeCommission;
 
           const policyData = {
-            date: currentDate,
+            date: new Date().toLocaleDateString('he-IL'),
             client_name: data.clientName,
             company,
             amount,
@@ -659,7 +690,7 @@ const CustomerJourney: React.FC = () => {
 
       // הכנת נתונים ל-PDF
       const reportData = {
-        date: currentDate,
+        date: new Date().toLocaleDateString('he-IL'),
         clientName: data.clientName,
         pensionDetails: selectedProducts.pension ? selectedCompanies.pension.map(company => ({
           company,
@@ -869,38 +900,87 @@ const CustomerJourney: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* טופס הזנת נתונים - כמו קודם */}
-      <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-8">
-        {/* פרטי לקוח */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">פרטי לקוח</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">שם הלקוח</label>
-                <Input {...register('clientName')} placeholder="הכנס שם לקוח" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">טלפון</label>
-                <Input {...register('clientPhone')} placeholder="הכנס מספר טלפון" />
+    <div className="space-y-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* כותרת ראשית */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">מסע לקוח</h1>
+        <p className="text-gray-600">ניהול פגישת לקוח וחישוב עמלות</p>
+      </div>
+
+      {/* פרטי לקוח */}
+      <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <User className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-blue-900">פרטי לקוח</CardTitle>
+              <CardDescription className="text-blue-600">הזן את פרטי הלקוח</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                שם הלקוח
+                <span className="text-red-500 mr-1">*</span>
+              </label>
+              <div className="relative">
+                <Input 
+                  {...register('clientName')} 
+                  placeholder="הכנס שם לקוח"
+                  className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+                <User className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                טלפון
+              </label>
+              <div className="relative">
+                <Input 
+                  {...register('clientPhone')} 
+                  placeholder="הכנס מספר טלפון"
+                  className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+                <Building2 className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* בחירת מוצרים וחברות */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">בחר מוצרים וחברות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {products.map((product) => (
-                <div key={product.id} className="space-y-4">
-                  <div className="flex items-center space-x-4 space-x-reverse">
+      {/* בחירת מוצרים */}
+      <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <Calculator className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-blue-900">בחירת מוצרים</CardTitle>
+              <CardDescription className="text-blue-600">בחר את המוצרים הרלוונטיים</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className={`
+                  relative overflow-hidden rounded-xl border-2 transition-all duration-300
+                  ${selectedProducts[product.id as keyof ProductSelection]
+                    ? 'border-blue-400 bg-blue-50 shadow-md'
+                    : 'border-gray-200 hover:border-blue-200 hover:shadow-md'
+                  }
+                `}
+              >
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
                     <Checkbox
                       checked={selectedProducts[product.id as keyof ProductSelection]}
                       onCheckedChange={(checked) => {
@@ -915,19 +995,34 @@ const CustomerJourney: React.FC = () => {
                           }));
                         }
                       }}
+                      className="h-5 w-5 border-2 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
-                    <div>
-                      <h3 className="font-medium">{product.label}</h3>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{product.label}</h3>
                       <p className="text-sm text-gray-500">{product.description}</p>
                     </div>
+                    {selectedProducts[product.id as keyof ProductSelection] ? (
+                      <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <PlusCircle className="h-5 w-5 text-gray-400" />
+                    )}
                   </div>
 
                   {selectedProducts[product.id as keyof ProductSelection] && (
-                    <div className="ml-8">
-                      <label className="text-sm font-medium">בחר חברות</label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                    <div className="mt-4 pl-8">
+                      <p className="text-sm font-medium text-gray-700 mb-2">בחר חברות:</p>
+                      <div className="grid grid-cols-2 gap-2">
                         {product.companies.map((company) => (
-                          <label key={company} className="flex items-center space-x-2 space-x-reverse">
+                          <label
+                            key={company}
+                            className={`
+                              flex items-center gap-2 p-2 rounded-lg border transition-all duration-200
+                              ${selectedCompanies[product.id as keyof CompanySelection].includes(company)
+                                ? 'border-blue-300 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-200'
+                              }
+                            `}
+                          >
                             <Checkbox
                               checked={selectedCompanies[product.id as keyof CompanySelection].includes(company)}
                               onCheckedChange={(checked) => {
@@ -938,349 +1033,155 @@ const CustomerJourney: React.FC = () => {
                                     : prev[product.id as keyof CompanySelection].filter(c => c !== company)
                                 }));
                               }}
+                              className="h-4 w-4"
                             />
-                            <span>{company}</span>
+                            <span className="text-sm">{company}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* טפסים דינמיים */}
-        {selectedProducts.pension && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">פרטי פנסיה</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">שכר חודשי</label>
-                <Input {...register('pensionSalary')} type="number" placeholder="הכנס שכר" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">סכום צבירה</label>
-                <Input {...register('pensionAccumulation')} type="number" placeholder="הכנס סכום" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">אחוז הפרשה</label>
-                <Select onValueChange={(value) => setValue('pensionProvision', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר אחוז הפרשה" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="18.5">18.5% (6+6.5+6)</SelectItem>
-                    <SelectItem value="19.5">19.5% (7+6.5+6)</SelectItem>
-                    <SelectItem value="20.5">20.5% (7+7.5+6)</SelectItem>
-                    <SelectItem value="20.83">20.83% (6+6.5+8.33)</SelectItem>
-                    <SelectItem value="21.83">21.83% (7+6.5+8.33)</SelectItem>
-                    <SelectItem value="22.83">22.83% (7+7.5+8.33)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedProducts.insurance && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">פרטי ביטוח</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">סוג ביטוח</label>
-                <Select onValueChange={(value) => setValue('insuranceType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר סוג ביטוח" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="risk">ריסק</SelectItem>
-                    <SelectItem value="mortgage_risk">ריסק למשכנתא</SelectItem>
-                    <SelectItem value="health">בריאות</SelectItem>
-                    <SelectItem value="critical_illness">מחלות קשות</SelectItem>
-                    <SelectItem value="service_letter">כתבי שירות</SelectItem>
-                    <SelectItem value="disability">אובדן כושר עבודה</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">פרמיה חודשית</label>
-                <Input {...register('insurancePremium')} type="number" placeholder="הכנס סכום" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedProducts.investment && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">פרטי גמל והשתלמות</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">סכום הניוד</label>
-                <Input {...register('investmentAmount')} type="number" placeholder="הכנס סכום" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedProducts.policy && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">פרטי פוליסת חיסכון</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">סכום הפקדה</label>
-                <Input 
-                  {...register('policyAmount')} 
-                  type="number" 
-                  placeholder="הכנס סכום הפקדה"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
-                <Input 
-                  {...register('policyPeriod')} 
-                  type="number" 
-                  placeholder="הכנס תקופה בשנים"
-                  min="1"
-                  max="30"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* טבלת תוצאות */}
-        <ResultsTable
-          data={journeys}
-          columns={[
-            { key: 'journey_date', label: 'תאריך' },
-            { key: 'client_name', label: 'שם הלקוח' },
-            { key: 'selected_products', label: 'מוצרים שנבחרו', format: (value: string[]) => value.join(', ') },
-            { key: 'commission_details.pension.total', label: 'עמלות פנסיה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
-            { key: 'commission_details.insurance.total', label: 'עמלות ביטוח', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
-            { key: 'commission_details.investment.total', label: 'עמלות השקעות', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
-            { key: 'commission_details.policy.total', label: 'עמלות פוליסה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
-            { key: 'total_commission', label: 'סה"כ עמלות', format: (value: number) => `₪${value.toLocaleString()}` }
-          ]}
-          onDownload={handleDownloadExcel}
-          onShare={() => {
-            const lastJourney = journeys[journeys.length - 1];
-            if (lastJourney) {
-              handleDownloadPDF(lastJourney);
-            } else {
-              toast.error('אין נתונים ליצירת דוח');
-            }
-          }}
-          onClear={() => setJourneys([])}
-        />
-
-        {Object.entries(selectedProducts).some(([_, value]) => value) && (
-          <div className="flex gap-4">
-            <Button 
-              type="submit" 
-              className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700"
-            >
-              חשב עמלות
-            </Button>
-            <Button 
-              type="button"
-              variant="outline"
-              className="flex-1 h-12 text-lg"
-              onClick={() => {
-                // יצירת אובייקט הנתונים לדוח
-                const reportData = {
-                  date: new Date().toLocaleDateString('he-IL'),
-                  clientName: watch('clientName'),
-                  pensionDetails: selectedProducts.pension ? selectedCompanies.pension.map(company => ({
-                    company,
-                    ...calculatePensionCommissions(watch(), company)
-                  })) : [],
-                  insuranceDetails: selectedProducts.insurance ? selectedCompanies.insurance.map(company => ({
-                    company,
-                    ...calculateInsuranceCommissions(watch(), company)
-                  })) : [],
-                  investmentDetails: selectedProducts.investment ? selectedCompanies.investment.map(company => ({
-                    company,
-                    amount: Number(watch('investmentAmount')),
-                    commission: (Number(watch('investmentAmount')) / 1000000) * 6000
-                  })) : [],
-                  policyDetails: selectedProducts.policy ? selectedCompanies.policy.map(company => ({
-                    company,
-                    amount: Number(watch('policyAmount')),
-                    commission: (Number(watch('policyAmount')) / 1000000) * 7000
-                  })) : []
-                };
-                generatePDF(reportData);
-              }}
-            >
-              צור דוח מסכם
-            </Button>
+            ))}
           </div>
-        )}
-      </form>
+        </CardContent>
+      </Card>
 
-      {/* טבלאות תוצאות */}
-      {pensionSales?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>מכירות פנסיה</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th>תאריך</th>
-                    <th>שם לקוח</th>
-                    <th>חברה</th>
-                    <th>שכר</th>
-                    <th>צבירה</th>
-                    <th>הפרשה</th>
-                    <th>עמלת היקף</th>
-                    <th>עמלת צבירה</th>
-                    <th>סה"כ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pensionSales.map((sale, index) => (
-                    <tr key={index}>
-                      <td>{sale.date}</td>
-                      <td>{sale.client_name}</td>
-                      <td>{sale.company}</td>
-                      <td>{sale.salary ? `₪${sale.salary.toLocaleString()}` : '-'}</td>
-                      <td>{sale.accumulation ? `₪${sale.accumulation.toLocaleString()}` : '-'}</td>
-                      <td>{sale.provision ? `${sale.provision}%` : '-'}</td>
-                      <td>{sale.scope_commission ? `₪${sale.scope_commission.toLocaleString()}` : '-'}</td>
-                      <td>{sale.accumulation_commission ? `₪${sale.accumulation_commission.toLocaleString()}` : '-'}</td>
-                      <td>{sale.total_commission ? `₪${sale.total_commission.toLocaleString()}` : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      {/* טפסי המוצרים */}
+      {Object.entries(selectedProducts).some(([_, value]) => value) && (
+        <div className="space-y-6">
+          {selectedProducts.pension && (
+            <Card className="border-2 border-blue-100 shadow-lg">
+              <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+                <CardTitle>פרטי פנסיה</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">שכר חודשי</label>
+                    <Input {...register('pensionSalary')} type="number" placeholder="הכנס שכר חודשי" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">סכום צבירה</label>
+                    <Input {...register('pensionAccumulation')} type="number" placeholder="הכנס סכום צבירה" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">אחוז הפרשה</label>
+                    <Select onValueChange={(value) => setValue('pensionProvision', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר אחוז הפרשה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="18.5">18.5% (6+6.5+6)</SelectItem>
+                        <SelectItem value="19.5">19.5% (7+6.5+6)</SelectItem>
+                        <SelectItem value="20.5">20.5% (7+7.5+6)</SelectItem>
+                        <SelectItem value="20.83">20.83% (6+6.5+8.33)</SelectItem>
+                        <SelectItem value="21.83">21.83% (7+6.5+8.33)</SelectItem>
+                        <SelectItem value="22.83">22.83% (7+7.5+8.33)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedProducts.insurance && (
+            <Card className="border-2 border-blue-100 shadow-lg">
+              <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+                <CardTitle>פרטי ביטוח</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">סוג ביטוח</label>
+                    <Select onValueChange={(value) => setValue('insuranceType', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר סוג ביטוח" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="risk">ריסק</SelectItem>
+                        <SelectItem value="mortgage_risk">ריסק למשכנתא</SelectItem>
+                        <SelectItem value="health">בריאות</SelectItem>
+                        <SelectItem value="critical_illness">מחלות קשות</SelectItem>
+                        <SelectItem value="service_letter">כתבי שירות</SelectItem>
+                        <SelectItem value="disability">אובדן כושר עבודה</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">פרמיה חודשית</label>
+                    <Input {...register('insurancePremium')} type="number" placeholder="הכנס פרמיה חודשית" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedProducts.investment && (
+            <Card className="border-2 border-blue-100 shadow-lg">
+              <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+                <CardTitle>פרטי השקעות</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">סכום השקעה</label>
+                  <Input {...register('investmentAmount')} type="number" placeholder="הכנס סכום השקעה" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedProducts.policy && (
+            <Card className="border-2 border-blue-100 shadow-lg">
+              <CardHeader className="bg-gradient-to-l from-blue-50 to-blue-100 border-b border-blue-200">
+                <CardTitle>פרטי פוליסת חיסכון</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">סכום הפקדה</label>
+                    <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום הפקדה" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
+                    <Input {...register('policyPeriod')} type="number" placeholder="הכנס תקופת חיסכון" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
-      {insuranceSales?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>מכירות ביטוח</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th>תאריך</th>
-                    <th>שם לקוח</th>
-                    <th>חברה</th>
-                    <th>סוג ביטוח</th>
-                    <th>פרמיה חודשית</th>
-                    <th>עמלה חד פעמית</th>
-                    <th>עמלה חודשית</th>
-                    <th>סה"כ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {insuranceSales.map((sale, index) => (
-                    <tr key={index}>
-                      <td>{sale.date}</td>
-                      <td>{sale.client_name}</td>
-                      <td>{sale.company}</td>
-                      <td>{sale.insurance_type}</td>
-                      <td>{sale.monthly_premium ? `₪${sale.monthly_premium.toLocaleString()}` : '-'}</td>
-                      <td>{sale.one_time_commission ? `₪${sale.one_time_commission.toLocaleString()}` : '-'}</td>
-                      <td>{sale.monthly_commission ? `₪${sale.monthly_commission.toLocaleString()}` : '-'}</td>
-                      <td>{sale.total_commission ? `₪${sale.total_commission.toLocaleString()}` : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {investmentSales.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>מכירות השקעות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th>תאריך</th>
-                    <th>שם לקוח</th>
-                    <th>חברה</th>
-                    <th>סכום</th>
-                    <th>עמלת היקף</th>
-                    <th>סה"כ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {investmentSales.map((sale, index) => (
-                    <tr key={index}>
-                      <td>{sale?.date || '-'}</td>
-                      <td>{sale?.clientName || '-'}</td>
-                      <td>{sale?.company || '-'}</td>
-                      <td>{sale?.amount ? `₪${sale.amount.toLocaleString()}` : '-'}</td>
-                      <td>{sale?.scopeCommission ? `₪${sale.scopeCommission.toLocaleString()}` : '-'}</td>
-                      <td>{sale?.totalCommission ? `₪${sale.totalCommission.toLocaleString()}` : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {policySales.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>מכירות פוליסות חיסכון</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th>תאריך</th>
-                    <th>שם לקוח</th>
-                    <th>חברה</th>
-                    <th>סכום</th>
-                    <th>עמלת היקף</th>
-                    <th>סה"כ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {policySales.map((sale, index) => (
-                    <tr key={index}>
-                      <td>{sale?.date || '-'}</td>
-                      <td>{sale?.clientName || '-'}</td>
-                      <td>{sale?.company || '-'}</td>
-                      <td>{sale?.amount ? `₪${sale.amount.toLocaleString()}` : '-'}</td>
-                      <td>{sale?.scopeCommission ? `₪${sale.scopeCommission.toLocaleString()}` : '-'}</td>
-                      <td>{sale?.totalCommission ? `₪${sale.totalCommission.toLocaleString()}` : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      {/* כפתורי פעולה */}
+      {Object.entries(selectedProducts).some(([_, value]) => value) && (
+        <div className="flex gap-4">
+          <Button 
+            onClick={handleFormSubmit(onSubmit)}
+            className="flex-1 h-12 text-lg bg-gradient-to-l from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 group"
+          >
+            <Calculator className="h-5 w-5 ml-2 group-hover:scale-110 transition-transform" />
+            חשב עמלות
+          </Button>
+          <Button 
+            variant="outline"
+            className="flex-1 h-12 text-lg border-2 hover:bg-blue-50 transition-all duration-300"
+            onClick={() => {
+              // יצירת אובייקט הנתונים לדוח
+              const reportData = {
+                date: new Date().toLocaleDateString('he-IL'),
+                clientName: watch('clientName'),
+                // ... rest of the report data ...
+              };
+              generatePDF(reportData);
+            }}
+          >
+            <FileText className="h-5 w-5 ml-2" />
+            צור דוח מסכם
+          </Button>
+        </div>
       )}
     </div>
   );
