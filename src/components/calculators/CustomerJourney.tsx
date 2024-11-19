@@ -109,89 +109,159 @@ const CustomerJourney: React.FC = () => {
       companies: ['הראל', 'מגדל', 'כלל', 'הפניקס', 'מנורה', 'איילון'] }
   ];
 
-  // פונקציות חישוב מכל המחבונים
-  const calculatePensionCommissions = (data: any, company: string) => {
-    const salary = Number(data.pensionSalary);
-    const accumulation = Number(data.pensionAccumulation);
-    const provision = Number(data.pensionProvision) / 100;
+  // פונקציה לחישוב עמלות פנסיה
+  const calculatePensionCommissions = async (data: any, company: string) => {
+    try {
+      // קבלת הסכם הסוכן הספציפי
+      const { data: agreementData, error } = await supabase
+        .from('agent_agreements')
+        .select('agreement_details')
+        .eq('company', company)
+        .eq('product_type', 'pension')
+        .single();
 
-    const rates: { [key: string]: { scope: number; accumulation: number } } = {
-      'כלל': { scope: 0.09, accumulation: 3000 },
-      'הראל': { scope: 0.06, accumulation: 0 },
-      'מגדל': { scope: 0.07, accumulation: 2500 },
-      'הפניקס': { scope: 0.06, accumulation: 0 },
-      'מנורה': { scope: 0.03, accumulation: 2500 },
-      'מור': { scope: 0.06, accumulation: 1760 }
-    };
+      if (error) throw error;
 
-    // בדיקה אם החברה קיימת במערך
-    if (!rates[company]) {
-      console.error(`חברה לא נמצאה: ${company}`);
+      // שימוש בערכי ברירת מחדל אם אין הסכם
+      const agreement = agreementData?.agreement_details?.pension || {
+        scopeRate: 0.06,
+        accumulationRate: 2500
+      };
+
+      const salary = Number(data.pensionSalary);
+      const accumulation = Number(data.pensionAccumulation);
+      const provision = Number(data.pensionProvision) / 100;
+
+      const scopeCommission = salary * 12 * agreement.scopeRate * provision;
+      const accumulationCommission = (accumulation / 1000000) * agreement.accumulationRate;
+
+      return {
+        scopeCommission,
+        accumulationCommission,
+        totalCommission: scopeCommission + accumulationCommission
+      };
+    } catch (error) {
+      console.error('Error calculating pension commissions:', error);
+      // החזרת ערכי ברירת מחדל במקרה של שגיאה
       return {
         scopeCommission: 0,
         accumulationCommission: 0,
         totalCommission: 0
       };
     }
-
-    const companyRates = rates[company];
-    const scopeCommission = salary * 12 * companyRates.scope * provision;
-    const accumulationCommission = (accumulation / 1000000) * companyRates.accumulation;
-
-    return {
-      scopeCommission,
-      accumulationCommission,
-      totalCommission: scopeCommission + accumulationCommission
-    };
   };
 
-  const calculateInsuranceCommissions = (data: any, company: string) => {
-    const monthlyPremium = Number(data.insurancePremium);
-    const insuranceType = data.insuranceType;
+  // פונקציה לחישוב עמלות ביטוח
+  const calculateInsuranceCommissions = async (data: any, company: string) => {
+    try {
+      const { data: agreementData, error } = await supabase
+        .from('agent_agreements')
+        .select('agreement_details')
+        .eq('company', company)
+        .eq('product_type', 'insurance')
+        .single();
 
-    let oneTimeRate = (company === 'איילון' || company === 'מגדל') ? 67 : 65;
-    let monthlyRate = 0;
+      if (error) throw error;
 
-    if (company === 'איילון') {
-      switch (insuranceType) {
-        case 'risk':
-        case 'health':
-        case 'critical_illness':
-        case 'service_letter':
-          monthlyRate = 20;
-          break;
-        case 'mortgage_risk':
-          monthlyRate = 14;
-          break;
-        case 'disability':
-          monthlyRate = 12;
-          break;
-      }
-    } else {
-      switch (insuranceType) {
-        case 'risk':
-        case 'health':
-        case 'critical_illness':
-        case 'service_letter':
-          monthlyRate = 20;
-          break;
-        case 'mortgage_risk':
-          monthlyRate = 17;
-          break;
-        case 'disability':
-          monthlyRate = 12;
-          break;
-      }
+      // שימוש בערכי ברירת מחדל אם אין הסכם
+      const agreement = agreementData?.agreement_details?.insurance || {
+        oneTimeRate: 65,
+        monthlyRate: {
+          risk: 20,
+          mortgage_risk: 17,
+          health: 20,
+          critical_illness: 20,
+          service_letter: 20,
+          disability: 12
+        }
+      };
+
+      const monthlyPremium = Number(data.insurancePremium);
+      const insuranceType = data.insuranceType;
+
+      const oneTimeCommission = monthlyPremium * 12 * (agreement.oneTimeRate / 100);
+      const monthlyCommission = monthlyPremium * (agreement.monthlyRate[insuranceType] / 100);
+
+      return {
+        oneTimeCommission,
+        monthlyCommission,
+        totalCommission: oneTimeCommission + (monthlyCommission * 12)
+      };
+    } catch (error) {
+      console.error('Error calculating insurance commissions:', error);
+      return {
+        oneTimeCommission: 0,
+        monthlyCommission: 0,
+        totalCommission: 0
+      };
     }
+  };
 
-    const oneTimeCommission = monthlyPremium * 12 * (oneTimeRate / 100);
-    const monthlyCommission = monthlyPremium * (monthlyRate / 100);
+  // פונקציה לחישוב עמלות השקעות
+  const calculateInvestmentCommissions = async (data: any, company: string) => {
+    try {
+      const { data: agreementData, error } = await supabase
+        .from('agent_agreements')
+        .select('agreement_details')
+        .eq('company', company)
+        .eq('product_type', 'investment')
+        .single();
 
-    return {
-      oneTimeCommission,
-      monthlyCommission,
-      totalCommission: oneTimeCommission + (monthlyCommission * 12)
-    };
+      if (error) throw error;
+
+      const agreement = agreementData?.agreement_details?.investment || {
+        scopeRate: 0.006 // ברירת מחדל - 0.6%
+      };
+
+      const amount = Number(data.investmentAmount);
+      const scopeCommission = amount * agreement.scopeRate;
+
+      return {
+        scopeCommission,
+        totalCommission: scopeCommission
+      };
+    } catch (error) {
+      console.error('Error calculating investment commissions:', error);
+      return {
+        scopeCommission: 0,
+        totalCommission: 0
+      };
+    }
+  };
+
+  // פונקציה לחישוב עמלות פוליסות חיסכון
+  const calculatePolicyCommissions = async (data: any, company: string) => {
+    try {
+      const { data: agreementData, error } = await supabase
+        .from('agent_agreements')
+        .select('agreement_details')
+        .eq('company', company)
+        .eq('product_type', 'policy')
+        .single();
+
+      if (error) throw error;
+
+      const agreement = agreementData?.agreement_details?.policy || {
+        shortTermRate: 0.006,
+        longTermRate: 0.007
+      };
+
+      const amount = Number(data.policyAmount);
+      const period = Number(data.policyPeriod);
+      
+      const scopeCommission = amount * (period >= 15 ? agreement.longTermRate : agreement.shortTermRate);
+
+      return {
+        scopeCommission,
+        totalCommission: scopeCommission
+      };
+    } catch (error) {
+      console.error('Error calculating policy commissions:', error);
+      return {
+        scopeCommission: 0,
+        totalCommission: 0
+      };
+    }
   };
 
   const generatePDF = (data: {
