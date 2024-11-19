@@ -1,10 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Share2 } from 'lucide-react';
+import { FileText, Download, Share2, Filter, Calendar, Search, Shield, PiggyBank } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 
 const Reports: React.FC = () => {
   const [pensionSales, setPensionSales] = React.useState<any[]>([]);
@@ -59,228 +59,255 @@ const Reports: React.FC = () => {
   }, []);
 
   const tableClasses = {
+    container: "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden",
+    header: "bg-gradient-to-r p-6",
+    headerPension: "from-blue-50 to-white border-b",
+    headerInsurance: "from-purple-50 to-white border-b",
+    headerInvestment: "from-green-50 to-white border-b",
+    headerPolicy: "from-indigo-50 to-white border-b",
     table: "w-full border-collapse",
-    th: "bg-gray-100 text-right p-3 border border-gray-200 font-medium text-gray-600",
-    td: "p-3 border border-gray-200 text-gray-800",
-    tr: "hover:bg-gray-50 transition-colors"
+    th: "bg-gray-50 text-right p-4 border-b border-gray-200 font-medium text-gray-600 text-sm",
+    td: "p-4 border-b border-gray-200 text-gray-800",
+    tr: "hover:bg-gray-50 transition-colors",
+    summary: "bg-gray-50 font-medium"
   };
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">דוחות מכירות</h1>
-        <div className="flex gap-4">
-          <Button variant="outline" size="sm">
-            <Download className="ml-2 h-4 w-4" />
-            ייצא לאקסל
-          </Button>
-          <Button variant="outline" size="sm">
-            <Share2 className="ml-2 h-4 w-4" />
-            שתף
-          </Button>
-        </div>
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900">דוחות מכירות</h1>
+        <p className="text-gray-500 mt-1">סקירה מקיפה של כל המכירות והעמלות שלך</p>
       </div>
 
-      <Tabs defaultValue="policy" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 gap-4 bg-gray-100 p-2 rounded-lg">
-          <TabsTrigger 
-            value="policy" 
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            פוליסות חיסכון
-          </TabsTrigger>
-          <TabsTrigger 
-            value="investment"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            גמל והשתלמות
-          </TabsTrigger>
-          <TabsTrigger 
-            value="pension"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            פנסיה
-          </TabsTrigger>
-          <TabsTrigger 
-            value="insurance"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            ביטוח
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="policy">
-          <Card>
-            <CardHeader>
-              <CardTitle>דוח מכירות פוליסות חיסכון</CardTitle>
-              <CardDescription>
-                סך מכירות: {policySales.length} | 
-                סך עמלות: ₪{policySales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+      <Card className={tableClasses.container}>
+        <CardHeader className={`${tableClasses.header} ${tableClasses.headerPension}`}>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl text-blue-900 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                דוח מכירות פנסיה
+              </CardTitle>
+              <CardDescription className="mt-2">
+                <span className="font-medium">סך מכירות: </span>
+                <span className="text-blue-600">{pensionSales.length}</span>
+                <span className="mx-2">|</span>
+                <span className="font-medium">סך עמלות: </span>
+                <span className="text-green-600">₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className={tableClasses.table}>
-                  <thead>
-                    <tr>
-                      <th className={tableClasses.th}>תאריך</th>
-                      <th className={tableClasses.th}>שם לקוח</th>
-                      <th className={tableClasses.th}>חברה</th>
-                      <th className={tableClasses.th}>סכום הפקדה</th>
-                      <th className={tableClasses.th}>עמלת היקף</th>
-                      <th className={tableClasses.th}>סה"כ עמלה</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {policySales.map((sale, index) => (
-                      <tr key={index} className={tableClasses.tr}>
-                        <td className={tableClasses.td}>{sale.date}</td>
-                        <td className={tableClasses.td}>{sale.client_name}</td>
-                        <td className={tableClasses.td}>{sale.company}</td>
-                        <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              ייצא לאקסל
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className={tableClasses.table}>
+              <thead>
+                <tr>
+                  <th className={tableClasses.th}>תאריך</th>
+                  <th className={tableClasses.th}>שם לקוח</th>
+                  <th className={tableClasses.th}>חברה</th>
+                  <th className={tableClasses.th}>שכר</th>
+                  <th className={tableClasses.th}>צבירה</th>
+                  <th className={tableClasses.th}>הפרשה</th>
+                  <th className={tableClasses.th}>עמלת היקף</th>
+                  <th className={tableClasses.th}>עמלת צבירה</th>
+                  <th className={tableClasses.th}>סה"כ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pensionSales.map((sale, index) => (
+                  <tr key={index} className={tableClasses.tr}>
+                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{sale.client_name}</td>
+                    <td className={tableClasses.td}>{sale.company}</td>
+                    <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.accumulation?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.provision}%</td>
+                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                  </tr>
+                ))}
+                <tr className={tableClasses.summary}>
+                  <td colSpan={6} className={tableClasses.td}>סה"כ</td>
+                  <td className={tableClasses.td}>
+                    ₪{pensionSales.reduce((sum, sale) => sum + sale.scope_commission, 0).toLocaleString()}
+                  </td>
+                  <td className={tableClasses.td}>
+                    ₪{pensionSales.reduce((sum, sale) => sum + sale.accumulation_commission, 0).toLocaleString()}
+                  </td>
+                  <td className={tableClasses.td}>
+                    ₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* טאב השקעות */}
-        <TabsContent value="investment">
-          <Card>
-            <CardHeader>
-              <CardTitle>דוח מכירות גמל והשתלמות</CardTitle>
-              <CardDescription>
-                סך מכירות: {investmentSales.length} | 
-                סך עמלות: ₪{investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+      <Card className={tableClasses.container}>
+        <CardHeader className={`${tableClasses.header} ${tableClasses.headerInsurance}`}>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl text-purple-900 flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                דוח מכירות ביטוח
+              </CardTitle>
+              <CardDescription className="mt-2">
+                <span className="font-medium">סך מכירות: </span>
+                <span className="text-purple-600">{insuranceSales.length}</span>
+                <span className="mx-2">|</span>
+                <span className="font-medium">סך עמלות: </span>
+                <span className="text-green-600">₪{insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className={tableClasses.table}>
-                  <thead>
-                    <tr>
-                      <th className={tableClasses.th}>תאריך</th>
-                      <th className={tableClasses.th}>שם לקוח</th>
-                      <th className={tableClasses.th}>חברה</th>
-                      <th className={tableClasses.th}>סכום ניוד</th>
-                      <th className={tableClasses.th}>עמלת היקף</th>
-                      <th className={tableClasses.th}>סה"כ עמלה</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {investmentSales.map((sale, index) => (
-                      <tr key={index} className={tableClasses.tr}>
-                        <td className={tableClasses.td}>{sale.date}</td>
-                        <td className={tableClasses.td}>{sale.client_name}</td>
-                        <td className={tableClasses.td}>{sale.company}</td>
-                        <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              ייצא לאקסל
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className={tableClasses.table}>
+              <thead>
+                <tr>
+                  <th className={tableClasses.th}>תאריך</th>
+                  <th className={tableClasses.th}>שם לקוח</th>
+                  <th className={tableClasses.th}>חברה</th>
+                  <th className={tableClasses.th}>סוג ביטוח</th>
+                  <th className={tableClasses.th}>פרמיה חודשית</th>
+                  <th className={tableClasses.th}>עמלה חד פעמית</th>
+                  <th className={tableClasses.th}>עמלה חודשית</th>
+                  <th className={tableClasses.th}>סה"כ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insuranceSales.map((sale, index) => (
+                  <tr key={index} className={tableClasses.tr}>
+                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{sale.client_name}</td>
+                    <td className={tableClasses.td}>{sale.company}</td>
+                    <td className={tableClasses.td}>{sale.insurance_type}</td>
+                    <td className={tableClasses.td}>{sale.monthly_premium?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* המשך הטאבים... */}
-        <TabsContent value="pension">
-          <Card>
-            <CardHeader>
-              <CardTitle>דוח מכירות פנסיה</CardTitle>
-              <CardDescription>
-                סך מכירות: {pensionSales.length} | 
-                סך עמלות: ₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+      <Card className={tableClasses.container}>
+        <CardHeader className={`${tableClasses.header} ${tableClasses.headerInvestment}`}>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl text-green-900 flex items-center gap-2">
+                <PiggyBank className="h-5 w-5" />
+                דוח מכירות גמל והשתלמות
+              </CardTitle>
+              <CardDescription className="mt-2">
+                <span className="font-medium">סך מכירות: </span>
+                <span className="text-green-600">{investmentSales.length}</span>
+                <span className="mx-2">|</span>
+                <span className="font-medium">סך עמלות: </span>
+                <span className="text-green-600">₪{investmentSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className={tableClasses.table}>
-                  <thead>
-                    <tr>
-                      <th className={tableClasses.th}>תאריך</th>
-                      <th className={tableClasses.th}>שם לקוח</th>
-                      <th className={tableClasses.th}>חברה</th>
-                      <th className={tableClasses.th}>שכר</th>
-                      <th className={tableClasses.th}>צבירה</th>
-                      <th className={tableClasses.th}>הפרשה</th>
-                      <th className={tableClasses.th}>עמלת היקף</th>
-                      <th className={tableClasses.th}>עמלת צבירה</th>
-                      <th className={tableClasses.th}>סה"כ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pensionSales.map((sale, index) => (
-                      <tr key={index} className={tableClasses.tr}>
-                        <td className={tableClasses.td}>{sale.date}</td>
-                        <td className={tableClasses.td}>{sale.client_name}</td>
-                        <td className={tableClasses.td}>{sale.company}</td>
-                        <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.accumulation?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.provision}%</td>
-                        <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              ייצא לאקסל
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className={tableClasses.table}>
+              <thead>
+                <tr>
+                  <th className={tableClasses.th}>תאריך</th>
+                  <th className={tableClasses.th}>שם לקוח</th>
+                  <th className={tableClasses.th}>חברה</th>
+                  <th className={tableClasses.th}>סכום ניוד</th>
+                  <th className={tableClasses.th}>עמלת היקף</th>
+                  <th className={tableClasses.th}>סה"כ עמלה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {investmentSales.map((sale, index) => (
+                  <tr key={index} className={tableClasses.tr}>
+                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{sale.client_name}</td>
+                    <td className={tableClasses.td}>{sale.company}</td>
+                    <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="insurance">
-          <Card>
-            <CardHeader>
-              <CardTitle>דוח מכירות ביטוח</CardTitle>
-              <CardDescription>
-                סך מכירות: {insuranceSales.length} | 
-                סך עמלות: ₪{insuranceSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
+      <Card className={tableClasses.container}>
+        <CardHeader className={`${tableClasses.header} ${tableClasses.headerPolicy}`}>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                דוח מכירות פוליסות חיסכון
+              </CardTitle>
+              <CardDescription className="mt-2">
+                <span className="font-medium">סך מכירות: </span>
+                <span className="text-indigo-600">{policySales.length}</span>
+                <span className="mx-2">|</span>
+                <span className="font-medium">סך עמלות: </span>
+                <span className="text-green-600">₪{policySales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}</span>
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className={tableClasses.table}>
-                  <thead>
-                    <tr>
-                      <th className={tableClasses.th}>תאריך</th>
-                      <th className={tableClasses.th}>שם לקוח</th>
-                      <th className={tableClasses.th}>חברה</th>
-                      <th className={tableClasses.th}>סוג ביטוח</th>
-                      <th className={tableClasses.th}>פרמיה חודשית</th>
-                      <th className={tableClasses.th}>עמלה חד פעמית</th>
-                      <th className={tableClasses.th}>עמלה חודשית</th>
-                      <th className={tableClasses.th}>סה"כ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {insuranceSales.map((sale, index) => (
-                      <tr key={index} className={tableClasses.tr}>
-                        <td className={tableClasses.td}>{sale.date}</td>
-                        <td className={tableClasses.td}>{sale.client_name}</td>
-                        <td className={tableClasses.td}>{sale.company}</td>
-                        <td className={tableClasses.td}>{sale.insurance_type}</td>
-                        <td className={tableClasses.td}>{sale.monthly_premium?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
-                        <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              ייצא לאקסל
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className={tableClasses.table}>
+              <thead>
+                <tr>
+                  <th className={tableClasses.th}>תאריך</th>
+                  <th className={tableClasses.th}>שם לקוח</th>
+                  <th className={tableClasses.th}>חברה</th>
+                  <th className={tableClasses.th}>סכום הפקדה</th>
+                  <th className={tableClasses.th}>עמלת היקף</th>
+                  <th className={tableClasses.th}>סה"כ עמלה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {policySales.map((sale, index) => (
+                  <tr key={index} className={tableClasses.tr}>
+                    <td className={tableClasses.td}>{sale.date}</td>
+                    <td className={tableClasses.td}>{sale.client_name}</td>
+                    <td className={tableClasses.td}>{sale.company}</td>
+                    <td className={tableClasses.td}>{sale.amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
