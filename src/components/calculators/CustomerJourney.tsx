@@ -509,15 +509,42 @@ const CustomerJourney: React.FC = () => {
       // שמירת נתוני פוליסות חיסכון
       if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
         for (const company of selectedCompanies.policy) {
-          const amount = Number(data.policyAmount);
-          const scopeCommission = (amount / 1000000) * 7000;
+          const amount = Number(data.policyAmount) || 0;
+          const period = Number(data.policyPeriod) || 0;
+          
+          // חישוב עמלת היקף לפי חברה
+          let scopeCommissionRate = 0;
+          switch (company) {
+            case 'כלל':
+              scopeCommissionRate = period >= 15 ? 0.007 : 0.006;
+              break;
+            case 'מגדל':
+              scopeCommissionRate = period >= 15 ? 0.0075 : 0.0065;
+              break;
+            case 'הראל':
+              scopeCommissionRate = period >= 15 ? 0.007 : 0.006;
+              break;
+            case 'הפניקס':
+              scopeCommissionRate = period >= 15 ? 0.0072 : 0.0062;
+              break;
+            case 'מנורה':
+              scopeCommissionRate = period >= 15 ? 0.007 : 0.006;
+              break;
+            default:
+              scopeCommissionRate = 0.006;
+          }
+
+          const scopeCommission = amount * scopeCommissionRate;
+          const totalCommission = scopeCommission;
+
           const policyData = {
             date: currentDate,
             client_name: data.clientName,
             company,
             amount,
+            period,
             scope_commission: scopeCommission,
-            total_commission: scopeCommission,
+            total_commission: totalCommission,
             user_id: user.id
           };
 
@@ -526,7 +553,7 @@ const CustomerJourney: React.FC = () => {
             .insert([policyData]);
 
           if (insertError) throw insertError;
-          totalCommissions += scopeCommission;
+          totalCommissions += totalCommission;
         }
       }
 
@@ -651,7 +678,7 @@ const CustomerJourney: React.FC = () => {
                   <div style="margin-left: 20px;">
                     <h3>${company}</h3>
                     <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ ��חברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
                   </div>
                 `).join('')}
               <p><strong>סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</strong></p>
@@ -916,11 +943,21 @@ const CustomerJourney: React.FC = () => {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">סכום הפקדה</label>
-                <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום" />
+                <Input 
+                  {...register('policyAmount')} 
+                  type="number" 
+                  placeholder="הכנס סכום הפקדה"
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">קופת הפקדה (בשנים)</label>
-                <Input {...register('policyPeriod')} type="number" placeholder="הכנס תקופה" />
+                <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
+                <Input 
+                  {...register('policyPeriod')} 
+                  type="number" 
+                  placeholder="הכנס תקופה בשנים"
+                  min="1"
+                  max="30"
+                />
               </div>
             </CardContent>
           </Card>
