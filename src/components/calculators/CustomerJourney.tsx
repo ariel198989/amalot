@@ -185,23 +185,66 @@ const CustomerJourney: React.FC = () => {
 
   const calculatePensionCommissions = async (data: any, company: string) => {
     try {
-      const rates = defaultRates.pension[company];
-      const salary = Number(data.pensionSalary);
-      const accumulation = Number(data.pensionAccumulation);
-      const provision = Number(data.pensionProvision) / 100;
+      // בדיקת תקינות הנתונים
+      if (!data || !company) {
+        throw new Error('נתונים חסרים');
+      }
 
-      const scopeCommission = salary * 12 * rates.scopeRate * provision;
-      const accumulationCommission = (accumulation / 1000000) * rates.accumulationRate;
+      // המרת הערכים למספרים
+      const salary = Number(data.pensionSalary) || 0;
+      const accumulation = Number(data.pensionAccumulation) || 0;
+      const provision = Number(data.pensionProvision) || 0;
+      
+      // אחוזי העמלות של הסוכן (צריך לקחת מהפרופיל של הסוכן)
+      const agentRates = {
+        scopeRate: 0.07, // 7% עמלת היקף
+        accumulationRate: 3000 // 3000 ₪ למיליון צבירה
+      };
+
+      // בדיקת תקינות המספרים
+      if (salary <= 0) throw new Error('נא להזין שכר חודשי תקין');
+      if (provision <= 0 || provision > 100) throw new Error('נא להזין אחוז הפרשה תקין');
+
+      // חישוב עמלת היקף:
+      // שכר חודשי * 12 חודשים * אחוז הסוכן * אחוז הפרשה
+      const annualSalary = salary * 12;
+      const provisionRate = provision / 100;
+      const scopeCommission = Math.round(annualSalary * agentRates.scopeRate * provisionRate);
+
+      // חישוב עמלת צבירה:
+      // סכום הצבירה * (עמלת צבירה למיליון / מיליון)
+      const accumulationCommission = accumulation > 0 ? 
+        Math.round(accumulation * (agentRates.accumulationRate / 1000000)) : 0;
+
+      // סה"כ עמלות
       const totalCommission = scopeCommission + accumulationCommission;
+
+      // לוג לבדיקה
+      console.log('Pension calculation:', {
+        salary,
+        annualSalary,
+        accumulation,
+        provisionRate,
+        agentRates,
+        scopeCommission,
+        accumulationCommission,
+        totalCommission
+      });
 
       return {
         scopeCommission,
         accumulationCommission,
         totalCommission
       };
+
     } catch (error) {
       console.error('Error calculating pension commissions:', error);
-      return { scopeCommission: 0, accumulationCommission: 0, totalCommission: 0 };
+      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
+      return {
+        scopeCommission: 0,
+        accumulationCommission: 0,
+        totalCommission: 0
+      };
     }
   };
 
