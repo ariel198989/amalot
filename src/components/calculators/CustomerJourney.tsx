@@ -23,6 +23,13 @@ import {
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
+import { reportService } from '@/services/reportService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProductSelection {
   pension: boolean;
@@ -93,6 +100,19 @@ interface Journey {
   user_id?: string;
 }
 
+interface FormData {
+  clientName: string;
+  clientPhone?: string;
+  pensionSalary?: number;
+  pensionAccumulation?: number;
+  pensionProvision?: number;
+  insurancePremium?: number;
+  insuranceType?: string;
+  investmentAmount?: number;
+  policyAmount?: number;
+  policyPeriod?: number;
+}
+
 const formatDate = (date: Date) => {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 };
@@ -113,7 +133,7 @@ const CustomerJourney: React.FC = () => {
   });
 
   const [journeys, setJourneys] = React.useState<Journey[]>([]);
-  const { register, handleSubmit: handleFormSubmit, setValue, watch } = useForm();
+  const { register, handleSubmit: handleFormSubmit, watch, setValue } = useForm<FormData>();
 
   const products = [
     { id: 'pension', label: 'פנסיה', description: 'חישוב עמלות פנסיה',
@@ -195,7 +215,7 @@ const CustomerJourney: React.FC = () => {
       const accumulation = Number(data.pensionAccumulation) || 0;
       const provision = Number(data.pensionProvision) || 0;
       
-      // אחוזי העמלות של הסוכן (צריך לקחת מהפרופיל של הסוכן)
+      // אחוזי העמלות של הסוכן (צריך לקחת מהרופיל של ה)
       const agentRates = {
         scopeRate: 0.07, // 7% עמלת היקף
         accumulationRate: 3000 // 3000 ₪ למיליון צבירה
@@ -275,39 +295,141 @@ const CustomerJourney: React.FC = () => {
 
   const calculateInvestmentCommissions = async (data: any, company: string) => {
     try {
-      if (!defaultRates.investment[company]) {
-        throw new Error(`לא נמצאו נתוני עמלות עבור חברת ${company}`);
+      if (!data.investmentAmount) {
+        throw new Error('נא להזין סכום השקעה');
       }
 
-      const rates = defaultRates.investment[company];
       const amount = Number(data.investmentAmount);
-      const scopeCommission = amount * rates.scopeRate;
+      if (amount <= 0) throw new Error('נא להזין סכום השקעה תקין');
+
+      // עמלת היקף - בין 6000 ל-8000 ₪ למיליון (נניח 6000 ₪ כברירת מחדל)
+      const scopeRatePerMillion = 6000; // צריך לקחת מפרופיל הסוכן
+      const scopeCommission = Math.round((amount / 1000000) * scopeRatePerMillion);
+
+      // עמלת נפרעים - 0.25% מהצבירה בשנה (250 ₪ למיליון לחודש)
+      const monthlyCommissionPerMillion = 250;
+      const monthlyCommission = Math.round((amount / 1000000) * monthlyCommissionPerMillion);
+      const annualCommission = monthlyCommission * 12;
+
+      // סה"כ עמלות - עמלת היקף + עמלה שוטפת שנתית
+      const totalCommission = scopeCommission + annualCommission;
+
+      console.log('Investment calculation:', {
+        amount,
+        scopeRatePerMillion,
+        scopeCommission,
+        monthlyCommissionPerMillion,
+        monthlyCommission,
+        annualCommission,
+        totalCommission,
+        details: {
+          scopeCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${scopeRatePerMillion} = ${scopeCommission} ₪`,
+          monthlyCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${monthlyCommissionPerMillion} = ${monthlyCommission} ₪ לחודש`
+        }
+      });
 
       return {
         scopeCommission,
-        totalCommission: scopeCommission
+        monthlyCommission,
+        annualCommission,
+        totalCommission,
+        details: {
+          amount,
+          scopeRatePerMillion,
+          monthlyCommissionPerMillion,
+          calculationDetails: {
+            scopeCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${scopeRatePerMillion} = ${scopeCommission} ₪`,
+            monthlyCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${monthlyCommissionPerMillion} = ${monthlyCommission} ₪ לחודש`
+          }
+        }
       };
+
     } catch (error) {
       console.error('Error calculating investment commissions:', error);
-      return { scopeCommission: 0, totalCommission: 0 };
+      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
+      return {
+        scopeCommission: 0,
+        monthlyCommission: 0,
+        annualCommission: 0,
+        totalCommission: 0,
+        details: {
+          amount: 0,
+          scopeRatePerMillion: 0,
+          monthlyCommissionPerMillion: 0,
+          calculationDetails: {
+            scopeCalculation: '',
+            monthlyCalculation: ''
+          }
+        }
+      };
     }
   };
 
   const calculatePolicyCommissions = async (data: any, company: string) => {
     try {
-      const rates = defaultRates.policy[company];
+      if (!data.policyAmount) {
+        throw new Error('נא להזין סכום הפקדה');
+      }
+
       const amount = Number(data.policyAmount);
-      const period = Number(data.policyPeriod);
-      
-      const scopeCommission = amount * (period >= 15 ? rates.longTermRate : rates.shortTermRate);
+      if (amount <= 0) throw new Error('נא להזין סכום הפקדה תקין');
+
+      // עמלת היקף - 6000-8000 ₪ למיליון (נניח 7000 ₪ כברירת מחדל)
+      const scopeRatePerMillion = 7000; // ניתן לקחת מפרופיל הסוכן
+      const scopeCommission = Math.round((amount / 1000000) * scopeRatePerMillion);
+
+      // עמלת נפרעים - 0.3% מהצבירה בשנה (0.025% לחודש)
+      const monthlyRate = 0.003; // 0.3%
+      const monthlyCommission = Math.round(amount * (monthlyRate / 12));
+      const annualCommission = monthlyCommission * 12;
+
+      // סה"כ עמלות - עמלת היקף + עמלה שוטפת שנתית
+      const totalCommission = scopeCommission + annualCommission;
+
+      console.log('Policy calculation:', {
+        amount,
+        scopeRatePerMillion,
+        scopeCommission,
+        monthlyRate,
+        monthlyCommission,
+        annualCommission,
+        totalCommission
+      });
 
       return {
         scopeCommission,
-        totalCommission: scopeCommission
+        monthlyCommission,
+        annualCommission,
+        totalCommission,
+        details: {
+          amount,
+          scopeRatePerMillion,
+          monthlyRate,
+          calculationDetails: {
+            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${scopeRatePerMillion.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} ₪`,
+            monthlyCalculation: `${amount.toLocaleString()} × ${(monthlyRate / 12 * 100).toFixed(3)}% = ${monthlyCommission.toLocaleString()} ₪ לחודש`
+          }
+        }
       };
+
     } catch (error) {
       console.error('Error calculating policy commissions:', error);
-      return { scopeCommission: 0, totalCommission: 0 };
+      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
+      return {
+        scopeCommission: 0,
+        monthlyCommission: 0,
+        annualCommission: 0,
+        totalCommission: 0,
+        details: {
+          amount: 0,
+          scopeRatePerMillion: 0,
+          monthlyRate: 0,
+          calculationDetails: {
+            scopeCalculation: '',
+            monthlyCalculation: ''
+          }
+        }
+      };
     }
   };
 
@@ -481,286 +603,201 @@ const CustomerJourney: React.FC = () => {
     loadSalesData();
   }, []);
 
-  const onSubmit = async (data: any) => {
+  const [commissionDetails, setCommissionDetails] = React.useState<CommissionDetails>({
+    pension: { companies: {}, total: 0 },
+    insurance: { companies: {}, total: 0 },
+    investment: { companies: {}, total: 0 },
+    policy: { companies: {}, total: 0 }
+  });
+
+  const onSubmit = async (data: FormData) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error('משתמש לא מחובר');
 
-      const currentDate = formatDate(new Date());
+      // בדיקת תקינות שם הלקוח
+      if (!data.clientName?.trim()) {
+        toast.error('נא להזין שם לקוח');
+        return;
+      }
+
+      // חישוב העמלות
+      const newCommissionDetails: CommissionDetails = {
+        pension: { companies: {}, total: 0 },
+        insurance: { companies: {}, total: 0 },
+        investment: { companies: {}, total: 0 },
+        policy: { companies: {}, total: 0 }
+      };
+
       let totalCommissions = 0;
-      const commissionDetails: any = {};
 
       // חישוב עמלות פנסיה
       if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
-        commissionDetails.pension = { companies: {}, total: 0 };
         for (const company of selectedCompanies.pension) {
           const result = await calculatePensionCommissions(data, company);
           totalCommissions += result.totalCommission;
-          commissionDetails.pension.companies[company] = result;
-          commissionDetails.pension.total += result.totalCommission;
-
-          const pensionData = {
-            date: currentDate,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            salary: Number(data.pensionSalary),
-            accumulation: Number(data.pensionAccumulation),
-            provision: Number(data.pensionProvision),
-            scope_commission: result.scopeCommission,
-            accumulation_commission: result.accumulationCommission,
-            total_commission: result.totalCommission,
-            user_id: user.id,
-            created_at: currentDate
-          };
-
-          const { error: pensionError } = await supabase
-            .from('pension_sales')
-            .insert([pensionData]);
-
-          if (pensionError) throw pensionError;
+          newCommissionDetails.pension.companies[company] = result;
+          newCommissionDetails.pension.total += result.totalCommission;
         }
       }
 
-      // שמירת נתוני ביטוח
+      // חישוב עמלות ביטוח
       if (selectedProducts.insurance && selectedCompanies.insurance.length > 0) {
-        commissionDetails.insurance = { companies: {}, total: 0 };
         for (const company of selectedCompanies.insurance) {
           const result = await calculateInsuranceCommissions(data, company);
           totalCommissions += result.totalCommission;
-          commissionDetails.insurance.companies[company] = result;
-          commissionDetails.insurance.total += result.totalCommission;
-
-          const insuranceData = {
-            date: currentDate,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            insurance_type: data.insuranceType,
-            monthly_premium: Number(data.insurancePremium),
-            one_time_commission: result.oneTimeCommission,
-            monthly_commission: result.monthlyCommission,
-            total_commission: result.totalCommission,
-            user_id: user.id,
-            created_at: currentDate
-          };
-
-          const { error: insuranceError } = await supabase
-            .from('insurance_sales')
-            .insert([insuranceData]);
-
-          if (insuranceError) throw insuranceError;
+          newCommissionDetails.insurance.companies[company] = result;
+          newCommissionDetails.insurance.total += result.totalCommission;
         }
       }
 
-      // שמירת נתוני השקעות
+      // חישב עמלות השקעות
       if (selectedProducts.investment && selectedCompanies.investment.length > 0) {
-        commissionDetails.investment = { companies: {}, total: 0 };
         for (const company of selectedCompanies.investment) {
           const result = await calculateInvestmentCommissions(data, company);
           totalCommissions += result.totalCommission;
-          commissionDetails.investment.companies[company] = result;
-          commissionDetails.investment.total += result.totalCommission;
-
-          const investmentData = {
-            date: currentDate,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            amount: Number(data.investmentAmount),
-            scope_commission: result.scopeCommission,
-            total_commission: result.totalCommission,
-            user_id: user.id,
-            created_at: currentDate
-          };
-
-          const { error: investmentError } = await supabase
-            .from('investment_sales')
-            .insert([investmentData]);
-
-          if (investmentError) throw investmentError;
+          newCommissionDetails.investment.companies[company] = result;
+          newCommissionDetails.investment.total += result.totalCommission;
         }
       }
 
-      // שמירת נתוני פוליסות
+      // חישוב עמלות פוליסות
       if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
-        commissionDetails.policy = { companies: {}, total: 0 };
         for (const company of selectedCompanies.policy) {
           const result = await calculatePolicyCommissions(data, company);
           totalCommissions += result.totalCommission;
-          commissionDetails.policy.companies[company] = result;
-          commissionDetails.policy.total += result.totalCommission;
-
-          const policyData = {
-            date: currentDate,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            amount: Number(data.policyAmount),
-            period: Number(data.policyPeriod),
-            scope_commission: result.scopeCommission,
-            total_commission: result.totalCommission,
-            user_id: user.id,
-            created_at: currentDate
-          };
-
-          const { error: policyError } = await supabase
-            .from('policy_sales')
-            .insert([policyData]);
-
-          if (policyError) throw policyError;
+          newCommissionDetails.policy.companies[company] = result;
+          newCommissionDetails.policy.total += result.totalCommission;
         }
       }
 
-      // שמירת מסע הלקוח
-      const journeyData = {
-        journey_date: currentDate,
+      // עדכון ה-state של פרטי העמלות
+      setCommissionDetails(newCommissionDetails);
+
+      // פיצול שם הלקוח
+      const nameParts = data.clientName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+
+      // בדיקה אם הלקוח קיים
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('first_name', firstName)
+        .eq('last_name', lastName)
+        .single();
+
+      let clientId: string | null = null;
+
+      if (!existingClient) {
+        // יצירת לקוח חדש
+        const { data: newClient, error: createError } = await supabase
+          .from('clients')
+          .insert([{
+            user_id: user.id,
+            first_name: firstName,
+            last_name: lastName,
+            phone: data.clientPhone,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            last_contact: new Date().toISOString()
+          }])
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        if (!newClient) throw new Error('שגיאה ביצירת לקוח חדש');
+        
+        clientId = newClient.id;
+      } else {
+        clientId = existingClient.id;
+      }
+
+      // יצירת סיכום פגישה
+      const summaryData = reportService.generateMeetingSummary({
         client_name: data.clientName,
-        client_phone: data.clientPhone,
         selected_products: Object.entries(selectedProducts)
           .filter(([_, value]) => value)
           .map(([key]) => key),
         selected_companies: selectedCompanies,
-        commission_details: commissionDetails,
-        total_commission: totalCommissions,
+        commission_details: newCommissionDetails,
+        formData: data
+      });
+
+      // שמירת הפגישה במערכת
+      const meetingData = {
+        client_id: clientId,
         user_id: user.id,
-        created_at: currentDate
+        date: new Date().toISOString(),
+        summary: summaryData.summary,
+        next_steps: summaryData.next_steps,
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        commission_details: newCommissionDetails,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: selectedCompanies
       };
 
-      const { error: journeyError } = await supabase
-        .from('customer_journeys')
-        .insert([journeyData]);
+      const { error: meetingError } = await supabase
+        .from('meetings')
+        .insert([meetingData]);
 
-      if (journeyError) throw journeyError;
+      if (meetingError) throw meetingError;
 
-      toast.success('הנתונים נשמרו בהצלחה!', {
-        duration: 5000,
-        position: 'top-center',
-        icon: '✅',
-        style: {
-          borderRadius: '10px',
-          background: '#333',
-          color: '#fff',
-        },
+      // עדכון תאריך הפגישה האחרון של הלקוח
+      await supabase
+        .from('clients')
+        .update({ last_contact: new Date().toISOString() })
+        .eq('id', clientId);
+
+      // פתיחת הדיאלוג עם הסיכום
+      setMeetingSummary({
+        isOpen: true,
+        summary: summaryData.summary,
+        next_steps: summaryData.next_steps,
+        pdfContent: summaryData.pdfContent
       });
 
-      // ניקוי הטופס
-      setSelectedProducts({
-        pension: false,
-        insurance: false,
-        investment: false,
-        policy: false
-      });
-      setSelectedCompanies({
-        pension: [],
-        insurance: [],
-        investment: [],
-        policy: []
-      });
+      toast.success('החישוב וסיכום הפגישה נוצרו ונשמרו בהצלחה');
 
-    } catch (error: any) {
-      console.error('Error saving data:', error);
-      toast.error(error.message || 'אירעה שגיאה בשמירת הנתונים');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('אירעה שגיאה בחישוב העמלות');
     }
   };
 
-  const handleDownloadPDF = (journey: any) => {
-    try {
-      const element = document.createElement('div');
-      element.innerHTML = `
-        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
-          <h1 style="color: #1a365d; text-align: center; margin-bottom: 30px;">דוח מסע לקוח</h1>
-          
-          <div style="margin-bottom: 20px;">
-            <h2 style="color: #2c5282;">פרטי לקוח</h2>
-            <p>תאריך: ${journey.journey_date}</p>
-            <p>שם לקוח: ${journey.client_name}</p>
-            <p>טלפון: ${journey.client_phone || ''}</p>
-          </div>
-
-          ${journey.commission_details?.pension?.total > 0 ? `
-            <div style="margin-bottom: 20px;">
-              <h2 style="color: #2c5282;">פנסיה</h2>
-              ${Object.entries(journey.commission_details.pension.companies)
-                .map(([company, details]: [string, any]) => `
-                  <div style="margin-left: 20px;">
-                    <h3>${company}</h3>
-                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
-                    <p>עמלת צבירה: ${details.accumulationCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
-                  </div>
-                `).join('')}
-              <p><strong>סה"כ עמלות פנסיה: ${journey.commission_details.pension.total.toLocaleString()} ₪</strong></p>
-            </div>
-          ` : ''}
-
-          ${journey.commission_details?.insurance?.total > 0 ? `
-            <div style="margin-bottom: 20px;">
-              <h2 style="color: #2c5282;">ביטוח</h2>
-              ${Object.entries(journey.commission_details.insurance.companies)
-                .map(([company, details]: [string, any]) => `
-                  <div style="margin-left: 20px;">
-                    <h3>${company}</h3>
-                    <p>עמלה חד פעמית: ${details.oneTimeCommission.toLocaleString()} ₪</p>
-                    <p>עמלה חודשית: ${details.monthlyCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
-                  </div>
-                `).join('')}
-              <p><strong>סה"כ עמלות ביטוח: ${journey.commission_details.insurance.total.toLocaleString()} ₪</strong></p>
-            </div>
-          ` : ''}
-
-          ${journey.commission_details?.investment?.total > 0 ? `
-            <div style="margin-bottom: 20px;">
-              <h2 style="color: #2c5282;">השקעות</h2>
-              ${Object.entries(journey.commission_details.investment.companies)
-                .map(([company, details]: [string, any]) => `
-                  <div style="margin-left: 20px;">
-                    <h3>${company}</h3>
-                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
-                  </div>
-                `).join('')}
-              <p><strong>סה"כ עמלות השקעות: ${journey.commission_details.investment.total.toLocaleString()} ₪</strong></p>
-            </div>
-          ` : ''}
-
-          ${journey.commission_details?.policy?.total > 0 ? `
-            <div style="margin-bottom: 20px;">
-              <h2 style="color: #2c5282;">פוליסת חיסכון</h2>
-              ${Object.entries(journey.commission_details.policy.companies)
-                .map(([company, details]: [string, any]) => `
-                  <div style="margin-left: 20px;">
-                    <h3>${company}</h3>
-                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
-                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
-                  </div>
-                `).join('')}
-              <p><strong>סה"כ עמלות פוליסת חיסכון: ${journey.commission_details.policy.total.toLocaleString()} ₪</strong></p>
-            </div>
-          ` : ''}
-
-          <div style="margin-top: 30px; border-top: 2px solid #2c5282; padding-top: 20px;">
-            <h2 style="color: #2c5282;">סיכום עמלות</h2>
-            <p style="font-size: 1.2em;"><strong>סה"כ עמלות: ${journey.total_commission.toLocaleString()} ₪</strong></p>
-          </div>
-        </div>
-      `;
-
-      const opt = {
-        margin: 10,
-        filename: `דוח_מסע_לקוח_${journey.client_name}_${journey.journey_date}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().from(element).set(opt).save();
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('אירעה שגיאה ביצירת הדוח');
+  const handleDownloadPDF = () => {
+    if (!meetingSummary.pdfContent) {
+      toast.error('אין נתונים להורדה');
+      return;
     }
+
+    const element = document.createElement('div');
+    element.innerHTML = meetingSummary.pdfContent;
+
+    const opt = {
+      margin: 10,
+      filename: `סיכום_פגישה_${watch('clientName')}_${new Date().toLocaleDateString('he-IL')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        dir: 'rtl'
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true
+      }
+    };
+
+    html2pdf().from(element).set(opt).save();
   };
 
   const handleDownloadExcel = () => {
@@ -805,7 +842,7 @@ const CustomerJourney: React.FC = () => {
     }
     
     const lastJourney = journeys[journeys.length - 1];
-    let message = `דוח מסע לקוח:\n\n`;
+    let message = `דוח סע לקוח:\n\n`;
     message += `תאריך: ${lastJourney.journey_date}\n`;
     message += `שם לקוח: ${lastJourney.client_name}\n`;
     message += `מוצרים שנבחרו: ${lastJourney.selected_products.join(', ')}\n\n`;
@@ -895,6 +932,65 @@ const CustomerJourney: React.FC = () => {
     } catch (error) {
       console.error('Error saving data:', error);
       toast.error('אירעה שגיאה בשמירת הנתונים');
+    }
+  };
+
+  const [meetingSummary, setMeetingSummary] = React.useState<{
+    isOpen: boolean;
+    summary: string;
+    next_steps: string;
+    pdfContent?: string;
+  }>({
+    isOpen: false,
+    summary: '',
+    next_steps: '',
+    pdfContent: ''
+  });
+
+  const handleCreateMeetingSummary = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // יצירת סיכום פגישה
+      const summaryData = reportService.generateMeetingSummary({
+        client_name: watch('clientName'),
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: selectedCompanies,
+        commission_details: commissionDetails
+      });
+
+      // שמירת הפגישה במערכת
+      const meetingData = {
+        client_id: null,
+        user_id: user.id,
+        date: new Date().toISOString(),
+        summary: summaryData.summary,
+        next_steps: summaryData.next_steps,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('meetings')
+        .insert([meetingData]);
+
+      if (error) throw error;
+
+      // פתיחת הדיאלוג עם הסיכום
+      setMeetingSummary({
+        isOpen: true,
+        summary: summaryData.summary,
+        next_steps: summaryData.next_steps
+      });
+
+      toast.success('סיכום הפגישה נוצר ונשמר בהצלחה');
+      
+    } catch (error) {
+      console.error('Error creating meeting summary:', error);
+      toast.error('שגיאה ביצירת סיכום הפגישה');
     }
   };
 
@@ -1141,7 +1237,7 @@ const CustomerJourney: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">סכום הפקדה</label>
-                    <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום הפקדה" />
+                    <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום ה��קדה" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
@@ -1167,21 +1263,66 @@ const CustomerJourney: React.FC = () => {
           <Button 
             variant="outline"
             className="flex-1 h-12 text-lg border-2 hover:bg-blue-50 transition-all duration-300"
-            onClick={() => {
-              // יצירת אובייקט הנתונים לדוח
-              const reportData = {
-                date: new Date().toLocaleDateString('he-IL'),
-                clientName: watch('clientName'),
-                // ... rest of the report data ...
-              };
-              generatePDF(reportData);
-            }}
+            onClick={handleCreateMeetingSummary}
           >
             <FileText className="h-5 w-5 ml-2" />
-            צור דוח מסכם
+            צור סיכום פגישה
           </Button>
         </div>
       )}
+
+      <Dialog 
+        open={meetingSummary.isOpen} 
+        onOpenChange={(open) => setMeetingSummary(prev => ({ ...prev, isOpen: open }))}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="sticky top-0 bg-white z-10 pb-4 border-b">
+            <DialogTitle>סיכום פגישה</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 p-4">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">סיכום</h3>
+              <div className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">
+                {meetingSummary.summary}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">משימות להמשך</h3>
+              <div className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">
+                {meetingSummary.next_steps}
+              </div>
+            </div>
+            
+            <div className="sticky bottom-0 bg-white pt-4 border-t flex justify-end space-x-4 space-x-reverse">
+              <Button onClick={handleDownloadPDF}>
+                <Download className="h-4 w-4 ml-2" />
+                הורד PDF
+              </Button>
+              <Button
+                onClick={() => {
+                  const text = `${meetingSummary.summary}\n\nמשימות להמשך:\n${meetingSummary.next_steps}`;
+                  const encodedText = encodeURIComponent(text);
+                  window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+                }}
+              >
+                <Share2 className="h-4 w-4 ml-2" />
+                שתף בווצאפ
+              </Button>
+              <Button
+                onClick={() => setMeetingSummary(prev => ({ ...prev, isOpen: false }))}
+                variant="outline"
+              >
+                סגור
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
