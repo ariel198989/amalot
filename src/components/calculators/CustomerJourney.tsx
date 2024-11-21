@@ -311,33 +311,56 @@ const CustomerJourney: React.FC = () => {
 
   const calculatePolicyCommissions = async (data: any, company: string) => {
     try {
-      if (!data.policyAmount) {
-        throw new Error('נא להזין סכום הפקדה');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // קבלת העמלות העדכניות מהדאטהבייס
+      const { data: ratesData, error } = await supabase
+        .from('agent_commission_rates')
+        .select('policy_companies')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // בדיקה שהחברה קיימת ופעילה
+      const companyRates = ratesData?.policy_companies?.[company];
+      if (!companyRates?.active) {
+        console.log(`Company ${company} is not active`);
+        return {
+          scopeCommission: 0,
+          monthlyCommission: 0,
+          annualCommission: 0,
+          totalCommission: 0
+        };
       }
 
-      const amount = Number(data.policyAmount);
-      if (amount <= 0) throw new Error('נא להזין סכום הפקדה תקין');
-
-      // עמלת היקף - 6000-8000 ₪ למיליון (נניח 7000 ₪ כברירת מחדל)
-      const scopeRatePerMillion = 7000; // ניתן לקחת מפרופיל הסוכן
-      const scopeCommission = Math.round((amount / 1000000) * scopeRatePerMillion);
-
-      // עמלת נפרעים - 0.3% מהצבירה בשנה (0.025% לחודש)
-      const monthlyRate = 0.003; // 0.3%
-      const monthlyCommission = Math.round(amount * (monthlyRate / 12));
+      const amount = Number(data.policyAmount) || 0;
+      
+      // חישוב עמלת היקף לפי הנתונים מהדאטהבייס
+      const scopeCommission = (amount / 1000000) * companyRates.scope_rate_per_million;
+      
+      // חישוב עמלה חודשית לפי הנתונים מהדאטהבייס
+      const monthlyCommission = amount * (companyRates.monthly_rate / 12);
+      
+      // חישוב עמלה שנתית
       const annualCommission = monthlyCommission * 12;
-
-      // סה"כ עמלות - עמלת היקף + עמלה שוטפת שנתית
+      
+      // סה"כ עמלות בשנה הראשונה
       const totalCommission = scopeCommission + annualCommission;
 
       console.log('Policy calculation:', {
         amount,
-        scopeRatePerMillion,
-        scopeCommission,
-        monthlyRate,
-        monthlyCommission,
-        annualCommission,
-        totalCommission
+        rates: {
+          scope_rate_per_million: companyRates.scope_rate_per_million,
+          monthly_rate: companyRates.monthly_rate
+        },
+        results: {
+          scopeCommission,
+          monthlyCommission,
+          annualCommission,
+          totalCommission
+        }
       });
 
       return {
@@ -347,33 +370,17 @@ const CustomerJourney: React.FC = () => {
         totalCommission,
         details: {
           amount,
-          scopeRatePerMillion,
-          monthlyRate,
+          scopeRatePerMillion: companyRates.scope_rate_per_million,
+          monthlyRate: companyRates.monthly_rate,
           calculationDetails: {
-            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${scopeRatePerMillion.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} `,
-            monthlyCalculation: `${amount.toLocaleString()} × ${(monthlyRate / 12 * 100).toFixed(3)}% = ${monthlyCommission.toLocaleString()} ₪ לחודש`
+            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${companyRates.scope_rate_per_million.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} ₪`,
+            monthlyCalculation: `${amount.toLocaleString()} × ${(companyRates.monthly_rate * 100).toFixed(3)}% = ${monthlyCommission.toLocaleString()} ₪ לחודש`
           }
         }
       };
-
     } catch (error) {
       console.error('Error calculating policy commissions:', error);
-      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
-      return {
-        scopeCommission: 0,
-        monthlyCommission: 0,
-        annualCommission: 0,
-        totalCommission: 0,
-        details: {
-          amount: 0,
-          scopeRatePerMillion: 0,
-          monthlyRate: 0,
-          calculationDetails: {
-            scopeCalculation: '',
-            monthlyCalculation: ''
-          }
-        }
-      };
+      throw error;
     }
   };
 
@@ -708,7 +715,7 @@ const CustomerJourney: React.FC = () => {
       let clientId: string | null = null;
 
       if (!existingClient) {
-        // יציר�� לקוח חדש
+        // יציר לקוח חדש
         const { data: newClient, error: createError } = await supabase
           .from('clients')
           .insert([{

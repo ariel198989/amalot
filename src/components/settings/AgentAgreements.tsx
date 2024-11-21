@@ -6,6 +6,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import { Checkbox } from "@/components/ui/checkbox";
+import { motion } from "framer-motion";
+import { 
+  Wallet, 
+  PiggyBank, 
+  Building2, 
+  Shield,
+  Settings2,
+  CheckCircle2,
+  XCircle,
+  Save,
+  RefreshCw
+} from 'lucide-react';
 
 interface CompanyRates {
   scope_rate: number;
@@ -210,99 +222,163 @@ const AgentAgreements = () => {
   if (isLoading) return <div>טוען...</div>;
 
   return (
-    <div className="container mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>הסכמי סוכן</CardTitle>
-          <CardDescription>עדכון עמלות לפי חברה ומוצר</CardDescription>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="container mx-auto p-6 text-right"
+      dir="rtl"
+    >
+      <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="bg-gradient-to-r from-blue-100 to-blue-50 border-b border-blue-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <Settings2 className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-blue-900">הסכמי סוכן</CardTitle>
+              <CardDescription className="text-blue-600">עדכון אחוזי ועמלות הסוכן לפי מוצר</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="pension" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pension">פנסיה</TabsTrigger>
-              <TabsTrigger value="investment">גמל והשתלמות</TabsTrigger>
-              <TabsTrigger value="policy">פוליסת חיסכון</TabsTrigger>
-              <TabsTrigger value="insurance">ביטוח</TabsTrigger>
+        <CardContent className="p-6">
+          <Tabs defaultValue="pension" className="space-y-6" dir="rtl">
+            <TabsList className="grid w-full grid-cols-4 p-1 bg-blue-50 rounded-xl">
+              <TabsTrigger 
+                value="pension"
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <Wallet className="h-4 w-4 ml-2" />
+                פנסיה
+              </TabsTrigger>
+              <TabsTrigger 
+                value="investment"
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <PiggyBank className="h-4 w-4 ml-2" />
+                גמל והשתלמות
+              </TabsTrigger>
+              <TabsTrigger 
+                value="policy"
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <Building2 className="h-4 w-4 ml-2" />
+                פוליסת חיסכון
+              </TabsTrigger>
+              <TabsTrigger 
+                value="insurance"
+                className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm transition-all duration-200"
+              >
+                <Shield className="h-4 w-4 ml-2" />
+                ביטוח
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="pension">
-              <Card>
-                <CardHeader>
-                  <CardTitle>עמלות פנסיה לפי חברה</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {COMPANIES.pension.map(company => (
-                      <div key={company} className="border p-4 rounded-lg">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold">{company}</h3>
-                          <Checkbox
-                            checked={rates.pension_companies[company].active}
-                            onCheckedChange={(checked) => {
-                              setRates(prev => ({
-                                ...prev,
-                                pension_companies: {
-                                  ...prev.pension_companies,
-                                  [company]: {
-                                    ...prev.pension_companies[company],
-                                    active: checked === true
-                                  }
-                                }
-                              }));
-                            }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              עמלת היקף (%)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={rates.pension_companies[company].scope_rate * 100}
-                              onChange={(e) => {
-                                setRates(prev => ({
-                                  ...prev,
-                                  pension_companies: {
-                                    ...prev.pension_companies,
-                                    [company]: {
-                                      ...prev.pension_companies[company],
-                                      scope_rate: Number(e.target.value) / 100
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                dir="rtl"
+              >
+                <Card className="border-2 border-blue-100 shadow-md hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="bg-gradient-to-r from-blue-100 to-blue-50">
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="h-5 w-5 text-blue-600" />
+                      עמלות פנסיה לפי חברה
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4 text-right">
+                      {COMPANIES.pension.map((company, index) => (
+                        <motion.div
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          key={company}
+                          className="border-2 border-gray-100 p-4 rounded-lg hover:border-blue-200 hover:shadow-md transition-all duration-200"
+                          dir="rtl"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-blue-600" />
+                              {company}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              {rates.pension_companies[company].active ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <XCircle className="h-5 w-5 text-red-500" />
+                              )}
+                              <Checkbox
+                                checked={rates.pension_companies[company].active}
+                                onCheckedChange={(checked) => {
+                                  setRates(prev => ({
+                                    ...prev,
+                                    pension_companies: {
+                                      ...prev.pension_companies,
+                                      [company]: {
+                                        ...prev.pension_companies[company],
+                                        active: checked === true
+                                      }
                                     }
-                                  }
-                                }));
-                              }}
-                            />
+                                  }));
+                                }}
+                                className="data-[state=checked]:bg-blue-600"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">
-                              עמלת נפרעים (%)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={rates.pension_companies[company].monthly_rate * 100}
-                              onChange={(e) => {
-                                setRates(prev => ({
-                                  ...prev,
-                                  pension_companies: {
-                                    ...prev.pension_companies,
-                                    [company]: {
-                                      ...prev.pension_companies[company],
-                                      monthly_rate: Number(e.target.value) / 100
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                עמלת היקף (%)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={rates.pension_companies[company].scope_rate * 100}
+                                onChange={(e) => {
+                                  setRates(prev => ({
+                                    ...prev,
+                                    pension_companies: {
+                                      ...prev.pension_companies,
+                                      [company]: {
+                                        ...prev.pension_companies[company],
+                                        scope_rate: Number(e.target.value) / 100
+                                      }
                                     }
-                                  }
-                                }));
-                              }}
-                            />
+                                  }));
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                עמלת נפרעים (%)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={rates.pension_companies[company].monthly_rate * 100}
+                                onChange={(e) => {
+                                  setRates(prev => ({
+                                    ...prev,
+                                    pension_companies: {
+                                      ...prev.pension_companies,
+                                      [company]: {
+                                        ...prev.pension_companies[company],
+                                        monthly_rate: Number(e.target.value) / 100
+                                      }
+                                    }
+                                  }));
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </TabsContent>
 
             <TabsContent value="investment">
@@ -569,19 +645,30 @@ const AgentAgreements = () => {
             </TabsContent>
           </Tabs>
 
-          <hr className="my-6 border-t border-gray-200" />
-
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-500">
-              עודכן לאחרונה: {new Date(rates.updated_at || '').toLocaleDateString('he-IL')}
+          <motion.div 
+            className="mt-6 border-t border-gray-200 pt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            dir="rtl"
+          >
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <RefreshCw className="h-4 w-4" />
+                עודכן לאחרונה: {new Date(rates.updated_at || '').toLocaleDateString('he-IL')}
+              </div>
+              <Button 
+                onClick={() => saveRates(rates)} 
+                className="min-w-[200px] bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-300 group"
+              >
+                <Save className="h-4 w-4 ml-2 group-hover:scale-110 transition-transform" />
+                שמור שינויים
+              </Button>
             </div>
-            <Button onClick={() => saveRates(rates)} className="min-w-[200px]">
-              שמור שינויים
-            </Button>
-          </div>
+          </motion.div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 };
 

@@ -296,6 +296,7 @@ export const reportService = {
       const period = journeyData.formData.policyPeriod || '';
 
       companies.forEach(company => {
+        const commissionDetails = journeyData.commission_details.policy.companies[company];
         pdfParts.push(`
           <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h3 style="color: #2563eb; font-size: 18px; margin-bottom: 15px;">
@@ -305,8 +306,14 @@ export const reportService = {
             <div style="padding-right: 20px; line-height: 1.6;">
               <p>• סכום הפקדה: ${amount} ₪</p>
               <p>• תקופה: ${period} שנים</p>
-              <p style="color: #059669; font-weight: bold;">
-                • צפי עמלות: ${journeyData.commission_details.policy.companies[company].totalCommission.toLocaleString()} ₪
+              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4 style="color: #1e3a8a; font-size: 16px; margin-bottom: 10px;">פירוט עמלות:</h4>
+                <p>• עמלת היקף (חד פעמי): ${commissionDetails.scopeCommission.toLocaleString()} ₪</p>
+                <p>• עמלת נפרעים חודשית: ${commissionDetails.monthlyCommission.toLocaleString()} ₪</p>
+                <p>• עמלת נפרעים שנתית: ${commissionDetails.annualCommission.toLocaleString()} ₪</p>
+              </div>
+              <p style="color: #059669; font-weight: bold; margin-top: 10px;">
+                • סה"כ עמלות בשנה הראשונה: ${commissionDetails.totalCommission.toLocaleString()} ₪
               </p>
             </div>
           </div>
@@ -316,7 +323,10 @@ export const reportService = {
         summaryText += `\n🔹 פתיחת פוליסת חיסכון ב${company}:\n`;
         summaryText += `   • סכום הפקדה: ${amount} ₪\n`;
         summaryText += `   • תקופה: ${period} שנים\n`;
-        summaryText += `   • צפי עמלות: ${journeyData.commission_details.policy.companies[company].totalCommission.toLocaleString()} ₪\n`;
+        summaryText += `   • עמלת היקף (חד פעמי): ${commissionDetails.scopeCommission.toLocaleString()} ₪\n`;
+        summaryText += `   • עמלת נפרעים חודשית: ${commissionDetails.monthlyCommission.toLocaleString()} ₪\n`;
+        summaryText += `   • עמלת נפרעים שנתית: ${commissionDetails.annualCommission.toLocaleString()} ₪\n`;
+        summaryText += `   • סה"כ עמלות בשנה הראשונה: ${commissionDetails.totalCommission.toLocaleString()} ₪\n`;
       });
     }
 
