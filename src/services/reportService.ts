@@ -158,8 +158,6 @@ export const reportService = {
     };
   }): MeetingSummary {
     const today = new Date().toLocaleDateString('he-IL');
-    
-    // נשתמש במערך במקום במשתנה קבוע
     const pdfParts: string[] = [];
     
     // הוספת הכותרת
@@ -179,8 +177,7 @@ export const reportService = {
           </h2>
     `);
 
-    let summaryText = '';  // לשימוש בווצאפ
-    let next_stepsText = '';  // לשימוש בווצאפ
+    let summaryText = '';
 
     const insuranceTypeMap: Record<string, string> = {
       risk: 'ביטוח חיים',
@@ -223,11 +220,6 @@ export const reportService = {
         summaryText += `   • אחוז הפרשה: ${provision}%\n`;
         summaryText += `   • צפי עמלות: ${journeyData.commission_details.pension.companies[company].totalCommission.toLocaleString()} ₪\n`;
       });
-
-      next_stepsText += `\nפנסיה - ${companies[0]}:\n`;
-      next_stepsText += `• להשלים טפסי ניוד מ${companies[0]}\n`;
-      next_stepsText += `• לוודא קבלת אישור העברה תוך 5 ימי עסקים\n`;
-      next_stepsText += `• לתאם פגישת המשך להצגת הפוליסה\n`;
     }
 
     // ביטוח
@@ -257,11 +249,6 @@ export const reportService = {
         summaryText += `   • פרמיה חודשית: ${premium} ₪\n`;
         summaryText += `   • צפי עמלות: ${journeyData.commission_details.insurance.companies[company].totalCommission.toLocaleString()} ₪\n`;
       });
-
-      next_stepsText += `\nביטוח - ${companies[0]}:\n`;
-      next_stepsText += `• להעביר הצעת ${type}\n`;
-      next_stepsText += `• לתאם בדיקות רפואיות במידת הצורך\n`;
-      next_stepsText += `• לוודא הפקת פוליסה תוך 3 ימי עסקים\n`;
     }
 
     // השקעות
@@ -300,11 +287,6 @@ export const reportService = {
         summaryText += `   • עמלת נפרעים שנתית: ${commissionDetails.annualCommission.toLocaleString()} ₪\n`;
         summaryText += `   • סה"כ עמלות בשנה הראשונה: ${commissionDetails.totalCommission.toLocaleString()} ₪\n`;
       });
-
-      next_stepsText += `\nהשקעות - ${companies[0]}:\n`;
-      next_stepsText += `• להשלים טפסי העברה\n`;
-      next_stepsText += `• לבחור מסלולי השקעה\n`;
-      next_stepsText += `• לוודא קבלת אישור העברה\n`;
     }
 
     // פוליסת חיסכון
@@ -336,11 +318,6 @@ export const reportService = {
         summaryText += `   • תקופה: ${period} שנים\n`;
         summaryText += `   • צפי עמלות: ${journeyData.commission_details.policy.companies[company].totalCommission.toLocaleString()} ₪\n`;
       });
-
-      next_stepsText += `\nפוליסת חיסכון - ${companies[0]}:\n`;
-      next_stepsText += `• להשלים טפסי הצטרפות\n`;
-      next_stepsText += `• לוודא קבלת אישור הפקדה\n`;
-      next_stepsText += `• לתאם פגישת המשך להצגת הפוליסה\n`;
     }
 
     // סיכום כללי
@@ -358,29 +335,17 @@ export const reportService = {
           </p>
         </div>
 
-        <div style="background: #f8fafc; padding: 30px; border-radius: 12px;">
-          <h2 style="color: #1e3a8a; font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">
-            משימות להמשך
-          </h2>
-          <div style="line-height: 1.8;">
-            ${next_stepsText.split('\n').map(step => 
-              step ? `<p style="margin-bottom: 10px;">${step}</p>` : ''
-            ).join('')}
-          </div>
-        </div>
-
         <div style="margin-top: 40px; text-align: center; color: #64748b; font-size: 14px;">
           <p>מסמך זה הופק באופן אוטומטי ע"י מערכת ניהול עמלות</p>
         </div>
       </div>
     `);
 
-    // איחוד כל החלקים לקובץ PDF אחד
     const finalPdfContent = pdfParts.join('');
 
     return {
       summary: summaryText.trim(),
-      next_steps: next_stepsText.trim(),
+      next_steps: '',
       pdfContent: finalPdfContent.trim()
     };
   }

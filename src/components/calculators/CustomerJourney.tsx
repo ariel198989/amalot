@@ -86,18 +86,20 @@ interface CommissionDetails {
   };
 }
 
-interface Journey {
+interface CustomerJourney {
   id?: string;
+  user_id: string;
+  client_id?: string;
+  journey_date: string;
   date: string;
-  clientName: string;
-  clientPhone?: string;
-  clientEmail?: string;
-  selectedProducts: string[];
-  selectedCompanies: CompanySelection;
-  commissionDetails: CommissionDetails;
-  totalCommission: number;
-  created_at?: string;
-  user_id?: string;
+  client_name: string;
+  client_phone?: string;
+  selected_products: string[];
+  selected_companies: Record<string, string[]>;
+  commission_details: CommissionDetails;
+  total_commission: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface FormData {
@@ -132,7 +134,7 @@ const CustomerJourney: React.FC = () => {
     policy: []
   });
 
-  const [journeys, setJourneys] = React.useState<Journey[]>([]);
+  const [journeys, setJourneys] = React.useState<CustomerJourney[]>([]);
   const { register, handleSubmit: handleFormSubmit, watch, setValue } = useForm<FormData>();
 
   const products = [
@@ -215,7 +217,7 @@ const CustomerJourney: React.FC = () => {
       const accumulation = Number(data.pensionAccumulation) || 0;
       const provision = Number(data.pensionProvision) || 0;
       
-      // אחוזי העמלות של הסוכן (צריך לקחת מהרופיל של ה)
+      // אחוזי העמלות של הסוכן (צריך לקחת מרופיל של ה)
       const agentRates = {
         scopeRate: 0.07, // 7% עמלת היקף
         accumulationRate: 3000 // 3000 ₪ למיליון צבירה
@@ -461,6 +463,18 @@ const CustomerJourney: React.FC = () => {
   }) => {
     try {
       const element = document.createElement('div');
+      
+      // חישוב סכומים
+      const totalOneTimeCommissions = 
+        (data.pensionDetails?.reduce((sum, detail) => sum + detail.scopeCommission, 0) || 0) +
+        (data.insuranceDetails?.reduce((sum, detail) => sum + detail.oneTimeCommission, 0) || 0);
+
+      const totalRecurringCommissions = 
+        (data.pensionDetails?.reduce((sum, detail) => sum + detail.accumulationCommission, 0) || 0) +
+        (data.insuranceDetails?.reduce((sum, detail) => sum + (detail.monthlyCommission * 12), 0) || 0) +
+        (data.investmentDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0) +
+        (data.policyDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0);
+
       element.innerHTML = `
         <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -474,19 +488,11 @@ const CustomerJourney: React.FC = () => {
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
               <div>
                 <p style="color: #93c5fd; margin: 0 0 5px 0;">סה"כ עמלות חד פעמיות</p>
-                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${
-                  (data.pensionDetails?.reduce((sum, detail) => sum + detail.scopeCommission, 0) || 0) +
-                  (data.insuranceDetails?.reduce((sum, detail) => sum + detail.oneTimeCommission, 0) || 0)
-                }.toLocaleString()} ₪</p>
+                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${totalOneTimeCommissions.toLocaleString()} ₪</p>
               </div>
               <div>
                 <p style="color: #93c5fd; margin: 0 0 5px 0;">סה"כ עמלות שוטפות (שנתי)</p>
-                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${
-                  (data.pensionDetails?.reduce((sum, detail) => sum + detail.accumulationCommission, 0) || 0) +
-                  (data.insuranceDetails?.reduce((sum, detail) => sum + (detail.monthlyCommission * 12), 0) || 0) +
-                  (data.investmentDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0) +
-                  (data.policyDetails?.reduce((sum, detail) => sum + detail.commission, 0) || 0)
-                }.toLocaleString()} ₪</p>
+                <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${totalRecurringCommissions.toLocaleString()} ₪</p>
               </div>
             </div>
           </div>
@@ -610,6 +616,70 @@ const CustomerJourney: React.FC = () => {
     policy: { companies: {}, total: 0 }
   });
 
+  // הוספת טיפוסים מדויקים
+  interface MeetingData {
+    client_id: string | null;
+    user_id: string;
+    date: string;
+    summary: string;
+    next_steps: string;
+    status: 'completed' | 'pending' | 'cancelled';
+    created_at: string;
+    commission_details: CommissionDetails;
+    selected_products: string[];
+    selected_companies: Record<string, string[]>;
+  }
+
+  // הוספת ממשק לנתוני מכירת פנסיה
+  interface PensionSale {
+    id?: string;
+    created_at: string;
+    user_id: string;
+    date: string;
+    client_name: string;
+    client_phone?: string;
+    company: string;
+    salary: number;
+    accumulation: number;
+    provision: number;
+    scope_commission: number;
+    accumulation_commission: number;
+    total_commission: number;
+    journey_id?: string;
+  }
+
+  // עדכון הפונקציה שמשתמשת בטיפוס החדש
+  const savePensionSale = async (
+    data: FormData, 
+    company: string, 
+    result: any, 
+    journeyId: string,
+    userId: string  // הוספת פרמטר של userId
+  ) => {
+    const pensionData: PensionSale = {
+      created_at: new Date().toISOString(),
+      user_id: userId,  // שימוש ב-userId במקום user.id
+      date: new Date().toISOString(),
+      client_name: data.clientName,
+      client_phone: data.clientPhone,
+      company: company,
+      salary: Number(data.pensionSalary),
+      accumulation: Number(data.pensionAccumulation),
+      provision: Number(data.pensionProvision),
+      scope_commission: result.scopeCommission,
+      accumulation_commission: result.accumulationCommission,
+      total_commission: result.totalCommission,
+      journey_id: journeyId
+    };
+
+    const { error: pensionError } = await supabase
+      .from('pension_sales')
+      .insert([pensionData]);
+
+    if (pensionError) throw pensionError;
+  };
+
+  // עדכון הקריאה לפונקציה ב-onSubmit
   const onSubmit = async (data: FormData) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -715,6 +785,127 @@ const CustomerJourney: React.FC = () => {
         clientId = existingClient.id;
       }
 
+      // יצירת מסע לקוח חדש
+      const journeyData = {
+        user_id: user.id,
+        client_id: clientId,
+        journey_date: new Date().toLocaleDateString('he-IL'),
+        date: new Date().toISOString(),
+        client_name: data.clientName,
+        client_phone: data.clientPhone,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: selectedCompanies,
+        commission_details: newCommissionDetails,
+        total_commission: Object.values(newCommissionDetails)
+          .reduce((sum, detail) => sum + detail.total, 0),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: newJourney, error: journeyError } = await supabase
+        .from('customer_journeys')
+        .insert([journeyData])
+        .select('id')
+        .single();
+
+      if (journeyError) throw journeyError;
+      if (!newJourney) throw new Error('שגיאה ביצירת מסע לקוח');
+
+      const journeyId = newJourney.id;
+
+      // שמירת נתוני פנסיה
+      if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
+        for (const company of selectedCompanies.pension) {
+          const result = await calculatePensionCommissions(data, company);
+          await savePensionSale(data, company, result, journeyId, user.id);  // העברת user.id
+        }
+      }
+
+      // שמירת נתוני ביטוח
+      if (selectedProducts.insurance && selectedCompanies.insurance.length > 0) {
+        for (const company of selectedCompanies.insurance) {
+          const result = await calculateInsuranceCommissions(data, company);
+          const insuranceData = {
+            user_id: user.id,
+            client_id: clientId,
+            journey_id: journeyId,  // הוספת קישור למסע
+            client_name: data.clientName,
+            client_phone: data.clientPhone,
+            company: company,
+            date: new Date().toISOString(),
+            insurance_type: data.insuranceType,
+            monthly_premium: Number(data.insurancePremium),
+            one_time_commission: result.oneTimeCommission,
+            monthly_commission: result.monthlyCommission,
+            total_commission: result.totalCommission,
+            created_at: new Date().toISOString()
+          };
+
+          const { error: insuranceError } = await supabase
+            .from('insurance_sales')
+            .insert([insuranceData]);
+
+          if (insuranceError) throw insuranceError;
+        }
+      }
+
+      // שמירת נתוני השקעות
+      if (selectedProducts.investment && selectedCompanies.investment.length > 0) {
+        for (const company of selectedCompanies.investment) {
+          const result = await calculateInvestmentCommissions(data, company);
+          const investmentData = {
+            user_id: user.id,
+            client_id: clientId,
+            client_name: data.clientName,
+            client_phone: data.clientPhone,
+            company: company,
+            date: new Date().toISOString(),
+            amount: Number(data.investmentAmount),
+            scope_commission: result.scopeCommission,
+            monthly_commission: result.monthlyCommission,
+            annual_commission: result.annualCommission,
+            total_commission: result.totalCommission,
+            created_at: new Date().toISOString()
+          };
+
+          const { error: investmentError } = await supabase
+            .from('investment_sales')
+            .insert([investmentData]);
+
+          if (investmentError) throw investmentError;
+        }
+      }
+
+      // שמירת נתוני פוליסות
+      if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
+        for (const company of selectedCompanies.policy) {
+          const result = await calculatePolicyCommissions(data, company);
+          const policyData = {
+            user_id: user.id,
+            client_id: clientId,
+            client_name: data.clientName,
+            client_phone: data.clientPhone,
+            company: company,
+            date: new Date().toISOString(),
+            amount: Number(data.policyAmount),
+            period: Number(data.policyPeriod),
+            scope_commission: result.scopeCommission,
+            monthly_commission: result.monthlyCommission,
+            annual_commission: result.annualCommission,
+            total_commission: result.totalCommission,
+            created_at: new Date().toISOString()
+          };
+
+          const { error: policyError } = await supabase
+            .from('policy_sales')
+            .insert([policyData]);
+
+          if (policyError) throw policyError;
+        }
+      }
+
       // יצירת סיכום פגישה
       const summaryData = reportService.generateMeetingSummary({
         client_name: data.clientName,
@@ -726,34 +917,6 @@ const CustomerJourney: React.FC = () => {
         formData: data
       });
 
-      // שמירת הפגישה במערכת
-      const meetingData = {
-        client_id: clientId,
-        user_id: user.id,
-        date: new Date().toISOString(),
-        summary: summaryData.summary,
-        next_steps: summaryData.next_steps,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-        commission_details: newCommissionDetails,
-        selected_products: Object.entries(selectedProducts)
-          .filter(([_, value]) => value)
-          .map(([key]) => key),
-        selected_companies: selectedCompanies
-      };
-
-      const { error: meetingError } = await supabase
-        .from('meetings')
-        .insert([meetingData]);
-
-      if (meetingError) throw meetingError;
-
-      // עדכון תאריך הפגישה האחרון של הלקוח
-      await supabase
-        .from('clients')
-        .update({ last_contact: new Date().toISOString() })
-        .eq('id', clientId);
-
       // פתיחת הדיאלוג עם הסיכום
       setMeetingSummary({
         isOpen: true,
@@ -762,11 +925,11 @@ const CustomerJourney: React.FC = () => {
         pdfContent: summaryData.pdfContent
       });
 
-      toast.success('החישוב וסיכום הפגישה נוצרו ונשמרו בהצלחה');
+      toast.success('החישוב וסיכום הפגישה נוצרו ונשמרו בהצלחה בכל הטבלאות');
 
     } catch (error) {
       console.error('Error:', error);
-      toast.error('אירעה שגיאה בחישוב העמלות');
+      toast.error('אירעה שגיאה בשמירת הנתונים');
     }
   };
 
@@ -998,7 +1161,7 @@ const CustomerJourney: React.FC = () => {
     <div className="space-y-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* כותרת ראשית */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">מסע לקוח</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">מסלקוח</h1>
         <p className="text-gray-600">ניהול פגישת לקוח וחישוב עמלות</p>
       </div>
 
@@ -1025,7 +1188,7 @@ const CustomerJourney: React.FC = () => {
               <div className="relative">
                 <Input 
                   {...register('clientName')} 
-                  placeholder="הכנס שם לקוח"
+                  placeholder="הנס שם לקוח"
                   className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
                 <User className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
@@ -1165,7 +1328,7 @@ const CustomerJourney: React.FC = () => {
                     <label className="text-sm font-medium">אחוז הפרשה</label>
                     <Select onValueChange={(value) => setValue('pensionProvision', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="בחר אחוז הפרשה" />
+                        <SelectValue placeholder="בחר חוז הפרשה" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="18.5">18.5% (6+6.5+6)</SelectItem>
@@ -1237,7 +1400,7 @@ const CustomerJourney: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">סכום הפקדה</label>
-                    <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום ה��קדה" />
+                    <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום הפקדה" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
