@@ -251,7 +251,7 @@ export const reportService = {
       });
     }
 
-    // השקעות
+    // גמל והשתלמות
     if (journeyData.selected_products.includes('investment')) {
       const companies = journeyData.selected_companies.investment;
       const amount = journeyData.formData.investmentAmount?.toLocaleString() || '';
@@ -262,7 +262,7 @@ export const reportService = {
           <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h3 style="color: #2563eb; font-size: 18px; margin-bottom: 15px;">
               <span style="margin-left: 8px;">🔹</span>
-              ניוד כספי השקעות ל${company}
+              ניוד כספי גמל והשתלמות ל${company}
             </h3>
             <div style="padding-right: 20px; line-height: 1.6;">
               <p>• סכום: ${amount} ₪</p>
@@ -280,7 +280,7 @@ export const reportService = {
         `);
 
         // גרסת טקסט לווצאפ
-        summaryText += `\n🔹 ניוד כספי השקעות ל${company}:\n`;
+        summaryText += `\n🔹 ניוד כספי גמל והשתלמות ל${company}:\n`;
         summaryText += `   • סכום: ${amount} ₪\n`;
         summaryText += `   • עמלת היקף (חד פעמי): ${commissionDetails.scopeCommission.toLocaleString()} ₪\n`;
         summaryText += `   • עמלת נפרעים חודשית: ${commissionDetails.monthlyCommission.toLocaleString()} ₪\n`;

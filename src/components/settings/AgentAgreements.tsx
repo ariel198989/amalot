@@ -224,7 +224,7 @@ const AgentAgreements = () => {
           <Tabs defaultValue="pension" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="pension">פנסיה</TabsTrigger>
-              <TabsTrigger value="investment">השקעות</TabsTrigger>
+              <TabsTrigger value="investment">גמל והשתלמות</TabsTrigger>
               <TabsTrigger value="policy">פוליסת חיסכון</TabsTrigger>
               <TabsTrigger value="insurance">ביטוח</TabsTrigger>
             </TabsList>
@@ -312,8 +312,8 @@ const AgentAgreements = () => {
             <TabsContent value="investment">
               <Card>
                 <CardHeader>
-                  <CardTitle>עמלות השקעות לפי חברה</CardTitle>
-                  <CardDescription>גמל והשתלמות</CardDescription>
+                  <CardTitle>עמלות גמל והשתלמות לפי חברה</CardTitle>
+                  <CardDescription>קרנות גמל וקרנות השתלמות</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

@@ -221,6 +221,7 @@ const CustomerJourney: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
+      // שליפת הנתונים העדכניים מהדאטהבייס
       const { data: ratesData, error } = await supabase
         .from('agent_commission_rates')
         .select('investment_companies')
@@ -232,7 +233,7 @@ const CustomerJourney: React.FC = () => {
       // בדיקה שהחברה קיימת ופעילה
       const companyRates = ratesData.investment_companies[company];
       if (!companyRates || !companyRates.active) {
-        console.log('Company rates not found or inactive:', company);
+        console.log(`No rates found for company ${company}`);
         return {
           scopeCommission: 0,
           monthlyCommission: 0,
@@ -241,30 +242,33 @@ const CustomerJourney: React.FC = () => {
         };
       }
 
-      console.log('Using rates for company:', company, companyRates);
-
       const amount = Number(data.investmentAmount) || 0;
-      
-      // חישוב עמלת היקף לפי ההגדרות העדכניות
+
+      // חישוב עמלת היקף - לפי ₪ למיליון
       const scopeCommission = (amount / 1000000) * companyRates.scope_rate_per_million;
-      
-      // חישוב עמלה חודשית לפי ההגדרות העדכניות
+
+      // חישוב עמלת נפרעים חודשית - לפי ₪ למיליון לחודש
       const monthlyCommission = (amount / 1000000) * companyRates.monthly_rate;
-      
-      // חישוב עמלה שנתית
+
+      // חישוב עמלת נפרעים שנתית
       const annualCommission = monthlyCommission * 12;
-      
-      // חישוב סה"כ עמלות לשנה הראשונה
+
+      // סה"כ עמלות בשנה הראשונה
       const totalCommission = scopeCommission + annualCommission;
 
-      console.log('Investment calculation results:', {
+      // לוג לבדיקה
+      console.log(`Investment calculation for ${company}:`, {
         amount,
-        scopeRatePerMillion: companyRates.scope_rate_per_million,
-        monthlyRate: companyRates.monthly_rate,
-        scopeCommission,
-        monthlyCommission,
-        annualCommission,
-        totalCommission
+        rates: {
+          scope_rate_per_million: companyRates.scope_rate_per_million,
+          monthly_rate: companyRates.monthly_rate
+        },
+        results: {
+          scopeCommission,
+          monthlyCommission,
+          annualCommission,
+          totalCommission
+        }
       });
 
       return {
@@ -284,21 +288,7 @@ const CustomerJourney: React.FC = () => {
       };
     } catch (error) {
       console.error('Error calculating investment commissions:', error);
-      return {
-        scopeCommission: 0,
-        monthlyCommission: 0,
-        annualCommission: 0,
-        totalCommission: 0,
-        details: {
-          amount: 0,
-          scopeRatePerMillion: 0,
-          monthlyRatePerMillion: 0,
-          calculationDetails: {
-            scopeCalculation: '',
-            monthlyCalculation: ''
-          }
-        }
-      };
+      throw error;
     }
   };
 
@@ -677,7 +667,7 @@ const CustomerJourney: React.FC = () => {
         }
       }
 
-      // עדכון ה-state של פרטי העמלות
+      // עדכון ה-state של פרי העמלות
       setCommissionDetails(newCommissionDetails);
 
       // פיצול שם הלקוח
@@ -765,7 +755,7 @@ const CustomerJourney: React.FC = () => {
           const insuranceData = {
             user_id: user.id,
             client_id: clientId,
-            journey_id: journeyId,  // הוספת קישור למסע
+            journey_id: journeyId,  // הוספ קישור למסע
             client_name: data.clientName,
             client_phone: data.clientPhone,
             company: company,
@@ -870,7 +860,7 @@ const CustomerJourney: React.FC = () => {
 
   const handleDownloadPDF = () => {
     if (!meetingSummary.pdfContent) {
-      toast.error('אין נתונים להורדה');
+      toast.error('אין נתונים לורדה');
       return;
     }
 
@@ -909,7 +899,7 @@ const CustomerJourney: React.FC = () => {
         תאריך: currentJourney.journey_date,
         'שם לקוח': currentJourney.clientName,
         טלפון: currentJourney.clientPhone || '',
-        'מוצרים שנבחרו': currentJourney.selectedProducts.join(', '),
+        'מצרים שנבחרו': currentJourney.selectedProducts.join(', '),
         'עמלות פנסיה': currentJourney.commission_details.pension.total,
         'עלות ביטוח': currentJourney.commission_details.insurance.total,
         'עמלות השקעות': currentJourney.commission_details.investment.total,
@@ -1014,7 +1004,7 @@ const CustomerJourney: React.FC = () => {
         company: formData.company,
         date: formattedDate,
         created_at: formattedDateTime,
-        // ... שאר השדות
+        // ... שאר השדת
       };
 
       const { data, error } = await supabase
@@ -1050,7 +1040,7 @@ const CustomerJourney: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // יצירת סיכום פגישה
+      // יצירת סיכום פגי��ה
       const summaryData = reportService.generateMeetingSummary({
         client_name: watch('clientName'),
         selected_products: Object.entries(selectedProducts)
@@ -1123,7 +1113,7 @@ const CustomerJourney: React.FC = () => {
               <div className="relative">
                 <Input 
                   {...register('clientName')} 
-                  placeholder="הנס שם לקוח"
+                  placeholder="נס שם לקוח"
                   className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
                 <User className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
@@ -1338,7 +1328,7 @@ const CustomerJourney: React.FC = () => {
                     <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום הפקדה" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">תקופת חיסכון (בשנים)</label>
+                    <label className="text-sm font-medium">תופת חיסכון (בשנים)</label>
                     <Input {...register('policyPeriod')} type="number" placeholder="הכנס תקופת חיסכון" />
                   </div>
                 </div>
