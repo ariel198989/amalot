@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
+    "framer-motion": "^11.11.17",
     "html2pdf.js": "^0.10.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",

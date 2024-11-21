@@ -40,6 +40,13 @@ interface Client {
   total_policies: number;
   last_contact: string;
   tags: string[];
+  companies: string[];
+  products: {
+    pension: boolean;
+    insurance: boolean;
+    investment: boolean;
+    policy: boolean;
+  };
 }
 
 interface ClientActivity {
@@ -105,24 +112,32 @@ const ClientsTable: React.FC = () => {
         const [pensionData, insuranceData, investmentData, policyData] = await Promise.all([
           supabase
             .from('pension_sales')
-            .select('total_commission')
+            .select('total_commission, company')
             .eq('user_id', user.id)
             .eq('client_name', fullName),
           supabase
             .from('insurance_sales')
-            .select('total_commission')
+            .select('total_commission, company')
             .eq('user_id', user.id)
             .eq('client_name', fullName),
           supabase
             .from('investment_sales')
-            .select('total_commission')
+            .select('total_commission, company')
             .eq('user_id', user.id)
             .eq('client_name', fullName),
           supabase
             .from('policy_sales')
-            .select('total_commission')
+            .select('total_commission, company')
             .eq('user_id', user.id)
             .eq('client_name', fullName)
+        ]);
+
+        // קיבוץ כל החברות יחד
+        const allCompanies = new Set([
+          ...(pensionData.data || []).map(sale => sale.company),
+          ...(insuranceData.data || []).map(sale => sale.company),
+          ...(investmentData.data || []).map(sale => sale.company),
+          ...(policyData.data || []).map(sale => sale.company)
         ]);
 
         const totalRevenue = [
@@ -139,14 +154,31 @@ const ClientsTable: React.FC = () => {
           policyData.data?.length || 0
         ].reduce((sum, count) => sum + count, 0);
 
+        // החזרת אובייקט מאוחד עבור הלקוח
         return {
           ...client,
+          companies: Array.from(allCompanies),
           total_revenue: totalRevenue,
-          total_policies: totalPolicies
+          total_policies: totalPolicies,
+          products: {
+            pension: pensionData.data?.length > 0,
+            insurance: insuranceData.data?.length > 0,
+            investment: investmentData.data?.length > 0,
+            policy: policyData.data?.length > 0
+          }
         };
       }));
 
-      setClients(enrichedClients);
+      // סינון לפי חיפוש וסטטוס
+      const filteredClients = enrichedClients.filter(client => {
+        const searchMatch = searchTerm ? 
+          `${client.first_name} ${client.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) :
+          true;
+        const statusMatch = filterStatus === 'all' ? true : client.status === filterStatus;
+        return searchMatch && statusMatch;
+      });
+
+      setClients(filteredClients);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast.error('שגיאה בטעינת נתוני לקוחות');
@@ -242,6 +274,16 @@ const ClientsTable: React.FC = () => {
       console.error('Error adding activity:', error);
       toast.error('שגיאה בהוספת פעילות');
     }
+  };
+
+  const getProductName = (product: string): string => {
+    const names: Record<string, string> = {
+      pension: 'פנסיה',
+      insurance: 'ביטוח',
+      investment: 'גמל והשתלמות',
+      policy: 'פוליסת חיסכון'
+    };
+    return names[product] || product;
   };
 
   return (
