@@ -29,6 +29,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 
 interface ProductSelection {
@@ -192,16 +193,35 @@ const CustomerJourney: React.FC = () => {
 
   const calculateInsuranceCommissions = async (data: any, company: string) => {
     try {
-      if (!defaultRates.insurance[company]) {
-        throw new Error(`א נמצאו נתוני עמלות עבור חברת ${company}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // קבלת העמלות העדכניות מהדאטהבייס
+      const { data: ratesData, error } = await supabase
+        .from('agent_commission_rates')
+        .select('insurance_companies')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // בדיקה שהחברה קיימת ופעילה
+      const companyRates = ratesData?.insurance_companies?.[company];
+      if (!companyRates?.active) {
+        console.log(`Company ${company} is not active`);
+        return {
+          oneTimeCommission: 0,
+          monthlyCommission: 0,
+          totalCommission: 0
+        };
       }
 
-      const rates = defaultRates.insurance[company];
-      const monthlyPremium = Number(data.insurancePremium);
+      const monthlyPremium = Number(data.insurancePremium) || 0;
       const insuranceType = data.insuranceType || 'risk';
-
-      const oneTimeCommission = monthlyPremium * 12 * (rates.oneTimeRate / 100);
-      const monthlyCommission = monthlyPremium * (rates.monthlyRates[insuranceType] / 100);
+      
+      // חישוב עמלות לפי הנתונים מהדאטהבייס
+      const oneTimeCommission = monthlyPremium * 12 * companyRates.products[insuranceType].one_time_rate;
+      const monthlyCommission = monthlyPremium * companyRates.products[insuranceType].monthly_rate;
       const totalCommission = oneTimeCommission + (monthlyCommission * 12);
 
       return {
@@ -217,23 +237,20 @@ const CustomerJourney: React.FC = () => {
 
   const calculateInvestmentCommissions = async (data: any, company: string) => {
     try {
-      // קבלת העמלות העדכניות מהדאטהבייס
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // שליפת הנתונים העדכניים מהדאטהבייס
       const { data: ratesData, error } = await supabase
         .from('agent_commission_rates')
-        .select('investment_companies')
+        .select('savings_and_study_companies')
         .eq('user_id', user.id)
         .single();
 
       if (error) throw error;
 
-      // בדיקה שהחברה קיימת ופעילה
-      const companyRates = ratesData.investment_companies[company];
-      if (!companyRates || !companyRates.active) {
-        console.log(`No rates found for company ${company}`);
+      const companyRates = ratesData?.savings_and_study_companies?.[company];
+      if (!companyRates?.active) {
+        console.log(`Company ${company} is not active in savings_and_study_companies`);
         return {
           scopeCommission: 0,
           monthlyCommission: 0,
@@ -333,7 +350,7 @@ const CustomerJourney: React.FC = () => {
           scopeRatePerMillion,
           monthlyRate,
           calculationDetails: {
-            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${scopeRatePerMillion.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} ₪`,
+            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${scopeRatePerMillion.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} `,
             monthlyCalculation: `${amount.toLocaleString()} × ${(monthlyRate / 12 * 100).toFixed(3)}% = ${monthlyCommission.toLocaleString()} ₪ לחודש`
           }
         }
@@ -496,7 +513,7 @@ const CustomerJourney: React.FC = () => {
       
       if (pensionData) setPensionSales(pensionData);
 
-      // טעינת נתוני ביטוח
+      // טעינת תוני ביטוח
       const { data: insuranceData } = await supabase
         .from('insurance_sales')
         .select('*')
@@ -676,18 +693,22 @@ const CustomerJourney: React.FC = () => {
       const lastName = nameParts.slice(1).join(' ');
 
       // בדיקה אם הלקוח קיים
-      const { data: existingClient } = await supabase
+      const { data: existingClient, error: clientError } = await supabase
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
         .eq('first_name', firstName)
         .eq('last_name', lastName)
-        .single();
+        .maybeSingle();
+
+      if (clientError) {
+        console.error('Error checking client:', clientError);
+      }
 
       let clientId: string | null = null;
 
       if (!existingClient) {
-        // יצירת לקוח חדש
+        // יציר�� לקוח חדש
         const { data: newClient, error: createError } = await supabase
           .from('clients')
           .insert([{
@@ -1040,7 +1061,7 @@ const CustomerJourney: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // יצירת סיכום פגי��ה
+      // יצירת סיכום פגישה
       const summaryData = reportService.generateMeetingSummary({
         client_name: watch('clientName'),
         selected_products: Object.entries(selectedProducts)
@@ -1086,7 +1107,7 @@ const CustomerJourney: React.FC = () => {
     <div className="space-y-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* כותרת ראשית */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">מסלקוח</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">מסלקו</h1>
         <p className="text-gray-600">ניהול פגישת לקוח וחישוב עמלות</p>
       </div>
 
@@ -1295,7 +1316,7 @@ const CustomerJourney: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">פרמיה חודשית</label>
-                    <Input {...register('insurancePremium')} type="number" placeholder="הכנס פרמיה חודשית" />
+                    <Input {...register('insurancePremium')} type="number" placeholder="הכנס פריה חודשית" />
                   </div>
                 </div>
               </CardContent>
@@ -1363,12 +1384,17 @@ const CustomerJourney: React.FC = () => {
         open={meetingSummary.isOpen} 
         onOpenChange={(open) => setMeetingSummary(prev => ({ ...prev, isOpen: open }))}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        <DialogContent 
+          className="max-w-4xl max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
+          aria-describedby="meeting-summary-description"
         >
           <DialogHeader className="sticky top-0 bg-white z-10 pb-4 border-b">
             <DialogTitle>סיכום פגישה</DialogTitle>
+            <DialogDescription id="meeting-summary-description">
+              פירוט הפעולות והעמלות מהפגישה
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 p-4">

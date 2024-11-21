@@ -53,7 +53,7 @@ export const reportService = {
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false }),
-      supabase.from('investment_sales')
+      supabase.from('savings_and_study_sales')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false }),

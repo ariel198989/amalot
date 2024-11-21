@@ -17,19 +17,15 @@ interface CompanyRates {
 interface AgentRates {
   id?: string;
   user_id?: string;
-  // פנסיה - עמלות לפי חברה
   pension_companies: {
-    [company: string]: CompanyRates;  // מגדל, הראל, כלל וכו'
+    [company: string]: CompanyRates;
   };
-  // השקעות - עמלות לפי חברה
-  investment_companies: {
-    [company: string]: CompanyRates;  // הראל, מגדל, ילין לפידות וכו'
+  savings_and_study_companies: {
+    [company: string]: CompanyRates;
   };
-  // פוליסת חיסכון - עמלות לפי חברה
   policy_companies: {
-    [company: string]: CompanyRates;  // הראל, מגדל, כלל וכו'
+    [company: string]: CompanyRates;
   };
-  // ביטוח - עמלות לפי חברה וסוג ביטוח
   insurance_companies: {
     [company: string]: {
       active: boolean;
@@ -79,18 +75,18 @@ const AgentAgreements = () => {
     pension_companies: Object.fromEntries(
       COMPANIES.pension.map(company => [company, { ...defaultCompanyRates }])
     ),
-    investment_companies: Object.fromEntries(
+    savings_and_study_companies: Object.fromEntries(
       COMPANIES.investment.map(company => [company, { 
         ...defaultCompanyRates,
-        scope_rate_per_million: 6000,  // ברירת מחדל להשקעות
-        monthly_rate: 250  // ברירת מחדל להשקעות
+        scope_rate_per_million: 6000,
+        monthly_rate: 250
       }])
     ),
     policy_companies: Object.fromEntries(
       COMPANIES.policy.map(company => [company, { 
         ...defaultCompanyRates,
-        scope_rate_per_million: 7000,  // ברירת מחדל לפוליסות
-        monthly_rate: 0.003  // 0.3% שנתי
+        scope_rate_per_million: 7000,
+        monthly_rate: 0.003
       }])
     ),
     insurance_companies: Object.fromEntries(
@@ -132,14 +128,14 @@ const AgentAgreements = () => {
               }
             ])
           ),
-          investment_companies: Object.fromEntries(
+          savings_and_study_companies: Object.fromEntries(
             COMPANIES.investment.map(company => [
               company,
               {
                 ...defaultCompanyRates,
                 scope_rate_per_million: 6000,
                 monthly_rate: 250,
-                ...(data.investment_companies?.[company] || {})
+                ...(data.savings_and_study_companies?.[company] || {})
               }
             ])
           ),
@@ -185,7 +181,7 @@ const AgentAgreements = () => {
       const dbRates = {
         user_id: user.id,
         pension_companies: newRates.pension_companies,
-        investment_companies: newRates.investment_companies,
+        savings_and_study_companies: newRates.savings_and_study_companies,
         policy_companies: newRates.policy_companies,
         insurance_companies: newRates.insurance_companies,
         updated_at: new Date().toISOString()
@@ -322,14 +318,14 @@ const AgentAgreements = () => {
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold">{company}</h3>
                           <Checkbox
-                            checked={rates.investment_companies[company].active}
+                            checked={rates.savings_and_study_companies[company].active}
                             onCheckedChange={(checked) => {
                               setRates(prev => ({
                                 ...prev,
-                                investment_companies: {
-                                  ...prev.investment_companies,
+                                savings_and_study_companies: {
+                                  ...prev.savings_and_study_companies,
                                   [company]: {
-                                    ...prev.investment_companies[company],
+                                    ...prev.savings_and_study_companies[company],
                                     active: checked === true
                                   }
                                 }
@@ -344,14 +340,14 @@ const AgentAgreements = () => {
                             </label>
                             <Input
                               type="number"
-                              value={rates.investment_companies[company].scope_rate_per_million}
+                              value={rates.savings_and_study_companies[company].scope_rate_per_million}
                               onChange={(e) => {
                                 setRates(prev => ({
                                   ...prev,
-                                  investment_companies: {
-                                    ...prev.investment_companies,
+                                  savings_and_study_companies: {
+                                    ...prev.savings_and_study_companies,
                                     [company]: {
-                                      ...prev.investment_companies[company],
+                                      ...prev.savings_and_study_companies[company],
                                       scope_rate_per_million: Number(e.target.value)
                                     }
                                   }
@@ -366,14 +362,14 @@ const AgentAgreements = () => {
                             </label>
                             <Input
                               type="number"
-                              value={rates.investment_companies[company].monthly_rate}
+                              value={rates.savings_and_study_companies[company].monthly_rate}
                               onChange={(e) => {
                                 setRates(prev => ({
                                   ...prev,
-                                  investment_companies: {
-                                    ...prev.investment_companies,
+                                  savings_and_study_companies: {
+                                    ...prev.savings_and_study_companies,
                                     [company]: {
-                                      ...prev.investment_companies[company],
+                                      ...prev.savings_and_study_companies[company],
                                       monthly_rate: Number(e.target.value)
                                     }
                                   }
