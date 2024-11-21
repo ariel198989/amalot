@@ -148,125 +148,45 @@ const CustomerJourney: React.FC = () => {
       companies: ['הראל', 'מגדל', 'כלל', 'הפניקס', 'מנורה', 'איילון'] }
   ];
 
-  // ערכי ברירת מחדל לכל סוגי המוצרים
-  const defaultRates = {
-    pension: {
-      'מגדל': { scopeRate: 0.0025, accumulationRate: 0.0015 },  // 0.25% מהיקף, 0.15% מצבירה
-      'הראל': { scopeRate: 0.0023, accumulationRate: 0.0014 },  // 0.23% מהיקף, 0.14% מצבירה
-      'כלל': { scopeRate: 0.0024, accumulationRate: 0.0015 },   // 0.24% מהיקף, 0.15% מצבירה
-      'הפניקס': { scopeRate: 0.0022, accumulationRate: 0.0013 }, // 0.22% מהיקף, 0.13% מצבירה
-      'מנורה': { scopeRate: 0.0021, accumulationRate: 0.0012 },  // 0.21% מהיקף, 0.12% מצבירה
-      'מור': { scopeRate: 0.0020, accumulationRate: 0.0011 }     // 0.20% מהיקף, 0.11% מצבירה
-    },
-    insurance: {
-      'איילון': { 
-        oneTimeRate: 0.35,  // 35% עמלת היקף חד פעמית
-        monthlyRates: { 
-          risk: 0.15,       // 15% עמלת נפרעים חודשית
-          mortgage_risk: 0.12, 
-          health: 0.20, 
-          critical_illness: 0.18, 
-          service_letter: 0.10, 
-          disability: 0.15 
-        } 
-      },
-      'הראל': { 
-        oneTimeRate: 0.33, 
-        monthlyRates: { 
-          risk: 0.14, 
-          mortgage_risk: 0.11, 
-          health: 0.19, 
-          critical_illness: 0.17, 
-          service_letter: 0.09, 
-          disability: 0.14 
-        } 
-      },
-      'מגדל': { oneTimeRate: 67, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
-      'הפניקס': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
-      'מנורה': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
-      'כלל': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } },
-      'הכשרה': { oneTimeRate: 65, monthlyRates: { risk: 20, mortgage_risk: 17, health: 20, critical_illness: 20, service_letter: 20, disability: 12 } }
-    },
-    investment: {
-      'הראל': { scopeRate: 0.0015 },    // 0.15% מהצבירה
-      'מגדל': { scopeRate: 0.0016 },    // 0.16% מהצבירה
-      'כלל': { scopeRate: 0.0015 },     // 0.15% מהצבירה
-      'הפניקס': { scopeRate: 0.0014 },  // 0.14% מהצבירה
-      'מור': { scopeRate: 0.0013 },     // 0.13% מהצבירה
-      'ילין לפידות': { scopeRate: 0.0012 } // 0.12% מהצבירה
-    },
-    policy: {
-      'הראל': { shortTermRate: 0.0018, longTermRate: 0.0022 },    // 0.18% לטווח קצר, 0.22% לטווח ארוך
-      'מגדל': { shortTermRate: 0.0019, longTermRate: 0.0023 },
-      'כלל': { shortTermRate: 0.0018, longTermRate: 0.0022 },
-      'הפניקס': { shortTermRate: 0.0017, longTermRate: 0.0021 },
-      'מנורה': { shortTermRate: 0.0016, longTermRate: 0.0020 },
-      'איילון': { shortTermRate: 0.0015, longTermRate: 0.0019 }
-    }
+  // פונקציה לקבלת הנוסחאות של הסוכן
+  const getAgentRates = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('משתמש לא מחובר');
+
+    const { data: rates, error } = await supabase
+      .from('agent_commission_rates')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) throw error;
+    return rates;
   };
 
+  // עדכון פונקציות החישוב
   const calculatePensionCommissions = async (data: any, company: string) => {
     try {
-      // בדיקת תקינות הנתונים
-      if (!data || !company) {
-        throw new Error('נתונים חסרים');
-      }
+      const rates = await getAgentRates();
+      if (!rates) throw new Error('לא נמצאו נתוני עמלות');
 
-      // המרת הערכים למספרים
-      const salary = Number(data.pensionSalary) || 0;
-      const accumulation = Number(data.pensionAccumulation) || 0;
-      const provision = Number(data.pensionProvision) || 0;
-      
-      // אחוזי העמלות של הסוכן (צריך לקחת מרופיל של ה)
-      const agentRates = {
-        scopeRate: 0.07, // 7% עמלת היקף
-        accumulationRate: 3000 // 3000 ₪ למיליון צבירה
-      };
+      const salary = Number(data.pensionSalary);
+      const accumulation = Number(data.pensionAccumulation);
+      const provision = Number(data.pensionProvision) / 100;
 
-      // בדיקת תקינות המספרים
-      if (salary <= 0) throw new Error('נא להזין שכר חודשי תקין');
-      if (provision <= 0 || provision > 100) throw new Error('נא להזין אחוז הפרשה תקין');
+      // עמלת היקף - אחוז מההפקדה השנתית
+      const scopeCommission = salary * 12 * provision * rates.pension_scope_rate;
 
-      // חישוב עמלת היקף:
-      // שכר חודשי * 12 חודשים * אחוז הסוכן * אחוז הפרשה
-      const annualSalary = salary * 12;
-      const provisionRate = provision / 100;
-      const scopeCommission = Math.round(annualSalary * agentRates.scopeRate * provisionRate);
-
-      // חישוב עמלת צבירה:
-      // סכום הצבירה * (עמלת צבירה למיליון / מיליון)
-      const accumulationCommission = accumulation > 0 ? 
-        Math.round(accumulation * (agentRates.accumulationRate / 1000000)) : 0;
-
-      // סה"כ עמלות
-      const totalCommission = scopeCommission + accumulationCommission;
-
-      // לוג לבדיקה
-      console.log('Pension calculation:', {
-        salary,
-        annualSalary,
-        accumulation,
-        provisionRate,
-        agentRates,
-        scopeCommission,
-        accumulationCommission,
-        totalCommission
-      });
+      // עמלת צבירה - סכום למיליון
+      const accumulationCommission = accumulation * (rates.pension_accumulation_rate / 1000000);
 
       return {
         scopeCommission,
         accumulationCommission,
-        totalCommission
+        totalCommission: scopeCommission + accumulationCommission
       };
-
     } catch (error) {
-      console.error('Error calculating pension commissions:', error);
-      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
-      return {
-        scopeCommission: 0,
-        accumulationCommission: 0,
-        totalCommission: 0
-      };
+      console.error('Error:', error);
+      return { scopeCommission: 0, accumulationCommission: 0, totalCommission: 0 };
     }
   };
 
@@ -297,37 +217,54 @@ const CustomerJourney: React.FC = () => {
 
   const calculateInvestmentCommissions = async (data: any, company: string) => {
     try {
-      if (!data.investmentAmount) {
-        throw new Error('נא להזין סכום השקעה');
+      // קבלת העמלות העדכניות מהדאטהבייס
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      const { data: ratesData, error } = await supabase
+        .from('agent_commission_rates')
+        .select('investment_companies')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // בדיקה שהחברה קיימת ופעילה
+      const companyRates = ratesData.investment_companies[company];
+      if (!companyRates || !companyRates.active) {
+        console.log('Company rates not found or inactive:', company);
+        return {
+          scopeCommission: 0,
+          monthlyCommission: 0,
+          annualCommission: 0,
+          totalCommission: 0
+        };
       }
 
-      const amount = Number(data.investmentAmount);
-      if (amount <= 0) throw new Error('נא להזין סכום השקעה תקין');
+      console.log('Using rates for company:', company, companyRates);
 
-      // עמלת היקף - בין 6000 ל-8000 ₪ למיליון (נניח 6000 ₪ כברירת מחדל)
-      const scopeRatePerMillion = 6000; // צריך לקחת מפרופיל הסוכן
-      const scopeCommission = Math.round((amount / 1000000) * scopeRatePerMillion);
-
-      // עמלת נפרעים - 0.25% מהצבירה בשנה (250 ₪ למיליון לחודש)
-      const monthlyCommissionPerMillion = 250;
-      const monthlyCommission = Math.round((amount / 1000000) * monthlyCommissionPerMillion);
+      const amount = Number(data.investmentAmount) || 0;
+      
+      // חישוב עמלת היקף לפי ההגדרות העדכניות
+      const scopeCommission = (amount / 1000000) * companyRates.scope_rate_per_million;
+      
+      // חישוב עמלה חודשית לפי ההגדרות העדכניות
+      const monthlyCommission = (amount / 1000000) * companyRates.monthly_rate;
+      
+      // חישוב עמלה שנתית
       const annualCommission = monthlyCommission * 12;
-
-      // סה"כ עמלות - עמלת היקף + עמלה שוטפת שנתית
+      
+      // חישוב סה"כ עמלות לשנה הראשונה
       const totalCommission = scopeCommission + annualCommission;
 
-      console.log('Investment calculation:', {
+      console.log('Investment calculation results:', {
         amount,
-        scopeRatePerMillion,
+        scopeRatePerMillion: companyRates.scope_rate_per_million,
+        monthlyRate: companyRates.monthly_rate,
         scopeCommission,
-        monthlyCommissionPerMillion,
         monthlyCommission,
         annualCommission,
-        totalCommission,
-        details: {
-          scopeCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${scopeRatePerMillion} = ${scopeCommission} ₪`,
-          monthlyCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${monthlyCommissionPerMillion} = ${monthlyCommission} ₪ לחודש`
-        }
+        totalCommission
       });
 
       return {
@@ -337,18 +274,16 @@ const CustomerJourney: React.FC = () => {
         totalCommission,
         details: {
           amount,
-          scopeRatePerMillion,
-          monthlyCommissionPerMillion,
+          scopeRatePerMillion: companyRates.scope_rate_per_million,
+          monthlyRatePerMillion: companyRates.monthly_rate,
           calculationDetails: {
-            scopeCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${scopeRatePerMillion} = ${scopeCommission} ₪`,
-            monthlyCalculation: `${(amount / 1000000).toFixed(3)} מיליון × ${monthlyCommissionPerMillion} = ${monthlyCommission} ₪ לחודש`
+            scopeCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${companyRates.scope_rate_per_million.toLocaleString()} ₪ = ${scopeCommission.toLocaleString()} ₪`,
+            monthlyCalculation: `${(amount / 1000000).toFixed(2)} מיליון × ${companyRates.monthly_rate.toLocaleString()} ₪ = ${monthlyCommission.toLocaleString()} ₪ לחודש`
           }
         }
       };
-
     } catch (error) {
       console.error('Error calculating investment commissions:', error);
-      toast.error(error instanceof Error ? error.message : 'אירעה שגיאה בחישוב העמלות');
       return {
         scopeCommission: 0,
         monthlyCommission: 0,
@@ -357,7 +292,7 @@ const CustomerJourney: React.FC = () => {
         details: {
           amount: 0,
           scopeRatePerMillion: 0,
-          monthlyCommissionPerMillion: 0,
+          monthlyRatePerMillion: 0,
           calculationDetails: {
             scopeCalculation: '',
             monthlyCalculation: ''

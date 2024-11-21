@@ -1,200 +1,605 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from '@/lib/supabase';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabase';
+import { Checkbox } from "@/components/ui/checkbox";
 
-interface AgreementDetails {
-  pension?: {
-    scopeRate: number;
-    accumulationRate: number;
-  };
-  insurance?: {
-    oneTimeRate: number;
-    monthlyRate: number;
-    riskRate: number;
-    mortgageRate: number;
-    healthRate: number;
-    disabilityRate: number;
-  };
-  investment?: {
-    scopeRate: number;
-  };
-  policy?: {
-    shortTermRate: number;
-    longTermRate: number;
-  };
+interface CompanyRates {
+  scope_rate: number;
+  monthly_rate: number;
+  scope_rate_per_million?: number;
+  active: boolean;
 }
 
-const AgentAgreements: React.FC = () => {
-  const [agreements, setAgreements] = React.useState<Record<string, Record<string, AgreementDetails>>>({});
-  const [selectedCompany, setSelectedCompany] = React.useState<string>('');
-  const [selectedProduct, setSelectedProduct] = React.useState<string>('');
-  const [loading, setLoading] = React.useState(true);
+interface AgentRates {
+  id?: string;
+  user_id?: string;
+  // פנסיה - עמלות לפי חברה
+  pension_companies: {
+    [company: string]: CompanyRates;  // מגדל, הראל, כלל וכו'
+  };
+  // השקעות - עמלות לפי חברה
+  investment_companies: {
+    [company: string]: CompanyRates;  // הראל, מגדל, ילין לפידות וכו'
+  };
+  // פוליסת חיסכון - עמלות לפי חברה
+  policy_companies: {
+    [company: string]: CompanyRates;  // הראל, מגדל, כלל וכו'
+  };
+  // ביטוח - עמלות לפי חברה וסוג ביטוח
+  insurance_companies: {
+    [company: string]: {
+      active: boolean;
+      products: {
+        risk: { one_time_rate: number; monthly_rate: number; };
+        mortgage_risk: { one_time_rate: number; monthly_rate: number; };
+        health: { one_time_rate: number; monthly_rate: number; };
+        critical_illness: { one_time_rate: number; monthly_rate: number; };
+        service_letter: { one_time_rate: number; monthly_rate: number; };
+        disability: { one_time_rate: number; monthly_rate: number; };
+      };
+    };
+  };
+  created_at?: string;
+  updated_at?: string;
+}
 
-  const companies = {
-    pension: ['כלל', 'הראל', 'מגדל', 'הפניקס', 'מנורה', 'מור'],
-    insurance: ['כלל', 'הראל', 'מגדל', 'הפניקס', 'מנורה', 'איילון'],
-    investment: ['כלל', 'הראל', 'מגדל', 'הפניקס', 'מנורה', 'אלטשולר'],
-    policy: ['כלל', 'הראל', 'מגדל', 'הפניקס', 'מנורה']
+const defaultCompanyRates: CompanyRates = {
+  scope_rate: 0.07,  // 7%
+  monthly_rate: 0.0025,  // 0.25%
+  scope_rate_per_million: 7000,  // 7,000 ₪ למיליון
+  active: true
+};
+
+const defaultInsuranceRates = {
+  active: true,
+  products: {
+    risk: { one_time_rate: 0.4, monthly_rate: 0.15 },
+    mortgage_risk: { one_time_rate: 0.35, monthly_rate: 0.12 },
+    health: { one_time_rate: 0.45, monthly_rate: 0.2 },
+    critical_illness: { one_time_rate: 0.4, monthly_rate: 0.18 },
+    service_letter: { one_time_rate: 0.3, monthly_rate: 0.1 },
+    disability: { one_time_rate: 0.4, monthly_rate: 0.15 }
+  }
+};
+
+const COMPANIES = {
+  pension: ['מגדל', 'הראל', 'כלל', 'הפניקס', 'מנורה', 'מור'],
+  investment: ['הראל', 'מגדל', 'כלל', 'הפניקס', 'מור', 'יין לפידות', 'אלשולר שחם', 'פסגות', 'מיטב דש'],
+  policy: ['הראל', 'מגדל', 'כלל', 'הפניקס', 'מנורה', 'איילון'],
+  insurance: ['איילון', 'הראל', 'מגדל', 'מנורה', 'כלל', 'הפניקס', 'הכשרה']
+};
+
+const AgentAgreements = () => {
+  // יצירת מצב התחלתי מלא
+  const initialRates: AgentRates = {
+    pension_companies: Object.fromEntries(
+      COMPANIES.pension.map(company => [company, { ...defaultCompanyRates }])
+    ),
+    investment_companies: Object.fromEntries(
+      COMPANIES.investment.map(company => [company, { 
+        ...defaultCompanyRates,
+        scope_rate_per_million: 6000,  // ברירת מחדל להשקעות
+        monthly_rate: 250  // ברירת מחדל להשקעות
+      }])
+    ),
+    policy_companies: Object.fromEntries(
+      COMPANIES.policy.map(company => [company, { 
+        ...defaultCompanyRates,
+        scope_rate_per_million: 7000,  // ברירת מחדל לפוליסות
+        monthly_rate: 0.003  // 0.3% שנתי
+      }])
+    ),
+    insurance_companies: Object.fromEntries(
+      COMPANIES.insurance.map(company => [company, { ...defaultInsuranceRates }])
+    )
   };
 
-  // טעינת הסכמים קיימים
-  React.useEffect(() => {
-    const loadAgreements = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-        if (!user) return;
+  const [rates, setRates] = React.useState<AgentRates>(initialRates);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-        const { data, error } = await supabase
-          .from('agent_agreements')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-
-        const agreementsMap: Record<string, Record<string, AgreementDetails>> = {};
-        data?.forEach(agreement => {
-          if (!agreementsMap[agreement.company]) {
-            agreementsMap[agreement.company] = {};
-          }
-          agreementsMap[agreement.company][agreement.product_type] = agreement.agreement_details;
-        });
-
-        setAgreements(agreementsMap);
-      } catch (error) {
-        console.error('Error loading agreements:', error);
-        toast.error('אירעה שגיאה בטעינת ההסכמים');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAgreements();
-  }, []);
-
-  const handleSaveAgreement = async (company: string, productType: string, details: AgreementDetails) => {
+  // טעינת הנתונים
+  const loadRates = async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      const { error } = await supabase
-        .from('agent_agreements')
-        .upsert({
-          user_id: user.id,
-          company,
-          product_type: productType,
-          agreement_details: details,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,company,product_type'
-        });
+      const { data, error } = await supabase
+        .from('agent_commission_rates')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-      if (error) throw error;
-
-      setAgreements(prev => ({
-        ...prev,
-        [company]: {
-          ...prev[company],
-          [productType]: details
+      if (error) {
+        if (error.code === 'PGRST116') {
+          await saveRates(initialRates);
+          setRates(initialRates);
+        } else {
+          throw error;
         }
-      }));
-
-      toast.success('ההסכם נשמר בהצלחה');
+      } else {
+        // מיזוג עם ערכי ברירת המחדל
+        const mergedRates = {
+          pension_companies: Object.fromEntries(
+            COMPANIES.pension.map(company => [
+              company,
+              {
+                ...defaultCompanyRates,
+                ...(data.pension_companies?.[company] || {})
+              }
+            ])
+          ),
+          investment_companies: Object.fromEntries(
+            COMPANIES.investment.map(company => [
+              company,
+              {
+                ...defaultCompanyRates,
+                scope_rate_per_million: 6000,
+                monthly_rate: 250,
+                ...(data.investment_companies?.[company] || {})
+              }
+            ])
+          ),
+          policy_companies: Object.fromEntries(
+            COMPANIES.policy.map(company => [
+              company,
+              {
+                ...defaultCompanyRates,
+                scope_rate_per_million: 7000,
+                monthly_rate: 0.003,
+                ...(data.policy_companies?.[company] || {})
+              }
+            ])
+          ),
+          insurance_companies: Object.fromEntries(
+            COMPANIES.insurance.map(company => [
+              company,
+              {
+                ...defaultInsuranceRates,
+                ...(data.insurance_companies?.[company] || {})
+              }
+            ])
+          )
+        };
+        setRates(mergedRates);
+      }
     } catch (error) {
-      console.error('Error saving agreement:', error);
-      toast.error('אירעה שגיאה בשמירת ההסכם');
+      console.error('Error loading rates:', error);
+      toast.error('שגיאה בטעינת הנתונים');
+      setRates(initialRates);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // שמירת הנתונים
+  const saveRates = async (newRates: AgentRates) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // המרת הנתונים לפורמט המתאים לדאטהבייס
+      const dbRates = {
+        user_id: user.id,
+        pension_companies: newRates.pension_companies,
+        investment_companies: newRates.investment_companies,
+        policy_companies: newRates.policy_companies,
+        insurance_companies: newRates.insurance_companies,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('agent_commission_rates')
+        .upsert(dbRates, {
+          onConflict: 'user_id',  // במקרה של התנגשות, עדכן לפי user_id
+          ignoreDuplicates: false  // אנחנו רוצים לעדכן את הרשומה הקיימת
+        });
+
+      if (error) throw error;
+      toast.success('הנתונים נשמרו בהצלחה');
+      loadRates();
+    } catch (error) {
+      console.error('Error saving rates:', error);
+      toast.error('שגיאה בשמירת הנתונים');
+    }
+  };
+
+  React.useEffect(() => {
+    loadRates();
+  }, []);
+
+  if (isLoading) return <div>טוען...</div>;
+
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-6">
       <Card>
         <CardHeader>
           <CardTitle>הסכמי סוכן</CardTitle>
+          <CardDescription>עדכון עמלות לפי חברה ומוצר</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">בחר חברה</label>
-              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                <SelectTrigger>
-                  <SelectValue placeholder="בחר חברה" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(companies).flat().filter((v, i, a) => a.indexOf(v) === i).map(company => (
-                    <SelectItem key={company} value={company}>{company}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent>
+          <Tabs defaultValue="pension" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="pension">פנסיה</TabsTrigger>
+              <TabsTrigger value="investment">השקעות</TabsTrigger>
+              <TabsTrigger value="policy">פוליסת חיסכון</TabsTrigger>
+              <TabsTrigger value="insurance">ביטוח</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">בחר מוצר</label>
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger>
-                  <SelectValue placeholder="בחר מוצר" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pension">פנסיה</SelectItem>
-                  <SelectItem value="insurance">ביטוח</SelectItem>
-                  <SelectItem value="investment">השקעות</SelectItem>
-                  <SelectItem value="policy">פוליסות חיסכון</SelectItem>
-                </SelectContent>
-              </Select>
+            <TabsContent value="pension">
+              <Card>
+                <CardHeader>
+                  <CardTitle>עמלות פנסיה לפי חברה</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {COMPANIES.pension.map(company => (
+                      <div key={company} className="border p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold">{company}</h3>
+                          <Checkbox
+                            checked={rates.pension_companies[company].active}
+                            onCheckedChange={(checked) => {
+                              setRates(prev => ({
+                                ...prev,
+                                pension_companies: {
+                                  ...prev.pension_companies,
+                                  [company]: {
+                                    ...prev.pension_companies[company],
+                                    active: checked === true
+                                  }
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת היקף (%)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={rates.pension_companies[company].scope_rate * 100}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  pension_companies: {
+                                    ...prev.pension_companies,
+                                    [company]: {
+                                      ...prev.pension_companies[company],
+                                      scope_rate: Number(e.target.value) / 100
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת נפרעים (%)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={rates.pension_companies[company].monthly_rate * 100}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  pension_companies: {
+                                    ...prev.pension_companies,
+                                    [company]: {
+                                      ...prev.pension_companies[company],
+                                      monthly_rate: Number(e.target.value) / 100
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="investment">
+              <Card>
+                <CardHeader>
+                  <CardTitle>עמלות השקעות לפי חברה</CardTitle>
+                  <CardDescription>גמל והשתלמות</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {COMPANIES.investment.map(company => (
+                      <div key={company} className="border p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold">{company}</h3>
+                          <Checkbox
+                            checked={rates.investment_companies[company].active}
+                            onCheckedChange={(checked) => {
+                              setRates(prev => ({
+                                ...prev,
+                                investment_companies: {
+                                  ...prev.investment_companies,
+                                  [company]: {
+                                    ...prev.investment_companies[company],
+                                    active: checked === true
+                                  }
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת היקף (₪ למיליון)
+                            </label>
+                            <Input
+                              type="number"
+                              value={rates.investment_companies[company].scope_rate_per_million}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  investment_companies: {
+                                    ...prev.investment_companies,
+                                    [company]: {
+                                      ...prev.investment_companies[company],
+                                      scope_rate_per_million: Number(e.target.value)
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                            <p className="text-sm text-gray-500">לדוגמה: 6,000 = 6,000 ₪ למיליון</p>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת נפרעים (₪ למיליון לחודש)
+                            </label>
+                            <Input
+                              type="number"
+                              value={rates.investment_companies[company].monthly_rate}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  investment_companies: {
+                                    ...prev.investment_companies,
+                                    [company]: {
+                                      ...prev.investment_companies[company],
+                                      monthly_rate: Number(e.target.value)
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                            <p className="text-sm text-gray-500">לדוגמה: 250 = 250 ₪ למיליון לחודש</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="policy">
+              <Card>
+                <CardHeader>
+                  <CardTitle>עמלות פוליסת חיסכון לפי חברה</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {COMPANIES.policy.map(company => (
+                      <div key={company} className="border p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold">{company}</h3>
+                          <Checkbox
+                            checked={rates.policy_companies[company].active}
+                            onCheckedChange={(checked) => {
+                              setRates(prev => ({
+                                ...prev,
+                                policy_companies: {
+                                  ...prev.policy_companies,
+                                  [company]: {
+                                    ...prev.policy_companies[company],
+                                    active: checked === true
+                                  }
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת היקף (₪ למיליון)
+                            </label>
+                            <Input
+                              type="number"
+                              value={rates.policy_companies[company].scope_rate_per_million}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  policy_companies: {
+                                    ...prev.policy_companies,
+                                    [company]: {
+                                      ...prev.policy_companies[company],
+                                      scope_rate_per_million: Number(e.target.value)
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                            <p className="text-sm text-gray-500">לדוגמה: 7,000 = 7,000 ₪ למיליון</p>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              עמלת נפרעים (% שנתי)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={rates.policy_companies[company].monthly_rate * 100}
+                              onChange={(e) => {
+                                setRates(prev => ({
+                                  ...prev,
+                                  policy_companies: {
+                                    ...prev.policy_companies,
+                                    [company]: {
+                                      ...prev.policy_companies[company],
+                                      monthly_rate: Number(e.target.value) / 100
+                                    }
+                                  }
+                                }));
+                              }}
+                            />
+                            <p className="text-sm text-gray-500">לדוגמה: 0.3 = 0.3% שנתי</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="insurance">
+              <Card>
+                <CardHeader>
+                  <CardTitle>עמלות ביטוח לפי חברה</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {COMPANIES.insurance.map(company => (
+                      <div key={company} className="border p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold">{company}</h3>
+                          <Checkbox
+                            checked={rates.insurance_companies[company].active}
+                            onCheckedChange={(checked) => {
+                              setRates(prev => ({
+                                ...prev,
+                                insurance_companies: {
+                                  ...prev.insurance_companies,
+                                  [company]: {
+                                    ...prev.insurance_companies[company],
+                                    active: checked === true
+                                  }
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-6">
+                          {Object.entries(rates.insurance_companies[company].products).map(([productType, rates]) => (
+                            <div key={productType} className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="font-medium mb-4">{getInsuranceProductName(productType)}</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">
+                                    עמלת היקף (% מפרמיה שנתית)
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={rates.one_time_rate * 100}
+                                    onChange={(e) => {
+                                      setRates(prev => ({
+                                        ...prev,
+                                        insurance_companies: {
+                                          ...prev.insurance_companies,
+                                          [company]: {
+                                            ...prev.insurance_companies[company],
+                                            products: {
+                                              ...prev.insurance_companies[company].products,
+                                              [productType]: {
+                                                ...prev.insurance_companies[company].products[productType],
+                                                one_time_rate: Number(e.target.value) / 100
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                  <p className="text-sm text-gray-500">לדוגמה: 40 = 40%</p>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">
+                                    עמלת נפרעים (% מפרמיה חודשית)
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={rates.monthly_rate * 100}
+                                    onChange={(e) => {
+                                      setRates(prev => ({
+                                        ...prev,
+                                        insurance_companies: {
+                                          ...prev.insurance_companies,
+                                          [company]: {
+                                            ...prev.insurance_companies[company],
+                                            products: {
+                                              ...prev.insurance_companies[company].products,
+                                              [productType]: {
+                                                ...prev.insurance_companies[company].products[productType],
+                                                monthly_rate: Number(e.target.value) / 100
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }));
+                                    }}
+                                  />
+                                  <p className="text-sm text-gray-500">לדוגמה: 15 = 15%</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          <hr className="my-6 border-t border-gray-200" />
+
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-500">
+              עודכן לאחרונה: {new Date(rates.updated_at || '').toLocaleDateString('he-IL')}
             </div>
+            <Button onClick={() => saveRates(rates)} className="min-w-[200px]">
+              שמור שינויים
+            </Button>
           </div>
-
-          {selectedCompany && selectedProduct && (
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-lg">הגדרת עמלות - {selectedCompany}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedProduct === 'pension' && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">אחוז עמלת היקף</label>
-                      <Input 
-                        type="number" 
-                        step="0.01"
-                        value={agreements[selectedCompany]?.pension?.scopeRate || ''}
-                        onChange={(e) => handleSaveAgreement(selectedCompany, 'pension', {
-                          pension: {
-                            scopeRate: Number(e.target.value),
-                            accumulationRate: agreements[selectedCompany]?.pension?.accumulationRate || 0
-                          }
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">סכום עמלת צבירה (לכל מיליון ₪)</label>
-                      <Input 
-                        type="number"
-                        value={agreements[selectedCompany]?.pension?.accumulationRate || ''}
-                        onChange={(e) => handleSaveAgreement(selectedCompany, 'pension', {
-                          pension: {
-                            scopeRate: agreements[selectedCompany]?.pension?.scopeRate || 0,
-                            accumulationRate: Number(e.target.value)
-                          }
-                        })}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* הוספת שדות דומים עבור שאר המוצרים */}
-              </CardContent>
-            </Card>
-          )}
         </CardContent>
       </Card>
     </div>
   );
+};
+
+// פונקציית עזר להמרת שמות מוצרי ביטוח
+const getInsuranceProductName = (productType: string): string => {
+  const names: Record<string, string> = {
+    risk: 'ביטוח חיים',
+    mortgage_risk: 'ביטוח משכנתא',
+    health: 'ביטוח בריאות',
+    critical_illness: 'מחלות קשות',
+    service_letter: 'כתבי שירות',
+    disability: 'אובדן כושר עבודה'
+  };
+  return names[productType] || productType;
 };
 
 export default AgentAgreements; 
