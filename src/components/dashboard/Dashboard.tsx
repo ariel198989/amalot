@@ -4,67 +4,105 @@ import * as React from 'react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { ArrowUpIcon, TrendingUp, Users, DollarSign, Clock, Target, Activity } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+import { reportService } from '@/services/reportService'
+import { toast } from 'react-hot-toast'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const kpiData = [
-  { 
-    title: 'סה"כ הכנסות', 
-    value: '₪54,239', 
-    change: '+14.5%', 
-    trend: [4, 6, 8, 7, 9, 10],
-    icon: DollarSign,
-    color: 'bg-green-500',
-    description: 'הכנסות מכל המוצרים'
-  },
-  { 
-    title: 'לקוחות חדשים', 
-    value: '2,741', 
-    change: '+5.2%', 
-    trend: [3, 4, 5, 3, 4, 5],
-    icon: Users,
-    color: 'bg-blue-500',
-    description: 'לקוחות שנוספו החודש'
-  },
-  { 
-    title: 'אחוז המרה', 
-    value: '3.24%', 
-    change: '+2.1%', 
-    trend: [2, 3, 2, 4, 3, 5],
-    icon: Target,
-    color: 'bg-purple-500',
-    description: 'יחס המרה מפגישות לסגירות'
-  },
-  { 
-    title: 'עמלות ממוצעות', 
-    value: '₪2,956', 
-    change: '+0.5%', 
-    trend: [4, 3, 5, 4, 5, 6],
-    icon: Activity,
-    color: 'bg-orange-500',
-    description: 'עמלות חודשיות ממוצעות'
-  },
-]
+interface DashboardStats {
+  totalSales: number;
+  totalCommission: number;
+  monthlySales: any[];
+  productDistribution: ProductDistribution[];
+}
 
-const monthlyData = [
-  { name: 'ינו׳', revenue: 40000, commissions: 24000 },
-  { name: 'פבר׳', revenue: 30000, commissions: 13980 },
-  { name: 'מרץ', revenue: 20000, commissions: 9800 },
-  { name: 'אפר׳', revenue: 27800, commissions: 39080 },
-  { name: 'מאי', revenue: 18900, commissions: 48000 },
-  { name: 'יוני', revenue: 23900, commissions: 38000 },
-]
-
-const productData = [
-  { name: 'פנסיה', value: 400, color: '#8884d8' },
-  { name: 'ביטוח', value: 300, color: '#82ca9d' },
-  { name: 'השקעות', value: 300, color: '#ffc658' },
-  { name: 'פוליסות', value: 200, color: '#ff7300' },
-]
+interface ProductDistribution {
+  type: string;
+  count: number;
+  commission: number;
+  details: any[];
+}
 
 export default function ModernAnalyticsDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const dashboardStats = await reportService.fetchDashboardStats();
+      setStats(dashboardStats);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast.error('שגיאה בטעינת נתוני הדשבורד');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>טוען...</div>;
+  }
+
+  const kpiData = [
+    { 
+      title: 'סה"כ הכנסות', 
+      value: `₪${stats?.totalCommission.toLocaleString() || 0}`, 
+      change: '+14.5%',
+      trend: stats?.monthlySales.slice(-6).map(sale => sale.totalCommission) || [],
+      icon: DollarSign,
+      color: 'bg-green-500',
+      description: 'הכנסות מכל המוצרים'
+    },
+    { 
+      title: 'סה"כ מכירות', 
+      value: stats?.totalSales.toString() || '0', 
+      change: '+5.2%',
+      trend: stats?.monthlySales.slice(-6).map(sale => sale.count) || [],
+      icon: Users,
+      color: 'bg-blue-500',
+      description: 'סך כל המכירות'
+    },
+    { 
+      title: 'אחוז המרה', 
+      value: '3.24%', 
+      change: '+2.1%', 
+      trend: [2, 3, 2, 4, 3, 5],
+      icon: Target,
+      color: 'bg-purple-500',
+      description: 'יחס המרה מפגישות לסגירות'
+    },
+    { 
+      title: 'עמלות ממוצעות', 
+      value: '₪2,956', 
+      change: '+0.5%', 
+      trend: [4, 3, 5, 4, 5, 6],
+      icon: Activity,
+      color: 'bg-orange-500',
+      description: 'עמלות חודשיות ממוצעות'
+    },
+  ];
+
+  const monthlyData = stats?.monthlySales.map(sale => ({
+    name: new Date(sale.month).toLocaleDateString('he-IL', { month: 'short' }),
+    revenue: sale.totalRevenue,
+    commissions: sale.totalCommission
+  })) || [];
+
+  const productData = stats?.productDistribution.map(product => ({
+    name: getProductHebrewName(product.type),
+    value: product.count,
+    color: getProductColor(product.type)
+  })) || [];
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -265,4 +303,24 @@ export default function ModernAnalyticsDashboard() {
       </div>
     </div>
   );
+}
+
+function getProductHebrewName(type: string): string {
+  const names: Record<string, string> = {
+    pension: 'פנסיה',
+    insurance: 'ביטוח',
+    investment: 'השקעות',
+    policy: 'פוליסות'
+  };
+  return names[type] || type;
+}
+
+function getProductColor(type: string): string {
+  const colors: Record<string, string> = {
+    pension: '#8884d8',
+    insurance: '#82ca9d',
+    investment: '#ffc658',
+    policy: '#ff7300'
+  };
+  return colors[type] || '#000000';
 }

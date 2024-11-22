@@ -628,20 +628,17 @@ const CustomerJourney: React.FC = () => {
     if (pensionError) throw pensionError;
   };
 
-  // עדכון הקריאה לפונקציה ב-onSubmit
+  // הוספת state לשמירת המסע הנוכחי
+  const [currentJourney, setCurrentJourney] = React.useState<CustomerJourney | null>(null);
+
+  // עדכון פונקציית onSubmit
   const onSubmit = async (data: FormData) => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // בדיקת תקינות שם הלקוח
-      if (!data.clientName?.trim()) {
-        toast.error('נא להזין שם לקוח');
-        return;
-      }
-
       // חישוב העמלות
+      let totalCommission = 0;
       const newCommissionDetails: CommissionDetails = {
         pension: { companies: {}, total: 0 },
         insurance: { companies: {}, total: 0 },
@@ -649,13 +646,11 @@ const CustomerJourney: React.FC = () => {
         policy: { companies: {}, total: 0 }
       };
 
-      let totalCommissions = 0;
-
       // חישוב עמלות פנסיה
       if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
         for (const company of selectedCompanies.pension) {
           const result = await calculatePensionCommissions(data, company);
-          totalCommissions += result.totalCommission;
+          totalCommission += result.totalCommission;
           newCommissionDetails.pension.companies[company] = result;
           newCommissionDetails.pension.total += result.totalCommission;
         }
@@ -665,17 +660,17 @@ const CustomerJourney: React.FC = () => {
       if (selectedProducts.insurance && selectedCompanies.insurance.length > 0) {
         for (const company of selectedCompanies.insurance) {
           const result = await calculateInsuranceCommissions(data, company);
-          totalCommissions += result.totalCommission;
+          totalCommission += result.totalCommission;
           newCommissionDetails.insurance.companies[company] = result;
           newCommissionDetails.insurance.total += result.totalCommission;
         }
       }
 
-      // חישב עמלות השקעות
+      // חישוב עמלות השקעות
       if (selectedProducts.investment && selectedCompanies.investment.length > 0) {
         for (const company of selectedCompanies.investment) {
           const result = await calculateInvestmentCommissions(data, company);
-          totalCommissions += result.totalCommission;
+          totalCommission += result.totalCommission;
           newCommissionDetails.investment.companies[company] = result;
           newCommissionDetails.investment.total += result.totalCommission;
         }
@@ -685,13 +680,13 @@ const CustomerJourney: React.FC = () => {
       if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
         for (const company of selectedCompanies.policy) {
           const result = await calculatePolicyCommissions(data, company);
-          totalCommissions += result.totalCommission;
+          totalCommission += result.totalCommission;
           newCommissionDetails.policy.companies[company] = result;
           newCommissionDetails.policy.total += result.totalCommission;
         }
       }
 
-      // עדכון ה-state של פרי העמלות
+      // עדכון ה-state של פרטי העמלות
       setCommissionDetails(newCommissionDetails);
 
       // פיצול שם הלקוח
@@ -700,7 +695,7 @@ const CustomerJourney: React.FC = () => {
       const lastName = nameParts.slice(1).join(' ');
 
       // בדיקה אם הלקוח קיים
-      const { data: existingClient, error: clientError } = await supabase
+      const { data: existingClient } = await supabase
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
@@ -708,14 +703,9 @@ const CustomerJourney: React.FC = () => {
         .eq('last_name', lastName)
         .maybeSingle();
 
-      if (clientError) {
-        console.error('Error checking client:', clientError);
-      }
-
-      let clientId: string | null = null;
+      let clientId = existingClient?.id;
 
       if (!existingClient) {
-        // יציר לקוח חדש
         const { data: newClient, error: createError } = await supabase
           .from('clients')
           .insert([{
@@ -734,8 +724,6 @@ const CustomerJourney: React.FC = () => {
         if (!newClient) throw new Error('שגיאה ביצירת לקוח חדש');
         
         clientId = newClient.id;
-      } else {
-        clientId = existingClient.id;
       }
 
       // יצירת מסע לקוח חדש
@@ -751,124 +739,29 @@ const CustomerJourney: React.FC = () => {
           .map(([key]) => key),
         selected_companies: selectedCompanies,
         commission_details: newCommissionDetails,
-        total_commission: Object.values(newCommissionDetails)
-          .reduce((sum, detail) => sum + detail.total, 0),
+        total_commission: totalCommission || 0, // וידוא שיש ערך תקין
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
+      // שמירת המסע
       const { data: newJourney, error: journeyError } = await supabase
         .from('customer_journeys')
         .insert([journeyData])
-        .select('id')
+        .select('*') // שינוי מ-select('id') ל-select('*')
         .single();
 
       if (journeyError) throw journeyError;
-      if (!newJourney) throw new Error('שגיאה ביצירת מסע לקוח');
 
-      const journeyId = newJourney.id;
-
-      // שמירת נתוני פנסיה
-      if (selectedProducts.pension && selectedCompanies.pension.length > 0) {
-        for (const company of selectedCompanies.pension) {
-          const result = await calculatePensionCommissions(data, company);
-          await savePensionSale(data, company, result, journeyId, user.id);  // העברת user.id
-        }
-      }
-
-      // שמירת נתוני ביטוח
-      if (selectedProducts.insurance && selectedCompanies.insurance.length > 0) {
-        for (const company of selectedCompanies.insurance) {
-          const result = await calculateInsuranceCommissions(data, company);
-          const insuranceData = {
-            user_id: user.id,
-            client_id: clientId,
-            journey_id: journeyId,  // הוספ קישור למסע
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            date: new Date().toISOString(),
-            insurance_type: data.insuranceType,
-            monthly_premium: Number(data.insurancePremium),
-            one_time_commission: result.oneTimeCommission,
-            monthly_commission: result.monthlyCommission,
-            total_commission: result.totalCommission,
-            created_at: new Date().toISOString()
-          };
-
-          const { error: insuranceError } = await supabase
-            .from('insurance_sales')
-            .insert([insuranceData]);
-
-          if (insuranceError) throw insuranceError;
-        }
-      }
-
-      // שמירת נתוני השקעות
-      if (selectedProducts.investment && selectedCompanies.investment.length > 0) {
-        for (const company of selectedCompanies.investment) {
-          const result = await calculateInvestmentCommissions(data, company);
-          const investmentData = {
-            user_id: user.id,
-            client_id: clientId,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            date: new Date().toISOString(),
-            amount: Number(data.investmentAmount),
-            scope_commission: result.scopeCommission,
-            monthly_commission: result.monthlyCommission,
-            annual_commission: result.annualCommission,
-            total_commission: result.totalCommission,
-            created_at: new Date().toISOString()
-          };
-
-          const { error: investmentError } = await supabase
-            .from('investment_sales')
-            .insert([investmentData]);
-
-          if (investmentError) throw investmentError;
-        }
-      }
-
-      // שמירת נתוני פוליסות
-      if (selectedProducts.policy && selectedCompanies.policy.length > 0) {
-        for (const company of selectedCompanies.policy) {
-          const result = await calculatePolicyCommissions(data, company);
-          const policyData = {
-            user_id: user.id,
-            client_id: clientId,
-            client_name: data.clientName,
-            client_phone: data.clientPhone,
-            company: company,
-            date: new Date().toISOString(),
-            amount: Number(data.policyAmount),
-            period: Number(data.policyPeriod),
-            scope_commission: result.scopeCommission,
-            monthly_commission: result.monthlyCommission,
-            annual_commission: result.annualCommission,
-            total_commission: result.totalCommission,
-            created_at: new Date().toISOString()
-          };
-
-          const { error: policyError } = await supabase
-            .from('policy_sales')
-            .insert([policyData]);
-
-          if (policyError) throw policyError;
-        }
-      }
+      // שמירת המסע הנוכחי ב-state
+      setCurrentJourney(newJourney);
 
       // יצירת סיכום פגישה
-      const summaryData = reportService.generateMeetingSummary({
-        client_name: data.clientName,
-        selected_products: Object.entries(selectedProducts)
-          .filter(([_, value]) => value)
-          .map(([key]) => key),
-        selected_companies: selectedCompanies,
-        commission_details: newCommissionDetails,
-        formData: data
-      });
+      const summaryData = {
+        summary: generateSummaryText(newJourney),
+        next_steps: generateNextSteps(newJourney),
+        pdfContent: generatePDFContent(newJourney)
+      };
 
       // פתיחת הדיאלוג עם הסיכום
       setMeetingSummary({
@@ -878,11 +771,13 @@ const CustomerJourney: React.FC = () => {
         pdfContent: summaryData.pdfContent
       });
 
-      toast.success('החישוב וסיכום הפגישה נוצרו ונשמרו בהצלחה בכל הטבלאות');
+      toast.success('המסע נשמר בהצלחה!');
+      return newJourney.id;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
-      toast.error('אירעה שגיאה בשמירת הנתונים');
+      toast.error(error.message || 'אירעה שגיאה בשמירת הנתונים');
+      throw error;
     }
   };
 
@@ -1108,6 +1003,322 @@ const CustomerJourney: React.FC = () => {
       console.error('Error creating meeting summary:', error);
       toast.error('שגיאה ביצירת סיכום הפגישה');
     }
+  };
+
+  const validateJourneyData = (data: any) => {
+    if (!data.client_name?.trim()) {
+      throw new Error('חובה להזין שם לקוח');
+    }
+    
+    if (!data.selected_products?.length) {
+      throw new Error('יש לבחור לפחות מוצר אחד');
+    }
+
+    // וידוא שיש חברות נבחרות לכל מוצר
+    for (const product of data.selected_products) {
+      const companies = data.selected_companies[product];
+      if (!companies?.length) {
+        throw new Error(`יש לבחור חברה עבור ${product}`);
+      }
+    }
+
+    // וידוא שיש ערך תקין ל-total_commission
+    if (typeof data.total_commission !== 'number') {
+      data.total_commission = 0;
+    }
+
+    return true;
+  };
+
+  const handleSaveJourney = async (data: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // חישוב סך העמלות מכל החברות והמוצרים
+      let totalCommission = 0;
+
+      // חישוב העמלות לפי מוצרים
+      if (selectedProducts.pension) {
+        for (const company of selectedCompanies.pension) {
+          const result = await calculatePensionCommissions(data, company);
+          totalCommission += result.totalCommission || 0;
+        }
+      }
+
+      if (selectedProducts.insurance) {
+        for (const company of selectedCompanies.insurance) {
+          const result = await calculateInsuranceCommissions(data, company);
+          totalCommission += result.totalCommission || 0;
+        }
+      }
+
+      if (selectedProducts.investment) {
+        for (const company of selectedCompanies.investment) {
+          const result = await calculateInvestmentCommissions(data, company);
+          totalCommission += result.totalCommission || 0;
+        }
+      }
+
+      if (selectedProducts.policy) {
+        for (const company of selectedCompanies.policy) {
+          const result = await calculatePolicyCommissions(data, company);
+          totalCommission += result.totalCommission || 0;
+        }
+      }
+
+      // יצירת מסע לקוח חדש
+      const journeyData = {
+        user_id: user.id,
+        client_id: clientId,
+        journey_date: new Date().toLocaleDateString('he-IL'),
+        date: new Date().toISOString(),
+        client_name: data.clientName,
+        client_phone: data.clientPhone,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: selectedCompanies,
+        commission_details: newCommissionDetails,
+        total_commission: totalCommission,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // בדיקה שיש ערך תקין ל-total_commission
+      if (typeof journeyData.total_commission !== 'number' || isNaN(journeyData.total_commission)) {
+        journeyData.total_commission = 0;
+      }
+
+      const { data: newJourney, error: journeyError } = await supabase
+        .from('customer_journeys')
+        .insert([journeyData])
+        .select('id')
+        .single();
+
+      if (journeyError) throw journeyError;
+      // ... rest of the code
+    } catch (error) {
+      console.error('Error saving journey:', error);
+      throw error;
+    }
+  };
+
+  // פונקציית עזר לחישוב סך העמלות
+  const calculateTotalCommission = (): number => {
+    if (!commissionDetails) return 0;
+    
+    return Object.values(commissionDetails).reduce(
+      (sum, product) => sum + (product?.total || 0),
+      0
+    );
+  };
+
+  // פונקציות עזר לייצור הדוח
+  const generateSummaryText = (journey: CustomerJourney): string => {
+    let summary = `סיכום פגישה עם ${journey.client_name}\n`;
+    summary += `תאריך: ${new Date(journey.date).toLocaleDateString('he-IL')}\n\n`;
+
+    let totalOneTime = 0;
+    let totalRecurring = 0;
+
+    // פנסיה
+    if (journey.commission_details.pension.total > 0) {
+      summary += '🔹 פנסיה:\n';
+      Object.entries(journey.commission_details.pension.companies).forEach(([company, details]) => {
+        summary += `   חברה: ${company}\n`;
+        summary += `   • עמלת היקף (חד פעמי): ${details.scopeCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת צבירה (שנתי): ${details.accumulationCommission.toLocaleString()} ₪\n`;
+        summary += `   • סה"כ: ${details.totalCommission.toLocaleString()} ₪\n\n`;
+        
+        totalOneTime += details.scopeCommission;
+        totalRecurring += details.accumulationCommission;
+      });
+    }
+
+    // ביטוח
+    if (journey.commission_details.insurance.total > 0) {
+      summary += '🔹 ביטוח:\n';
+      Object.entries(journey.commission_details.insurance.companies).forEach(([company, details]) => {
+        summary += `   חברה: ${company}\n`;
+        summary += `   • עמלת היקף (חד פעמי): ${details.oneTimeCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים חודשית: ${details.monthlyCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים שנתית: ${(details.monthlyCommission * 12).toLocaleString()} ₪\n`;
+        summary += `   • סה"כ בשנה ראשונה: ${details.totalCommission.toLocaleString()} ₪\n\n`;
+        
+        totalOneTime += details.oneTimeCommission;
+        totalRecurring += (details.monthlyCommission * 12);
+      });
+    }
+
+    // השקעות
+    if (journey.commission_details.investment.total > 0) {
+      summary += '🔹 השקעות:\n';
+      Object.entries(journey.commission_details.investment.companies).forEach(([company, details]) => {
+        summary += `   חברה: ${company}\n`;
+        summary += `   • עמלת היקף (חד פעמי): ${details.scopeCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים חודשית: ${details.monthlyCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים שנתית: ${details.annualCommission.toLocaleString()} ₪\n`;
+        summary += `   • סה"כ בשנה ראשונה: ${details.totalCommission.toLocaleString()} ₪\n\n`;
+        
+        totalOneTime += details.scopeCommission;
+        totalRecurring += details.annualCommission;
+      });
+    }
+
+    // פוליסות
+    if (journey.commission_details.policy.total > 0) {
+      summary += '🔹 פוליסות חיסכון:\n';
+      Object.entries(journey.commission_details.policy.companies).forEach(([company, details]) => {
+        summary += `   חברה: ${company}\n`;
+        summary += `   • עמלת היקף (חד פעמי): ${details.scopeCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים חודשית: ${details.monthlyCommission.toLocaleString()} ₪\n`;
+        summary += `   • עמלת נפרעים שנתית: ${details.annualCommission.toLocaleString()} ₪\n`;
+        summary += `   • סה"כ בשנה ראשונה: ${details.totalCommission.toLocaleString()} ₪\n\n`;
+        
+        totalOneTime += details.scopeCommission;
+        totalRecurring += details.annualCommission;
+      });
+    }
+
+    // סיכום כללי
+    summary += '\n📊 סיכום עמלות:\n';
+    summary += `• סה"כ עמלות חד פעמיות: ${totalOneTime.toLocaleString()} ₪\n`;
+    summary += `• סה"כ עמלות שוטפות (שנתי): ${totalRecurring.toLocaleString()} ₪\n`;
+    summary += `• סה"כ עמלות בשנה ראשונה: ${journey.total_commission.toLocaleString()} ₪\n`;
+
+    return summary;
+  };
+
+  const generateNextSteps = (journey: CustomerJourney): string => {
+    let steps = 'משימות להמשך:\n';
+    journey.selected_products.forEach(product => {
+      switch (product) {
+        case 'pension':
+          steps += '- השלמת טפסי ניוד פנסיה\n';
+          break;
+        case 'insurance':
+          steps += '- השלמת הצעת ביטוח\n';
+          break;
+        case 'investment':
+          steps += '- השלמת טפסי העברת כספים\n';
+          break;
+        case 'policy':
+          steps += '- השלמת טפסי פוליסת חיסכון\n';
+          break;
+      }
+    });
+    return steps;
+  };
+
+  const generatePDFContent = (journey: CustomerJourney): string => {
+    return `
+      <div dir="rtl" style="font-family: Arial, sans-serif; padding: 40px;">
+        <div style="text-align: center; margin-bottom: 40px;">
+          <h1 style="color: #1e3a8a; font-size: 28px;">סיכום פגישת ייעוץ</h1>
+          <p style="color: #64748b;">תאריך: ${new Date(journey.date).toLocaleDateString('he-IL')}</p>
+          <p style="color: #64748b;">שם לקוח: ${journey.client_name}</p>
+        </div>
+
+        ${Object.entries(journey.commission_details)
+          .filter(([_, details]) => details.total > 0)
+          .map(([type, details]) => `
+            <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h2 style="color: #1e3a8a; font-size: 20px; margin-bottom: 15px;">
+                ${getProductHebrewName(type)}
+              </h2>
+              ${Object.entries(details.companies).map(([company, companyDetails]) => `
+                <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                  <h3 style="color: #2563eb; font-size: 16px; margin-bottom: 10px;">
+                    חברה: ${company}
+                  </h3>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <div style="padding: 10px; background: #f1f5f9; border-radius: 6px;">
+                      <p style="color: #475569; margin-bottom: 5px;">עמלת היקף (חד פעמי)</p>
+                      <p style="color: #1e3a8a; font-weight: bold;">
+                        ${(companyDetails.scopeCommission || companyDetails.oneTimeCommission || 0).toLocaleString()} ₪
+                      </p>
+                    </div>
+                    <div style="padding: 10px; background: #f1f5f9; border-radius: 6px;">
+                      <p style="color: #475569; margin-bottom: 5px;">עמלת נפרעים חודשית</p>
+                      <p style="color: #1e3a8a; font-weight: bold;">
+                        ${(companyDetails.monthlyCommission || 0).toLocaleString()} ₪
+                      </p>
+                    </div>
+                    <div style="padding: 10px; background: #f1f5f9; border-radius: 6px;">
+                      <p style="color: #475569; margin-bottom: 5px;">עמלת נפרעים שנתית</p>
+                      <p style="color: #1e3a8a; font-weight: bold;">
+                        ${(companyDetails.annualCommission || companyDetails.monthlyCommission * 12 || 0).toLocaleString()} ₪
+                      </p>
+                    </div>
+                  </div>
+                  <div style="margin-top: 10px; padding: 10px; background: #dbeafe; border-radius: 6px;">
+                    <p style="color: #1e3a8a; font-weight: bold;">
+                      סה"כ בשנה ראשונה: ${companyDetails.totalCommission.toLocaleString()} ₪
+                    </p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+
+        <div style="background: #1e40af; color: white; padding: 20px; border-radius: 10px; margin-top: 30px;">
+          <h2 style="font-size: 20px; margin-bottom: 15px;">סיכום עמלות</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+              <p style="color: #93c5fd; margin-bottom: 5px;">סה"כ עמלות חד פעמיות</p>
+              <p style="font-size: 1.2em; font-weight: bold;">
+                ${calculateTotalOneTime(journey.commission_details).toLocaleString()} ₪
+              </p>
+            </div>
+            <div>
+              <p style="color: #93c5fd; margin-bottom: 5px;">סה"כ עמלות שוטפות (שנתי)</p>
+              <p style="font-size: 1.2em; font-weight: bold;">
+                ${calculateTotalRecurring(journey.commission_details).toLocaleString()} ₪
+              </p>
+            </div>
+            <div>
+              <p style="color: #93c5fd; margin-bottom: 5px;">סה"כ עמלות בשנה ראשונה</p>
+              <p style="font-size: 1.2em; font-weight: bold;">
+                ${journey.total_commission.toLocaleString()} ₪
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  // פונקציות עזר לחישוב סיכומים
+  const calculateTotalOneTime = (commissionDetails: CommissionDetails): number => {
+    let total = 0;
+    Object.values(commissionDetails).forEach(product => {
+      Object.values(product.companies).forEach(company => {
+        total += company.scopeCommission || company.oneTimeCommission || 0;
+      });
+    });
+    return total;
+  };
+
+  const calculateTotalRecurring = (commissionDetails: CommissionDetails): number => {
+    let total = 0;
+    Object.values(commissionDetails).forEach(product => {
+      Object.values(product.companies).forEach(company => {
+        total += company.annualCommission || (company.monthlyCommission * 12) || 0;
+      });
+    });
+    return total;
+  };
+
+  // פונקציית עזר להמרת שמות מוצרים לעברית
+  const getProductHebrewName = (type: string): string => {
+    const names: Record<string, string> = {
+      pension: 'פנסיה',
+      insurance: 'ביטוח',
+      investment: 'השקעות',
+      policy: 'פוליסת חיסכון'
+    };
+    return names[type] || type;
   };
 
   return (
