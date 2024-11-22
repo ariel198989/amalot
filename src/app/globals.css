@@ -1,0 +1,90 @@
+/* ... existing styles ... */
+
+/* RTL and Right Alignment Fixes */
+.rtl {
+  direction: rtl !important;
+}
+
+.rtl * {
+  text-align: right;
+}
+
+/* Dialog RTL Fixes */
+.DialogContent {
+  direction: rtl !important;
+}
+
+.DialogContent * {
+  text-align: right;
+}
+
+/* Tab Navigation RTL Fixes */
+.rtl nav {
+  direction: rtl !important;
+  justify-content: flex-start;
+}
+
+.rtl nav button {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+.rtl nav button:first-child {
+  margin-right: 0;
+}
+
+/* Card Content RTL Fixes */
+.rtl .card-content {
+  direction: rtl !important;
+  text-align: right;
+}
+
+/* Input and Form RTL Fixes */
+.rtl input,
+.rtl select,
+.rtl textarea {
+  direction: rtl !important;
+  text-align: right;
+}
+
+/* Badge and Label RTL Fixes */
+.rtl .badge,
+.rtl label {
+  direction: rtl !important;
+  text-align: right;
+}
+
+/* Grid RTL Fixes */
+.rtl .grid {
+  direction: rtl !important;
+}
+
+/* Flex Container RTL Fixes */
+.rtl .flex {
+  direction: rtl !important;
+}
+
+/* Icon Spacing Fixes */
+.rtl svg + span,
+.rtl img + span {
+  margin-right: 0.5rem;
+  margin-left: 0;
+}
+
+/* Dropdown RTL Fixes */
+.SelectContent {
+  direction: rtl !important;
+  text-align: right;
+}
+
+.SelectItem {
+  direction: rtl !important;
+  text-align: right;
+}
+
+/* Force RTL for specific elements */
+[dir="rtl"],
+[dir="rtl"] * {
+  direction: rtl !important;
+  text-align: right;
+} 

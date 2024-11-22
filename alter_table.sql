@@ -25,3 +25,22 @@ AND column_name = 'total_commission';
 -- אם עדיין יש בעיה, נוכל לנסות:
 ALTER TABLE customer_journeys ALTER COLUMN total_commission SET DEFAULT 0;
 ALTER TABLE customer_journeys ALTER COLUMN total_commission DROP NOT NULL; 
+
+-- הוספת קשרים בין הטבלאות
+ALTER TABLE customer_journeys
+ADD CONSTRAINT fk_customer_journeys_client
+FOREIGN KEY (client_id) REFERENCES clients(id);
+
+ALTER TABLE client_activities
+ADD CONSTRAINT fk_client_activities_client
+FOREIGN KEY (client_id) REFERENCES clients(id);
+
+-- אינדקסים לשיפור ביצועים
+CREATE INDEX idx_client_activities_client_id ON client_activities(client_id);
+CREATE INDEX idx_customer_journeys_client_id ON customer_journeys(client_id); 
+
+-- הוספת אינדקסים לשיפור ביצועים
+CREATE INDEX IF NOT EXISTS idx_pension_sales_user_client ON pension_sales(user_id, client_name);
+CREATE INDEX IF NOT EXISTS idx_insurance_sales_user_client ON insurance_sales(user_id, client_name);
+CREATE INDEX IF NOT EXISTS idx_investment_sales_user_client ON investment_sales(user_id, client_name);
+CREATE INDEX IF NOT EXISTS idx_policy_sales_user_client ON policy_sales(user_id, client_name); 
