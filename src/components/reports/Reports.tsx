@@ -19,47 +19,58 @@ const Reports: React.FC = () => {
   React.useEffect(() => {
     const loadSalesData = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // טעינת כל הנתונים
-        const { data: pensionData } = await supabase
-          .from('pension_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
-        
-        const { data: insuranceData } = await supabase
-          .from('insurance_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
-        
-        const { data: investmentData } = await supabase
-          .from('investment_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
-        
-        const { data: policyData } = await supabase
-          .from('policy_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false });
+        console.log('Loading sales data...');
 
-        setPensionSales(pensionData || []);
-        setInsuranceSales(insuranceData || []);
-        setInvestmentSales(investmentData || []);
-        setPolicySales(policyData || []);
+        const [pensionData, insuranceData, investmentData, policyData] = await Promise.all([
+          supabase
+            .from('pension_sales')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('insurance_sales')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('investment_sales')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('policy_sales')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+        ]);
 
-      } catch (error: any) {
+        console.log('Investment sales:', investmentData.data);
+
+        setPensionSales(pensionData.data || []);
+        setInsuranceSales(insuranceData.data || []);
+        setInvestmentSales(investmentData.data || []);
+        setPolicySales(policyData.data || []);
+
+      } catch (error) {
         console.error('Error loading data:', error);
         toast.error('אירעה שגיאה בטעינת הנתונים');
       }
     };
 
+    // טעינה ראשונית
     loadSalesData();
+
+    // האזנה לשינויים
+    const handleSalesUpdate = () => {
+      console.log('Sales update event received');
+      loadSalesData();
+    };
+    
+    window.addEventListener('sales-updated', handleSalesUpdate);
+    return () => window.removeEventListener('sales-updated', handleSalesUpdate);
   }, []);
 
   const tableClasses = {
@@ -405,7 +416,7 @@ const Reports: React.FC = () => {
         throw error;
       }
 
-      // רק אם המחיקה הצליחה, נעדכן את ה-state
+      // רק אם המחיקה הצליחה, נעדן את ה-state
       switch (type) {
         case 'pension':
           setPensionSales(prev => prev.filter(sale => sale.id !== id));
@@ -440,7 +451,7 @@ const Reports: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg p-8 text-white mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">דוחות מכירות</h1>
+            <h1 className="text-3xl font-bold">דוחות כירות</h1>
             <p className="mt-2 text-blue-100">סקירה מקיפה של כל המכירות והעמלות שלך</p>
           </div>
           <div className="flex gap-4">
@@ -526,11 +537,11 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
                   <th className={tableClasses.th}>שכר</th>
-                  <th className={tableClasses.th}>צבירה</th>
                   <th className={tableClasses.th}>הפרשה</th>
+                  <th className={tableClasses.th}>צבירה</th>
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלת צבירה</th>
-                  <th className={tableClasses.th}>סה"כ</th>
+                  <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
@@ -541,36 +552,18 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.accumulation?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.provision}%</td>
+                    <td className={tableClasses.td}>{sale.accumulation?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('pension', sale.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete('pension', sale.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
                   </tr>
                 ))}
-                <tr className={tableClasses.summary}>
-                  <td colSpan={6} className={tableClasses.td}>סה"כ</td>
-                  <td className={tableClasses.td}>
-                    ₪{pensionSales.reduce((sum, sale) => sum + sale.scope_commission, 0).toLocaleString()}
-                  </td>
-                  <td className={tableClasses.td}>
-                    ₪{pensionSales.reduce((sum, sale) => sum + sale.accumulation_commission, 0).toLocaleString()}
-                  </td>
-                  <td className={tableClasses.td}>
-                    ₪{pensionSales.reduce((sum, sale) => sum + sale.total_commission, 0).toLocaleString()}
-                  </td>
-                  <td className={tableClasses.td}></td>
-                </tr>
               </tbody>
             </table>
           </div>
@@ -606,8 +599,11 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
                   <th className={tableClasses.th}>סוג ביטוח</th>
-                  <th className={tableClasses.th}>פרמיה</th>
-                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>פרמיה חודשית</th>
+                  <th className={tableClasses.th}>עמלה חד פעמית</th>
+                  <th className={tableClasses.th}>עמלה חודשית</th>
+                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
@@ -618,15 +614,13 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.insurance_type}</td>
-                    <td className={tableClasses.td}>{sale.premium?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.monthly_premium?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('insurance', sale.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete('insurance', sale.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
@@ -668,7 +662,9 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>חברה</th>
                   <th className={tableClasses.th}>סוג השקעה</th>
                   <th className={tableClasses.th}>סכום השקעה</th>
-                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>עמלה חודשית</th>
+                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
@@ -680,14 +676,11 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.investment_type}</td>
                     <td className={tableClasses.td}>{sale.investment_amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('investment', sale.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete('investment', sale.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
@@ -727,9 +720,11 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>סוג הפוליסות</th>
-                  <th className={tableClasses.th}>סכום הפוליסות</th>
-                  <th className={tableClasses.th}>עמלה</th>
+                  <th className={tableClasses.th}>סכום פוליסה</th>
+                  <th className={tableClasses.th}>עמלת היקף</th>
+                  <th className={tableClasses.th}>עמלה חודשית</th>
+                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
@@ -739,16 +734,12 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.policy_type}</td>
                     <td className={tableClasses.td}>{sale.policy_amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('policy', sale.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete('policy', sale.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
