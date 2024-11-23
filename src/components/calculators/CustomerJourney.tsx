@@ -135,8 +135,13 @@ const CustomerJourney: React.FC = () => {
     policy: []
   });
 
+<<<<<<< Updated upstream
   const [journeys, setJourneys] = React.useState<CustomerJourney[]>([]);
   const { register, handleSubmit: handleFormSubmit, watch, setValue } = useForm<FormData>();
+=======
+  const [currentJourney, setCurrentJourney] = React.useState<Journey | null>(null);
+  const { register, handleSubmit: handleFormSubmit, setValue, watch } = useForm();
+>>>>>>> Stashed changes
 
   const products = [
     { id: 'pension', label: 'פנסיה', description: 'חישוב עמלות פנסיה',
@@ -196,6 +201,7 @@ const CustomerJourney: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
+<<<<<<< Updated upstream
       // קבלת העמלות העדכניות מהדאטהבייס
       const { data: ratesData, error } = await supabase
         .from('agent_commission_rates')
@@ -410,6 +416,122 @@ const CustomerJourney: React.FC = () => {
       commission: number;
     }>;
   }) => {
+=======
+      const commission_details = {
+        pension: {
+          companies: {} as Record<string, {
+            scopeCommission: number;
+            accumulationCommission: number;
+            totalCommission: number;
+          }>,
+          total: 0
+        },
+        insurance: {
+          companies: {} as Record<string, {
+            oneTimeCommission: number;
+            monthlyCommission: number;
+            totalCommission: number;
+          }>,
+          total: 0
+        },
+        investment: {
+          companies: {} as Record<string, {
+            scopeCommission: number;
+            totalCommission: number;
+          }>,
+          total: 0
+        },
+        policy: {
+          companies: {} as Record<string, {
+            scopeCommission: number;
+            totalCommission: number;
+          }>,
+          total: 0
+        }
+      };
+
+      // חישוב עמלות פנסיה לכל חברה
+      if (selectedProducts.pension) {
+        selectedCompanies.pension.forEach(company => {
+          const result = calculatePensionCommissions(data, company);
+          commission_details.pension.companies[company] = {
+            scopeCommission: result.scopeCommission,
+            accumulationCommission: result.accumulationCommission,
+            totalCommission: result.totalCommission
+          };
+          commission_details.pension.total += result.totalCommission;
+        });
+      }
+
+      // חישוב עמלות ביטוח לכל חברה
+      if (selectedProducts.insurance) {
+        selectedCompanies.insurance.forEach(company => {
+          const result = calculateInsuranceCommissions(data, company);
+          commission_details.insurance.companies[company] = {
+            oneTimeCommission: result.oneTimeCommission,
+            monthlyCommission: result.monthlyCommission,
+            totalCommission: result.totalCommission
+          };
+          commission_details.insurance.total += result.totalCommission;
+        });
+      }
+
+      // חישוב עמלות השקעות לכל חברה
+      if (selectedProducts.investment) {
+        selectedCompanies.investment.forEach(company => {
+          const amount = Number(data.investmentAmount);
+          const scopeCommission = (amount / 1000000) * 6000;
+          commission_details.investment.companies[company] = {
+            scopeCommission,
+            totalCommission: scopeCommission
+          };
+          commission_details.investment.total += scopeCommission;
+        });
+      }
+
+      // חישוב עמלות פוליסת חיסכון לכל חברה
+      if (selectedProducts.policy) {
+        selectedCompanies.policy.forEach(company => {
+          const amount = Number(data.policyAmount);
+          const scopeCommission = (amount / 1000000) * 7000;
+          commission_details.policy.companies[company] = {
+            scopeCommission,
+            totalCommission: scopeCommission
+          };
+          commission_details.policy.total += scopeCommission;
+        });
+      }
+
+      const journey = {
+        journey_date: new Date().toLocaleDateString('he-IL'),
+        client_name: data.clientName,
+        client_phone: data.clientPhone,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, selected]) => selected)
+          .map(([product]) => product),
+        selected_companies: selectedCompanies,
+        commission_details,
+        total_commission: Object.values(commission_details).reduce((sum, product) => sum + product.total, 0),
+        user_id: user.id
+      };
+
+      setCurrentJourney(journey);
+      toast.success('החישוב הושלם בהצלחה!');
+      generatePDF(journey);
+
+    } catch (error: any) {
+      console.error('Error calculating:', error);
+      toast.error(error.message || 'אירעה שגיאה בחישוב');
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!currentJourney) {
+      toast.error('אין נתונים להורדה');
+      return;
+    }
+
+>>>>>>> Stashed changes
     try {
       const element = document.createElement('div');
       
@@ -426,6 +548,7 @@ const CustomerJourney: React.FC = () => {
 
       element.innerHTML = `
         <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
+<<<<<<< Updated upstream
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #1e3a8a; font-size: 28px; margin: 0;">דוח מסע לקוח</h1>
             <p style="color: #64748b; margin: 10px 0;">תאריך: ${data.date}</p>
@@ -444,13 +567,93 @@ const CustomerJourney: React.FC = () => {
                 <p style="font-size: 1.2em; font-weight: bold; margin: 0;">${totalRecurringCommissions.toLocaleString()} ₪</p>
               </div>
             </div>
+=======
+          <h1 style="color: #1a365d; text-align: center; margin-bottom: 30px;">דוח מסע לקוח</h1>
+          
+          <div style="margin-bottom: 20px;">
+            <h2 style="color: #2c5282;">פרטי לקוח</h2>
+            <p>תאריך: ${currentJourney.journey_date}</p>
+            <p>שם לקוח: ${currentJourney.client_name}</p>
+            <p>טלפון: ${currentJourney.client_phone || ''}</p>
+          </div>
+
+          ${currentJourney.commission_details?.pension?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">פנסיה</h2>
+              ${Object.entries(currentJourney.commission_details.pension.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>עמלת צבירה: ${details.accumulationCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות פנסיה: ${currentJourney.commission_details.pension.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${currentJourney.commission_details?.insurance?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">ביטוח</h2>
+              ${Object.entries(currentJourney.commission_details.insurance.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלה חד פעמית: ${details.oneTimeCommission.toLocaleString()} ₪</p>
+                    <p>עמלה חודשית: ${details.monthlyCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות ביטוח: ${currentJourney.commission_details.insurance.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${currentJourney.commission_details?.investment?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">השקעות</h2>
+              ${Object.entries(currentJourney.commission_details.investment.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות השקעות: ${currentJourney.commission_details.investment.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          ${currentJourney.commission_details?.policy?.total > 0 ? `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #2c5282;">פוליסת חיסכון</h2>
+              ${Object.entries(currentJourney.commission_details.policy.companies)
+                .map(([company, details]: [string, any]) => `
+                  <div style="margin-left: 20px;">
+                    <h3>${company}</h3>
+                    <p>עמלת היקף: ${details.scopeCommission.toLocaleString()} ₪</p>
+                    <p>סה"כ לחברה: ${details.totalCommission.toLocaleString()} ₪</p>
+                  </div>
+                `).join('')}
+              <p><strong>סה"כ עמלות פוליסת חיסכון: ${currentJourney.commission_details.policy.total.toLocaleString()} ₪</strong></p>
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 30px; border-top: 2px solid #2c5282; padding-top: 20px;">
+            <h2 style="color: #2c5282;">סיכום עמלות</h2>
+            <p style="font-size: 1.2em;"><strong>סה"כ עמלות: ${currentJourney.total_commission.toLocaleString()} ₪</strong></p>
+>>>>>>> Stashed changes
           </div>
         </div>
       `;
 
       const opt = {
         margin: 10,
+<<<<<<< Updated upstream
         filename: `דוח_מסע_לקוח_${data.clientName}_${data.date}.pdf`,
+=======
+        filename: `דוח_מסע_לקוח_${currentJourney.client_name}_${currentJourney.journey_date}.pdf`,
+>>>>>>> Stashed changes
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -820,11 +1023,19 @@ const CustomerJourney: React.FC = () => {
     try {
       const worksheet = XLSXUtils.json_to_sheet([{
         תאריך: currentJourney.journey_date,
+<<<<<<< Updated upstream
         'שם לקוח': currentJourney.clientName,
         טלפון: currentJourney.clientPhone || '',
         'מצרים שנבחרו': currentJourney.selectedProducts.join(', '),
         'עמלות פנסיה': currentJourney.commission_details.pension.total,
         'עלות ביטוח': currentJourney.commission_details.insurance.total,
+=======
+        'שם לקוח': currentJourney.client_name,
+        טלפון: currentJourney.client_phone || '',
+        'מוצרים שנבחרו': currentJourney.selected_products.join(', '),
+        'עמלות פנסיה': currentJourney.commission_details.pension.total,
+        'עמלות ביטוח': currentJourney.commission_details.insurance.total,
+>>>>>>> Stashed changes
         'עמלות השקעות': currentJourney.commission_details.investment.total,
         'עמלות פוליסה': currentJourney.commission_details.policy.total,
         'סה"כ עמלות': currentJourney.total_commission
@@ -839,7 +1050,14 @@ const CustomerJourney: React.FC = () => {
       const excelBuffer = XLSXWrite(workbook, { bookType: 'xlsx', type: 'array' });
       const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
+<<<<<<< Updated upstream
       saveAs(data, `דח_מסע_לקוח_${currentJourney.clientName}_${currentJourney.journey_date}.xlsx`);
+=======
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(data);
+      link.download = `דוח_מסע_לקוח_${currentJourney.client_name}_${currentJourney.journey_date}.xlsx`;
+      link.click();
+>>>>>>> Stashed changes
     } catch (error) {
       console.error('Error generating Excel:', error);
       toast.error('אירעה שגיאה ביצירת הקובץ');
@@ -847,31 +1065,38 @@ const CustomerJourney: React.FC = () => {
   };
 
   const handleShare = () => {
-    if (journeys.length === 0) {
+    if (currentJourney === null) {
       toast.error('אין נתונים לשליחה');
       return;
     }
     
+<<<<<<< Updated upstream
     const lastJourney = journeys[journeys.length - 1];
     let message = `דוח סע לקוח:\n\n`;
     message += `תאריך: ${lastJourney.journey_date}\n`;
     message += `שם לקוח: ${lastJourney.client_name}\n`;
     message += `מוצרים שנבחרו: ${lastJourney.selected_products.join(', ')}\n\n`;
+=======
+    const message = `דוח מסע לקוח:\n\n`;
+    message += `תאריך: ${currentJourney.journey_date}\n`;
+    message += `שם לקוח: ${currentJourney.client_name}\n`;
+    message += `מוצרים שנבחרו: ${currentJourney.selected_products.join(', ')}\n\n`;
+>>>>>>> Stashed changes
     
-    if (lastJourney.commission_details.pension.total > 0) {
-      message += `עמלות פנסיה: ${lastJourney.commission_details.pension.total.toLocaleString()} ₪\n`;
+    if (currentJourney.commission_details.pension.total > 0) {
+      message += `עמלות פנסיה: ${currentJourney.commission_details.pension.total.toLocaleString()} ₪\n`;
     }
-    if (lastJourney.commission_details.insurance.total > 0) {
-      message += `עמלות ביטוח: ${lastJourney.commission_details.insurance.total.toLocaleString()} ₪\n`;
+    if (currentJourney.commission_details.insurance.total > 0) {
+      message += `עמלות ביטוח: ${currentJourney.commission_details.insurance.total.toLocaleString()} ₪\n`;
     }
-    if (lastJourney.commission_details.investment.total > 0) {
-      message += `עמלות השקעות: ${lastJourney.commission_details.investment.total.toLocaleString()} ₪\n`;
+    if (currentJourney.commission_details.investment.total > 0) {
+      message += `עמלות השקעות: ${currentJourney.commission_details.investment.total.toLocaleString()} ₪\n`;
     }
-    if (lastJourney.commission_details.policy.total > 0) {
-      message += `עמלות פוליסה: ${lastJourney.commission_details.policy.total.toLocaleString()} ₪\n`;
+    if (currentJourney.commission_details.policy.total > 0) {
+      message += `עמלות פוליסה: ${currentJourney.commission_details.policy.total.toLocaleString()} ₪\n`;
     }
     
-    message += `\nסה"כ עמלות: ${lastJourney.total_commission.toLocaleString()} ₪`;
+    message += `\nסה"כ עמלות: ${currentJourney.total_commission.toLocaleString()} ₪`;
     
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
@@ -1577,7 +1802,90 @@ const CustomerJourney: React.FC = () => {
         </div>
       )}
 
+<<<<<<< Updated upstream
       {/* כפתורי פעולה */}
+=======
+      {selectedProducts.insurance && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">פרטי ביטוח</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">סוג ביטוח</label>
+              <Select onValueChange={(value) => setValue('insuranceType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר סוג ביטוח" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="risk">ריסק</SelectItem>
+                  <SelectItem value="mortgage_risk">ריסק למשכנתא</SelectItem>
+                  <SelectItem value="health">בריאות</SelectItem>
+                  <SelectItem value="critical_illness">מחלות קשות</SelectItem>
+                  <SelectItem value="service_letter">כתבי שירות</SelectItem>
+                  <SelectItem value="disability">אובדן כושר עבודה</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">פרמיה חודשית</label>
+              <Input {...register('insurancePremium')} type="number" placeholder="הכנס סכום" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedProducts.investment && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">פרטי גמל והשתלמות</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">סכום הניוד</label>
+              <Input {...register('investmentAmount')} type="number" placeholder="הכנס סכום" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedProducts.policy && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">פרטי פוליסת חיסכון</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">סכום הפקדה</label>
+              <Input {...register('policyAmount')} type="number" placeholder="הכנס סכום" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">קופת הפקדה (בשנים)</label>
+              <Input {...register('policyPeriod')} type="number" placeholder="הכנס תקופה" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* טבלת תוצאות */}
+      <ResultsTable
+        data={currentJourney ? [currentJourney] : []}
+        columns={[
+          { key: 'journey_date', label: 'תאריך' },
+          { key: 'client_name', label: 'שם הלקוח' },
+          { key: 'selected_products', label: 'מוצרים שנבחרו', format: (value: string[]) => value.join(', ') },
+          { key: 'commission_details.pension.total', label: 'עמלות פנסיה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
+          { key: 'commission_details.insurance.total', label: 'עמלות ביטוח', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
+          { key: 'commission_details.investment.total', label: 'עמלות השקעות', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
+          { key: 'commission_details.policy.total', label: 'עמלות פוליסה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '-' },
+          { key: 'total_commission', label: 'סה"כ עמלות', format: (value: number) => `₪${value.toLocaleString()}` }
+        ]}
+        onDownload={handleDownloadExcel}
+        onShare={handleDownloadPDF}
+        onClear={() => setCurrentJourney(null)}
+      />
+
+>>>>>>> Stashed changes
       {Object.entries(selectedProducts).some(([_, value]) => value) && (
         <div className="flex gap-4">
           <Button 
@@ -1589,8 +1897,19 @@ const CustomerJourney: React.FC = () => {
           </Button>
           <Button 
             variant="outline"
+<<<<<<< Updated upstream
             className="flex-1 h-12 text-lg border-2 hover:bg-blue-50 transition-all duration-300"
             onClick={handleCreateMeetingSummary}
+=======
+            className="flex-1 h-12 text-lg"
+            onClick={() => {
+              if (currentJourney) {
+                handleDownloadPDF(currentJourney);
+              } else {
+                toast.error('אין נתונים ליצירת דוח');
+              }
+            }}
+>>>>>>> Stashed changes
           >
             <FileText className="h-5 w-5 ml-2" />
             צור סיכום פגישה
