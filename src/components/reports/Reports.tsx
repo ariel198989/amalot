@@ -80,12 +80,14 @@ const Reports: React.FC = () => {
     headerInsurance: "from-purple-50 to-white border-b",
     headerInvestment: "from-green-50 to-white border-b",
     headerPolicy: "from-indigo-50 to-white border-b",
-    table: "w-full border-collapse",
-    th: "bg-gray-50 text-right p-4 border-b border-gray-200 font-medium text-gray-600 text-sm",
-    td: "p-4 border-b border-gray-200 text-gray-800",
-    dateCell: "p-4 border-b border-gray-200 text-gray-800 whitespace-nowrap min-w-[120px]",
+    table: "w-full border-collapse min-w-[1000px]",
+    th: "bg-gray-50 text-right px-2 py-3 border-b border-gray-200 font-medium text-gray-600 text-sm whitespace-nowrap",
+    td: "px-2 py-2 border-b border-gray-200 text-gray-800",
+    dateCell: "px-2 py-2 border-b border-gray-200 text-gray-800 whitespace-nowrap min-w-[90px]",
+    numberCell: "px-2 py-2 border-b border-gray-200 text-gray-800 whitespace-nowrap text-left font-medium min-w-[90px] ltr",
     tr: "hover:bg-gray-50 transition-colors duration-150",
-    summary: "bg-gray-50 font-medium"
+    summary: "bg-gray-50 font-medium",
+    tableWrapper: "overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
   };
 
   const generateMonthlySummaryPDF = () => {
@@ -151,7 +153,7 @@ const Reports: React.FC = () => {
                 text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
               ">${currentDate}</p>
               
-              <!-- קו מפריד דקורטיבי -->
+              <!-- קו מפריד דקו��טיבי -->
               <div style="
                 width: 100px;
                 height: 4px;
@@ -312,7 +314,7 @@ const Reports: React.FC = () => {
 
       const opt = {
         margin: [5, 5, 5, 5], // הקטנת שוליים
-        filename: `דוח_מסכם_חודשי_${currentDate}.pdf`,
+        filename: `דח_מסכם_חודשי_${currentDate}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { 
           scale: 2,
@@ -530,7 +532,7 @@ const Reports: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={tableClasses.tableWrapper}>
             <table className={tableClasses.table}>
               <thead>
                 <tr>
@@ -540,9 +542,9 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>שכר</th>
                   <th className={tableClasses.th}>הפרשה</th>
                   <th className={tableClasses.th}>צבירה</th>
-                  <th className={tableClasses.th}>עמלת היקף</th>
+                  <th className={tableClasses.th}>עמלת היקף חד פעמית</th>
                   <th className={tableClasses.th}>עמלת צבירה</th>
-                  <th className={tableClasses.th}>סה"כ עמלת</th>
+                  <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
@@ -552,12 +554,20 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.salary?.toLocaleString()}</span>{" "}₪
+                    </td>
                     <td className={tableClasses.td}>{sale.provision}%</td>
                     <td className={tableClasses.td}>{sale.accumulation?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.accumulation_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.scope_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.accumulation_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.total_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
                     <td className={tableClasses.td}>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete('pension', sale.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -592,7 +602,7 @@ const Reports: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={tableClasses.tableWrapper}>
             <table className={tableClasses.table}>
               <thead>
                 <tr>
@@ -601,7 +611,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>חברה</th>
                   <th className={tableClasses.th}>סוג ביטוח</th>
                   <th className={tableClasses.th}>פרמיה חודשית</th>
-                  <th className={tableClasses.th}>עמלה חד פעמית</th>
+                  <th className={tableClasses.th}>עמלת היקף חד פעמית</th>
                   <th className={tableClasses.th}>עמלת נפרעים חודשית</th>
                   <th className={tableClasses.th}>עמלת נפרעים שנתית</th>
                   <th className={tableClasses.th}>סה"כ עמלות</th>
@@ -615,11 +625,21 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.insurance_type}</td>
-                    <td className={tableClasses.td}>{sale.monthly_premium?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.one_time_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.monthly_premium?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.one_time_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.monthly_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{(sale.monthly_commission * 12)?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.total_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
                     <td className={tableClasses.td}>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete('insurance', sale.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -654,16 +674,16 @@ const Reports: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={tableClasses.tableWrapper}>
             <table className={tableClasses.table}>
               <thead>
                 <tr>
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>עמלת היקף</th>
-                  <th className={tableClasses.th}>עמלה חודשית</th>
-                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>עמלת היקף חד פעמית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים חודשית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים שנתית</th>
                   <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
@@ -674,10 +694,18 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.scope_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.monthly_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{(sale.monthly_commission * 12)?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.total_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
                     <td className={tableClasses.td}>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete('investment', sale.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -712,16 +740,16 @@ const Reports: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={tableClasses.tableWrapper}>
             <table className={tableClasses.table}>
               <thead>
                 <tr>
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>עמלת היקף</th>
-                  <th className={tableClasses.th}>עמלה חודשית</th>
-                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>עמלת היקף חד פעמית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים חודשית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים שנתית</th>
                   <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
@@ -732,10 +760,18 @@ const Reports: React.FC = () => {
                     <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
-                    <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.scope_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.monthly_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{(sale.monthly_commission * 12)?.toLocaleString()}</span>{" "}₪
+                    </td>
+                    <td className={tableClasses.numberCell}>
+                      <span className="font-medium">{sale.total_commission?.toLocaleString()}</span>{" "}₪
+                    </td>
                     <td className={tableClasses.td}>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete('policy', sale.id)}>
                         <Trash2 className="h-4 w-4" />
