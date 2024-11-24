@@ -21,7 +21,8 @@ import {
   Download,
   Share2,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Mail
 } from 'lucide-react';
 import { reportService } from '@/services/reportService';
 import {
@@ -101,6 +102,7 @@ interface CustomerJourney {
   total_commission: number;
   created_at: string;
   updated_at: string;
+  email?: string;
 }
 
 interface FormData {
@@ -114,6 +116,8 @@ interface FormData {
   investmentAmount?: number;
   policyAmount?: number;
   policyPeriod?: number;
+  clientId?: string;
+  clientEmail?: string;
 }
 
 const formatDate = (date: Date) => {
@@ -553,7 +557,7 @@ const CustomerJourney: React.FC = () => {
     }
   };
 
-  // שימוש בפונקציה ב-useEffect
+  // ��ימוש בפונקציה ב-useEffect
   React.useEffect(() => {
     loadSalesData();
   }, []);
@@ -1291,6 +1295,21 @@ const CustomerJourney: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <div style="margin-bottom: 20px;">
+          <p style="color: #475569; margin-bottom: 5px;">שם הלקוח</p>
+          <p style="color: #1e3a8a; font-weight: bold;">${journey.client_name}</p>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <p style="color: #475569; margin-bottom: 5px;">תעודת זהות</p>
+          <p style="color: #1e3a8a; font-weight: bold;">${journey.id}</p>
+        </div>
+        ${journey.email ? `
+        <div style="margin-bottom: 20px;">
+          <p style="color: #475569; margin-bottom: 5px;">אימייל</p>
+          <p style="color: #1e3a8a; font-weight: bold;">${journey.email}</p>
+        </div>
+        ` : ''}
       </div>
     `;
   };
@@ -1358,12 +1377,28 @@ const CustomerJourney: React.FC = () => {
               <div className="relative">
                 <Input 
                   {...register('clientName')} 
-                  placeholder="נס שם לקוח"
+                  placeholder="הכנס שם לקוח"
                   className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
                 <User className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
               </div>
             </div>
+
+            <div className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                תעודת זהות
+                <span className="text-red-500 mr-1">*</span>
+              </label>
+              <div className="relative">
+                <Input 
+                  {...register('clientId')} 
+                  placeholder="הכנס מספר ת.ז"
+                  className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+                <User className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
+              </div>
+            </div>
+
             <div className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 טלפון
@@ -1375,6 +1410,21 @@ const CustomerJourney: React.FC = () => {
                   className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                 />
                 <Building2 className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
+              </div>
+            </div>
+
+            <div className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                אימייל
+              </label>
+              <div className="relative">
+                <Input 
+                  {...register('clientEmail')} 
+                  type="email"
+                  placeholder="הכנס כתובת אימייל"
+                  className="pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                />
+                <Mail className="h-5 w-5 text-gray-400 absolute top-2.5 right-3 group-hover:text-blue-500 transition-colors" />
               </div>
             </div>
           </div>
@@ -1530,7 +1580,7 @@ const CustomerJourney: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="risk">ריסק</SelectItem>
-                        <SelectItem value="mortgage_risk">ריסק למשכנתא</SelectItem>
+                        <SelectItem value="mortgage_risk">��יסק למשכנתא</SelectItem>
                         <SelectItem value="health">בריאות</SelectItem>
                         <SelectItem value="critical_illness">מחלות קשות</SelectItem>
                         <SelectItem value="service_letter">כתבי שירות</SelectItem>
