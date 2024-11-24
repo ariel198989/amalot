@@ -1,0 +1,1 @@
+// העתק את כל הקוד מ-src/pages/clients.tsx לכאן 
