@@ -83,6 +83,7 @@ const Reports: React.FC = () => {
     table: "w-full border-collapse",
     th: "bg-gray-50 text-right p-4 border-b border-gray-200 font-medium text-gray-600 text-sm",
     td: "p-4 border-b border-gray-200 text-gray-800",
+    dateCell: "p-4 border-b border-gray-200 text-gray-800 whitespace-nowrap min-w-[120px]",
     tr: "hover:bg-gray-50 transition-colors duration-150",
     summary: "bg-gray-50 font-medium"
   };
@@ -268,7 +269,7 @@ const Reports: React.FC = () => {
               </tbody>
             </table>
 
-            <!-- סיכום -->
+            <!-- סכום -->
             <div style="
               background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
               color: white;
@@ -541,14 +542,14 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>צבירה</th>
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלת צבירה</th>
-                  <th className={tableClasses.th}>סה"כ עמלות</th>
+                  <th className={tableClasses.th}>סה"כ עמלת</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
                 {pensionSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
+                    <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.salary?.toLocaleString()} ₪</td>
@@ -601,8 +602,8 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>סוג ביטוח</th>
                   <th className={tableClasses.th}>פרמיה חודשית</th>
                   <th className={tableClasses.th}>עמלה חד פעמית</th>
-                  <th className={tableClasses.th}>עמלה חודשית</th>
-                  <th className={tableClasses.th}>עמלה שנתית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים חודשית</th>
+                  <th className={tableClasses.th}>עמלת נפרעים שנתית</th>
                   <th className={tableClasses.th}>סה"כ עמלות</th>
                   <th className={tableClasses.th}>פעולות</th>
                 </tr>
@@ -610,7 +611,7 @@ const Reports: React.FC = () => {
               <tbody>
                 {insuranceSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
+                    <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
                     <td className={tableClasses.td}>{sale.insurance_type}</td>
@@ -660,8 +661,7 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>סוג השקעה</th>
-                  <th className={tableClasses.th}>סכום השקעה</th>
+                  <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלה חודשית</th>
                   <th className={tableClasses.th}>עמלה שנתית</th>
                   <th className={tableClasses.th}>סה"כ עמלות</th>
@@ -671,11 +671,10 @@ const Reports: React.FC = () => {
               <tbody>
                 {investmentSales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
+                    <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.investment_type}</td>
-                    <td className={tableClasses.td}>{sale.investment_amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
@@ -720,7 +719,6 @@ const Reports: React.FC = () => {
                   <th className={tableClasses.th}>תאריך</th>
                   <th className={tableClasses.th}>שם לקוח</th>
                   <th className={tableClasses.th}>חברה</th>
-                  <th className={tableClasses.th}>סכום פוליסה</th>
                   <th className={tableClasses.th}>עמלת היקף</th>
                   <th className={tableClasses.th}>עמלה חודשית</th>
                   <th className={tableClasses.th}>עמלה שנתית</th>
@@ -731,10 +729,10 @@ const Reports: React.FC = () => {
               <tbody>
                 {policySales.map((sale, index) => (
                   <tr key={index} className={tableClasses.tr}>
-                    <td className={tableClasses.td}>{formatDate(sale.date)}</td>
+                    <td className={tableClasses.dateCell}>{formatDate(sale.date)}</td>
                     <td className={tableClasses.td}>{sale.client_name}</td>
                     <td className={tableClasses.td}>{sale.company}</td>
-                    <td className={tableClasses.td}>{sale.policy_amount?.toLocaleString()} ₪</td>
+                    <td className={tableClasses.td}>{sale.scope_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.monthly_commission?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{(sale.monthly_commission * 12)?.toLocaleString()} ₪</td>
                     <td className={tableClasses.td}>{sale.total_commission?.toLocaleString()} ₪</td>
