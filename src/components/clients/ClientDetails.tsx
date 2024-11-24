@@ -26,11 +26,21 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [existingFiles, setExistingFiles] = useState<any[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+      const validFiles = newFiles.filter(file => 
+        file.type === 'application/pdf' || 
+        file.type.startsWith('image/')
+      );
+      
+      if (validFiles.length !== newFiles.length) {
+        toast.error('ניתן להעלות רק קבצי PDF ותמונות');
+      }
+      
+      setFiles(prev => [...prev, ...validFiles]);
     }
   };
 
@@ -38,19 +48,51 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
     setIsLoading(true);
     try {
       for (const file of files) {
-        const { error } = await supabase.storage
-          .from('client-documents')
-          .upload(`${client.id}/${file.name}`, file);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${client.id}/${Date.now()}.${fileExt}`;
         
-        if (error) throw error;
+        const { error: uploadError } = await supabase.storage
+          .from('client-documents')
+          .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+
+        const { error: dbError } = await supabase
+          .from('client_documents')
+          .insert({
+            client_id: client.id,
+            file_name: file.name,
+            file_type: file.type,
+            file_path: fileName,
+            user_id: (await supabase.auth.getUser()).data.user?.id
+          });
+
+        if (dbError) throw dbError;
       }
+      
       toast.success('הקבצים הועלו בהצלחה');
       setFiles([]);
+      
     } catch (error) {
       console.error('Error uploading files:', error);
       toast.error('שגיאה בהעלאת הקבצים');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadExistingFiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_documents')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setExistingFiles(data || []);
+    } catch (error) {
+      console.error('Error loading files:', error);
     }
   };
 
@@ -414,6 +456,39 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                             >
                               {isLoading ? 'מעלה...' : 'העלה קבצים'}
                             </Button>
+                          </div>
+                        )}
+                        {existingFiles.length > 0 && (
+                          <div className="mt-6">
+                            <h4 className="font-medium mb-2 text-right">קבצים קיימים:</h4>
+                            <div className="space-y-2">
+                              {existingFiles.map((file) => (
+                                <div key={file.id} className="flex flex-row-reverse items-center justify-between bg-gray-50 p-2 rounded">
+                                  <span>{file.file_name}</span>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        const { data } = await supabase.storage
+                                          .from('client-documents')
+                                          .getPublicUrl(file.file_path);
+                                        window.open(data.publicUrl, '_blank');
+                                      }}
+                                    >
+                                      צפה
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteFile(file)}
+                                    >
+                                      הסר
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
