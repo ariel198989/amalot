@@ -56,19 +56,19 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white max-w-4xl max-h-[85vh] overflow-y-auto p-0 rtl">
-        <div className="sticky top-0 z-50 bg-gradient-to-r from-blue-50 to-white border-b p-4">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
+      <DialogContent className="bg-white max-w-3xl max-h-[80vh] overflow-y-auto p-0 rtl">
+        <div className="sticky top-0 z-50 bg-gradient-to-l from-blue-50 to-white border-b p-3">
+          <div className="flex flex-row-reverse items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
               {client.first_name[0]}{client.last_name[0]}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-right">
               <h2 className="text-xl font-bold text-gray-900">
                 {client.first_name} {client.last_name}
               </h2>
-              <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                <Calendar className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 justify-end">
                 עודכן: {new Date(client.last_contact).toLocaleDateString('he-IL')}
+                <Calendar className="h-3.5 w-3.5" />
               </div>
             </div>
           </div>
@@ -78,14 +78,14 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
               {[
                 { id: 'overview', label: 'סקירה', icon: User },
                 { id: 'sales', label: 'מכירות', icon: DollarSign },
-                { id: 'activities', label: 'פעילויות', icon: Activity },
+                { id: 'activities', label: 'המלצות', icon: Activity },
                 { id: 'documents', label: 'מסמכים', icon: FileText }
               ].reverse().map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    group inline-flex items-center gap-1.5 py-2 px-2 border-b-2 font-medium text-sm
+                    group inline-flex flex-row-reverse items-center gap-1.5 py-2 px-2 border-b-2 font-medium text-sm
                     transition-all duration-200 hover:text-blue-600
                     ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
@@ -93,11 +93,11 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                     }
                   `}
                 >
+                  {tab.label}
                   <tab.icon className={`
                     h-3.5 w-3.5 transition-colors
                     ${activeTab === tab.id ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'}
                   `} />
-                  {tab.label}
                 </button>
               ))}
             </nav>
@@ -114,7 +114,32 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
             ) : (
               <>
                 {activeTab === 'overview' && (
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-4 min-h-[400px]">
+                    <Card className="col-span-2 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="pb-2 border-b">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <DollarSign className="h-4 w-4 text-green-500" />
+                          נתונים פיננסיים
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                            <p className="text-xs font-medium text-blue-600 mb-1">סה"כ מכירות</p>
+                            <p className="text-2xl font-bold text-blue-700">
+                              {client.total_policies}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                            <p className="text-xs font-medium text-green-600 mb-1">סה"כ הכנסות</p>
+                            <p className="text-2xl font-bold text-green-700">
+                              ₪{client.total_revenue?.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
                     <Card className="col-span-1 shadow-sm hover:shadow-md transition-shadow duration-200">
                       <CardHeader className="pb-2 border-b">
                         <CardTitle className="flex items-center gap-2 text-base">
@@ -151,63 +176,41 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                         </div>
                       </CardContent>
                     </Card>
-
-                    <Card className="col-span-2 shadow-sm hover:shadow-md transition-shadow duration-200">
-                      <CardHeader className="pb-2 border-b">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <DollarSign className="h-4 w-4 text-green-500" />
-                          נתונים פיננסיים
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                            <p className="text-xs font-medium text-blue-600 mb-1">סה"כ מכירות</p>
-                            <p className="text-2xl font-bold text-blue-700">
-                              {client.total_policies}
-                            </p>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                            <p className="text-xs font-medium text-green-600 mb-1">סה"כ הכנסות</p>
-                            <p className="text-2xl font-bold text-green-700">
-                              ₪{client.total_revenue?.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
                 )}
 
                 {activeTab === 'sales' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>מכירות</CardTitle>
+                  <Card className="min-h-[400px]">
+                    <CardHeader className="text-right">
+                      <CardTitle className="flex items-center gap-2 justify-end">
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        מכירות
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
                         {/* Pension Sales */}
                         {client.pension_sales?.length > 0 && (
                           <div>
-                            <h3 className="font-semibold mb-4">פנסיה</h3>
+                            <h3 className="font-semibold mb-4 text-right">פנסיה</h3>
                             <div className="space-y-2">
                               {client.pension_sales.map((sale: any) => (
                                 <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
                                   <div className="flex justify-between items-center">
-                                    <div>
-                                      <span className="font-medium">{sale.company}</span>
-                                      <div className="text-sm text-gray-500">
-                                        שכר: ₪{sale.salary?.toLocaleString()}
-                                        {sale.accumulation && ` | צבירה: ${sale.accumulation}%`}
-                                        {sale.provision && ` | הפרשה: ${sale.provision}%`}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
+                                    <div className="text-left">
                                       <div className="font-medium text-green-600">
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
                                         {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        שכר: ₪{sale.salary?.toLocaleString()}
+                                        {sale.accumulation && ` | צבירה: ${sale.accumulation}%`}
+                                        {sale.provision && ` | הפרשה: ${sale.provision}%`}
                                       </div>
                                     </div>
                                   </div>
@@ -220,23 +223,23 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                         {/* Insurance Sales */}
                         {client.insurance_sales?.length > 0 && (
                           <div>
-                            <h3 className="font-semibold mb-4">ביטוח</h3>
+                            <h3 className="font-semibold mb-4 text-right">ביטוח</h3>
                             <div className="space-y-2">
                               {client.insurance_sales.map((sale: any) => (
                                 <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
                                   <div className="flex justify-between items-center">
-                                    <div>
-                                      <span className="font-medium">{sale.company}</span>
-                                      <div className="text-sm text-gray-500">
-                                        {sale.insurance_type} | פרמיה: ₪{sale.monthly_premium?.toLocaleString()}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
+                                    <div className="text-left">
                                       <div className="font-medium text-green-600">
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
                                         {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        {sale.insurance_type} | פרמיה: ₪{sale.monthly_premium?.toLocaleString()}
                                       </div>
                                     </div>
                                   </div>
@@ -249,23 +252,23 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                         {/* Investment Sales */}
                         {client.investment_sales?.length > 0 && (
                           <div>
-                            <h3 className="font-semibold mb-4">השקעות</h3>
+                            <h3 className="font-semibold mb-4 text-right">השקעות</h3>
                             <div className="space-y-2">
                               {client.investment_sales.map((sale: any) => (
                                 <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
                                   <div className="flex justify-between items-center">
-                                    <div>
-                                      <span className="font-medium">{sale.company}</span>
-                                      <div className="text-sm text-gray-500">
-                                        סכום: ₪{sale.amount?.toLocaleString()}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
+                                    <div className="text-left">
                                       <div className="font-medium text-green-600">
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
                                         {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        סכום: ₪{sale.amount?.toLocaleString()}
                                       </div>
                                     </div>
                                   </div>
@@ -278,23 +281,23 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                         {/* Policy Sales */}
                         {client.policy_sales?.length > 0 && (
                           <div>
-                            <h3 className="font-semibold mb-4">פוליסות</h3>
+                            <h3 className="font-semibold mb-4 text-right">פוליסות</h3>
                             <div className="space-y-2">
                               {client.policy_sales.map((sale: any) => (
                                 <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
                                   <div className="flex justify-between items-center">
-                                    <div>
-                                      <span className="font-medium">{sale.company}</span>
-                                      <div className="text-sm text-gray-500">
-                                        סכום: ₪{sale.amount?.toLocaleString()}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
+                                    <div className="text-left">
                                       <div className="font-medium text-green-600">
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
                                         {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        סכום: ₪{sale.amount?.toLocaleString()}
                                       </div>
                                     </div>
                                   </div>
@@ -319,20 +322,59 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                 )}
 
                 {activeTab === 'activities' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>פעילויות</CardTitle>
+                  <Card className="min-h-[350px]">
+                    <CardHeader className="text-right">
+                      <CardTitle className="flex items-center gap-2 justify-end">
+                        <Activity className="h-4 w-4 text-blue-500" />
+                        המלצות
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {/* ... existing activities content ... */}
+                      <div className="space-y-4">
+                        {client.insurance_sales?.length > 0 && (
+                          <div className="p-4 bg-blue-50 rounded-lg">
+                            <div className="flex flex-row-reverse items-center gap-2 text-blue-700">
+                              <Calendar className="h-4 w-4" />
+                              <span className="font-medium text-right">
+                                מומלץ לבצע בדיקת תיק ביטוח בתאריך {
+                                  new Date(new Date(client.insurance_sales[0].date).setFullYear(
+                                    new Date(client.insurance_sales[0].date).getFullYear() + 1
+                                  )).toLocaleDateString('he-IL')
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <div className="flex flex-row-reverse items-center gap-2 text-green-700">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="font-medium text-right">
+                              כדאי לבדוק אפשרות להוזלת פרמיית הביטוח
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-orange-50 rounded-lg">
+                          <div className="flex flex-row-reverse items-center gap-2 text-orange-700">
+                            <Activity className="h-4 w-4" />
+                            <span className="font-medium text-right">
+                              מומלץ לבחון התאמת מסלול השקעה לפי פרופיל סיכון
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
 
                 {activeTab === 'documents' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>מסמכים</CardTitle>
+                  <Card className="min-h-[400px]">
+                    <CardHeader className="text-right">
+                      <CardTitle className="flex items-center gap-2 justify-end">
+                        <FileText className="h-4 w-4 text-blue-500" />
+                        מסמכים
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -349,11 +391,11 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                           </label>
                         </div>
                         {files.length > 0 && (
-                          <div className="mt-4">
+                          <div className="mt-4 text-right">
                             <h4 className="font-medium mb-2">קבצים שנבחרו:</h4>
                             <div className="space-y-2">
                               {files.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                <div key={index} className="flex flex-row-reverse items-center justify-between bg-gray-50 p-2 rounded">
                                   <span>{file.name}</span>
                                   <Button
                                     variant="ghost"
