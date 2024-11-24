@@ -25,6 +25,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   const [activities, setActivities] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -105,162 +106,279 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
 
         <div className="p-4 bg-gray-50">
           <div className="max-w-4xl mx-auto">
-            {activeTab === 'overview' && (
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="col-span-1 shadow-sm hover:shadow-md transition-shadow duration-200">
-                  <CardHeader className="pb-2 border-b">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <User className="h-4 w-4 text-blue-500" />
-                      פרטי קשר
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-4">
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <label className="text-xs font-medium text-gray-500">טלפון</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Phone className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="font-medium text-sm">{client.phone}</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <label className="text-xs font-medium text-gray-500">דוא"ל</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Mail className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="font-medium text-sm">{client.email}</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <label className="text-xs font-medium text-gray-500">סטטוס</label>
-                      <div className="mt-1">
-                        <Badge variant={
-                          client.status === 'active' ? 'success' :
-                          client.status === 'inactive' ? 'destructive' : 'default'
-                        } className="text-xs px-2 py-0.5">
-                          {client.status === 'active' ? 'פעיל' :
-                           client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="col-span-2 shadow-sm hover:shadow-md transition-shadow duration-200">
-                  <CardHeader className="pb-2 border-b">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <DollarSign className="h-4 w-4 text-green-500" />
-                      נתונים פיננסיים
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                        <p className="text-xs font-medium text-blue-600 mb-1">סה"כ מכירות</p>
-                        <p className="text-2xl font-bold text-blue-700">
-                          {client.total_policies}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                        <p className="text-xs font-medium text-green-600 mb-1">סה"כ הכנסות</p>
-                        <p className="text-2xl font-bold text-green-700">
-                          ₪{client.total_revenue?.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            {isLoadingDetails ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">טוען נתונים...</p>
               </div>
-            )}
-
-            {activeTab === 'sales' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>מכירות</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {client.pension_sales?.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold mb-4">פנסיה</h3>
-                        <div className="space-y-2">
-                          {client.pension_sales.map((sale: any) => (
-                            <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
-                              <div className="flex justify-between">
-                                <span>{sale.company}</span>
-                                <span className="font-medium">₪{sale.total_commission.toLocaleString()}</span>
-                              </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                {new Date(sale.date).toLocaleDateString('he-IL')}
-                              </div>
-                            </div>
-                          ))}
+            ) : (
+              <>
+                {activeTab === 'overview' && (
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card className="col-span-1 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="pb-2 border-b">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <User className="h-4 w-4 text-blue-500" />
+                          פרטי קשר
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 pt-4">
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="text-xs font-medium text-gray-500">טלפון</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Phone className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="font-medium text-sm">{client.phone}</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {/* ... Similar sections for other sale types ... */}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTab === 'activities' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>פעילויות</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* ... existing activities content ... */}
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTab === 'documents' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>מסמכים</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-4">
-                      <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                        בחר קבצים
-                        <input
-                          type="file"
-                          className="hidden"
-                          multiple
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                    </div>
-                    {files.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="font-medium mb-2">קבצים שנבחרו:</h4>
-                        <div className="space-y-2">
-                          {files.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                              <span>{file.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setFiles(files.filter((_, i) => i !== index))}
-                              >
-                                הסר
-                              </Button>
-                            </div>
-                          ))}
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="text-xs font-medium text-gray-500">דוא"ל</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Mail className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="font-medium text-sm">{client.email}</span>
+                          </div>
                         </div>
-                        <Button
-                          className="mt-4"
-                          onClick={handleUploadFiles}
-                          disabled={isLoading}
-                        >
-                          {isLoading ? 'מעלה...' : 'העלה קבצים'}
-                        </Button>
-                      </div>
-                    )}
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="text-xs font-medium text-gray-500">סטטוס</label>
+                          <div className="mt-1">
+                            <Badge variant={
+                              client.status === 'active' ? 'success' :
+                              client.status === 'inactive' ? 'destructive' : 'default'
+                            } className="text-xs px-2 py-0.5">
+                              {client.status === 'active' ? 'פעיל' :
+                               client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="col-span-2 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <CardHeader className="pb-2 border-b">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <DollarSign className="h-4 w-4 text-green-500" />
+                          נתונים פיננסיים
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                            <p className="text-xs font-medium text-blue-600 mb-1">סה"כ מכירות</p>
+                            <p className="text-2xl font-bold text-blue-700">
+                              {client.total_policies}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                            <p className="text-xs font-medium text-green-600 mb-1">סה"כ הכנסות</p>
+                            <p className="text-2xl font-bold text-green-700">
+                              ₪{client.total_revenue?.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+
+                {activeTab === 'sales' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>מכירות</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {/* Pension Sales */}
+                        {client.pension_sales?.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-4">פנסיה</h3>
+                            <div className="space-y-2">
+                              {client.pension_sales.map((sale: any) => (
+                                <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        שכר: ₪{sale.salary?.toLocaleString()}
+                                        {sale.accumulation && ` | צבירה: ${sale.accumulation}%`}
+                                        {sale.provision && ` | הפרשה: ${sale.provision}%`}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-medium text-green-600">
+                                        ₪{sale.total_commission?.toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Insurance Sales */}
+                        {client.insurance_sales?.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-4">ביטוח</h3>
+                            <div className="space-y-2">
+                              {client.insurance_sales.map((sale: any) => (
+                                <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        {sale.insurance_type} | פרמיה: ₪{sale.monthly_premium?.toLocaleString()}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-medium text-green-600">
+                                        ₪{sale.total_commission?.toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Investment Sales */}
+                        {client.investment_sales?.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-4">השקעות</h3>
+                            <div className="space-y-2">
+                              {client.investment_sales.map((sale: any) => (
+                                <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        סכום: ₪{sale.amount?.toLocaleString()}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-medium text-green-600">
+                                        ₪{sale.total_commission?.toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Policy Sales */}
+                        {client.policy_sales?.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-4">פוליסות</h3>
+                            <div className="space-y-2">
+                              {client.policy_sales.map((sale: any) => (
+                                <div key={sale.id} className="bg-gray-50 p-4 rounded-lg">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{sale.company}</span>
+                                      <div className="text-sm text-gray-500">
+                                        סכום: ₪{sale.amount?.toLocaleString()}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-medium text-green-600">
+                                        ₪{sale.total_commission?.toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* No Sales Message */}
+                        {!client.pension_sales?.length && 
+                         !client.insurance_sales?.length && 
+                         !client.investment_sales?.length && 
+                         !client.policy_sales?.length && (
+                          <div className="text-center text-gray-500 py-8">
+                            אין מכירות להצגה
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === 'activities' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>פעילויות</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {/* ... existing activities content ... */}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {activeTab === 'documents' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>מסמכים</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="mt-4">
+                          <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                            בחר קבצים
+                            <input
+                              type="file"
+                              className="hidden"
+                              multiple
+                              onChange={handleFileChange}
+                            />
+                          </label>
+                        </div>
+                        {files.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="font-medium mb-2">קבצים שנבחרו:</h4>
+                            <div className="space-y-2">
+                              {files.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                  <span>{file.name}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                                  >
+                                    הסר
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            <Button
+                              className="mt-4"
+                              onClick={handleUploadFiles}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? 'מעלה...' : 'העלה קבצים'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </div>

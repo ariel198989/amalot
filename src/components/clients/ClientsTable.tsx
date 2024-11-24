@@ -38,6 +38,7 @@ const ClientsTable = () => {
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [isAddingClient, setIsAddingClient] = React.useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   // טעינת נתוני לקוחות
   const loadClients = async () => {
@@ -70,21 +71,39 @@ const ClientsTable = () => {
   // טעינת פרטי לקוח מלאים
   const loadClientDetails = async (clientId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+      console.log('Loading details for client:', clientId);
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select(`
           *,
-          pension_sales(*),
-          insurance_sales(*),
-          investment_sales(*),
-          policy_sales(*)
+          pension_sales (
+            id, date, company, total_commission, 
+            salary, accumulation, provision, scope_commission
+          ),
+          insurance_sales (
+            id, date, company, total_commission,
+            insurance_type, monthly_premium, one_time_commission, monthly_commission
+          ),
+          investment_sales (
+            id, date, company, total_commission,
+            amount, scope_commission, monthly_commission
+          ),
+          policy_sales (
+            id, date, company, total_commission,
+            amount, scope_commission, monthly_commission
+          )
         `)
         .eq('id', clientId)
         .single();
-
+      
+      console.log('Raw client data:', clientData);
+      console.log('Sales data:', {
+        pension: clientData?.pension_sales,
+        insurance: clientData?.insurance_sales,
+        investment: clientData?.investment_sales,
+        policy: clientData?.policy_sales
+      });
+      
       if (clientError) throw clientError;
 
       // חישוב סיכומים
@@ -108,6 +127,8 @@ const ClientsTable = () => {
         total_policies: totalPolicies
       });
 
+      console.log('Client data from API:', clientData);
+
     } catch (error) {
       console.error('Error loading client details:', error);
       toast.error('שגיאה בטעינת פרטי הלקוח');
@@ -127,9 +148,17 @@ const ClientsTable = () => {
     });
   }, [clients, searchTerm, statusFilter]);
 
-  const handleRowClick = (client: Client) => {
-    setSelectedClient(client);
-    setIsDetailsOpen(true);
+  const handleRowClick = async (client: Client) => {
+    try {
+      setIsLoadingDetails(true);
+      await loadClientDetails(client.id);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error('Error in handleRowClick:', error);
+      toast.error('שגיאה בטעינת פרטי הלקוח');
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   return (
