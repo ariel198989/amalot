@@ -99,6 +99,9 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-white max-w-3xl max-h-[80vh] overflow-y-auto p-0 rtl">
+        <DialogHeader>
+          <DialogTitle className="sr-only">פרטי לקוח</DialogTitle>
+        </DialogHeader>
         <div className="sticky top-0 z-50 bg-gradient-to-l from-blue-50 to-white border-b p-3">
           <div className="flex flex-row-reverse items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
@@ -117,7 +120,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
 
           <div className="mt-4">
             <nav className="flex justify-end -mb-px space-x-4 space-x-reverse" aria-label="Tabs">
-              {[
+              {[/* eslint-disable @typescript-eslint/no-unused-vars */
                 { id: 'overview', label: 'סקירה', icon: User },
                 { id: 'sales', label: 'מכירות', icon: DollarSign },
                 { id: 'activities', label: 'המלצות', icon: Activity },
@@ -244,7 +247,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
-                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                        {new Date(sale.created_at).toLocaleDateString('he-IL')}
                                       </div>
                                     </div>
                                     <div className="text-right">
@@ -275,7 +278,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
-                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                        {new Date(sale.created_at).toLocaleDateString('he-IL')}
                                       </div>
                                     </div>
                                     <div className="text-right">
@@ -304,7 +307,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
-                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                        {new Date(sale.created_at).toLocaleDateString('he-IL')}
                                       </div>
                                     </div>
                                     <div className="text-right">
@@ -333,7 +336,7 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                                         ₪{sale.total_commission?.toLocaleString()}
                                       </div>
                                       <div className="text-sm text-gray-500">
-                                        {new Date(sale.date).toLocaleDateString('he-IL')}
+                                        {new Date(sale.created_at).toLocaleDateString('he-IL')}
                                       </div>
                                     </div>
                                     <div className="text-right">
@@ -379,39 +382,21 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                               <Calendar className="h-4 w-4" />
                               <span className="font-medium text-right">
                                 מומלץ לבצע בדיקת תיק ביטוח בתאריך {
-                                  new Date(new Date(client.insurance_sales[0].date).setFullYear(
-                                    new Date(client.insurance_sales[0].date).getFullYear() + 1
+                                  new Date(new Date(client.insurance_sales[0].created_at).setFullYear(
+                                    new Date(client.insurance_sales[0].created_at).getFullYear() + 1
                                   )).toLocaleDateString('he-IL')
                                 }
                               </span>
                             </div>
                           </div>
                         )}
-                        
-                        <div className="p-4 bg-green-50 rounded-lg">
-                          <div className="flex flex-row-reverse items-center gap-2 text-green-700">
-                            <DollarSign className="h-4 w-4" />
-                            <span className="font-medium text-right">
-                              כדאי לבדוק אפשרות להוזלת פרמיית הביטוח
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="p-4 bg-orange-50 rounded-lg">
-                          <div className="flex flex-row-reverse items-center gap-2 text-orange-700">
-                            <Activity className="h-4 w-4" />
-                            <span className="font-medium text-right">
-                              מומלץ לבחון התאמת מסלול השקעה לפי פרופיל סיכון
-                            </span>
-                          </div>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 )}
 
                 {activeTab === 'documents' && (
-                  <Card className="min-h-[400px]">
+                  <Card className="min-h-[350px]">
                     <CardHeader className="text-right">
                       <CardTitle className="flex items-center gap-2 justify-end">
                         <FileText className="h-4 w-4 text-blue-500" />
@@ -419,77 +404,64 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="mt-4">
-                          <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                            בחר קבצים
-                            <input
-                              type="file"
-                              className="hidden"
-                              multiple
-                              onChange={handleFileChange}
-                            />
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <input
+                            type="file"
+                            multiple
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="file-upload"
+                            accept="application/pdf,image/*"
+                          />
+                          <label
+                            htmlFor="file-upload"
+                            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <Upload className="h-4 w-4" />
+                            העלאת קבצים
                           </label>
-                        </div>
-                        {files.length > 0 && (
-                          <div className="mt-4 text-right">
-                            <h4 className="font-medium mb-2">קבצים שנבחרו:</h4>
-                            <div className="space-y-2">
-                              {files.map((file, index) => (
-                                <div key={index} className="flex flex-row-reverse items-center justify-between bg-gray-50 p-2 rounded">
-                                  <span>{file.name}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setFiles(files.filter((_, i) => i !== index))}
-                                  >
-                                    הסר
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
+                          {files.length > 0 && (
                             <Button
-                              className="mt-4"
                               onClick={handleUploadFiles}
                               disabled={isLoading}
+                              className="bg-blue-600 hover:bg-blue-700"
                             >
-                              {isLoading ? 'מעלה...' : 'העלה קבצים'}
+                              {isLoading ? 'מעלה...' : 'שמור קבצים'}
                             </Button>
+                          )}
+                        </div>
+
+                        {files.length > 0 && (
+                          <div className="space-y-2">
+                            <h3 className="font-medium text-gray-700">קבצים להעלאה:</h3>
+                            {files.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <span className="text-sm">{file.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        {existingFiles.length > 0 && (
-                          <div className="mt-6">
-                            <h4 className="font-medium mb-2 text-right">קבצים קיימים:</h4>
-                            <div className="space-y-2">
-                              {existingFiles.map((file) => (
-                                <div key={file.id} className="flex flex-row-reverse items-center justify-between bg-gray-50 p-2 rounded">
-                                  <span>{file.file_name}</span>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={async () => {
-                                        const { data } = await supabase.storage
-                                          .from('client-documents')
-                                          .getPublicUrl(file.file_path);
-                                        window.open(data.publicUrl, '_blank');
-                                      }}
-                                    >
-                                      צפה
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteFile(file)}
-                                    >
-                                      הסר
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+
+                        {existingFiles.length > 0 ? (
+                          <div className="space-y-2">
+                            <h3 className="font-medium text-gray-700">קבצים קיימים:</h3>
+                            {existingFiles.map((file) => (
+                              <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <span className="text-sm">{file.file_name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(file.uploaded_at).toLocaleDateString('he-IL')}
+                                </span>
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          <p className="text-center text-gray-500 py-8">
+                            אין מסמכים להצגה
+                          </p>
                         )}
                       </div>
                     </CardContent>
@@ -504,4 +476,4 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   );
 };
 
-export default ClientDetails; 
+export default ClientDetails;

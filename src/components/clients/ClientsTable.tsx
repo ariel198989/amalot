@@ -76,58 +76,41 @@ const ClientsTable = () => {
         .from('clients')
         .select(`
           *,
-          pension_sales (
-            id, date, company, total_commission, 
-            salary, accumulation, provision, scope_commission
-          ),
-          insurance_sales (
-            id, date, company, total_commission,
-            insurance_type, monthly_premium, one_time_commission, monthly_commission
-          ),
-          investment_sales (
-            id, date, company, total_commission,
-            amount, scope_commission, monthly_commission
-          ),
-          policy_sales (
-            id, date, company, total_commission,
-            amount, scope_commission, monthly_commission
+          sales!client_id(
+            id, created_at, company, total_commission,
+            sale_type,
+            salary, accumulation, provision, scope_commission,
+            insurance_type, monthly_premium, one_time_commission, monthly_commission,
+            amount
           )
         `)
         .eq('id', clientId)
         .single();
       
       console.log('Raw client data:', clientData);
-      console.log('Sales data:', {
-        pension: clientData?.pension_sales,
-        insurance: clientData?.insurance_sales,
-        investment: clientData?.investment_sales,
-        policy: clientData?.policy_sales
-      });
-      
+
       if (clientError) throw clientError;
 
-      // חישוב סיכומים
-      const totalRevenue = [
-        ...(clientData.pension_sales || []),
-        ...(clientData.insurance_sales || []),
-        ...(clientData.investment_sales || []),
-        ...(clientData.policy_sales || [])
-      ].reduce((sum, sale) => sum + (sale.total_commission || 0), 0);
+      // מיון המכירות לפי סוג
+      const sales = clientData?.sales || [];
+      const pension_sales = sales.filter(sale => sale.sale_type === 'pension');
+      const insurance_sales = sales.filter(sale => sale.sale_type === 'insurance');
+      const investment_sales = sales.filter(sale => sale.sale_type === 'investment');
+      const policy_sales = sales.filter(sale => sale.sale_type === 'policy');
 
-      const totalPolicies = [
-        clientData.pension_sales?.length || 0,
-        clientData.insurance_sales?.length || 0,
-        clientData.investment_sales?.length || 0,
-        clientData.policy_sales?.length || 0
-      ].reduce((sum, count) => sum + count, 0);
+      // חישוב סיכומים
+      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0);
+      const totalPolicies = sales.length;
 
       setSelectedClient({
         ...clientData,
+        pension_sales,
+        insurance_sales,
+        investment_sales,
+        policy_sales,
         total_revenue: totalRevenue,
         total_policies: totalPolicies
       });
-
-      console.log('Client data from API:', clientData);
 
     } catch (error) {
       console.error('Error loading client details:', error);
@@ -291,4 +274,4 @@ const ClientsTable = () => {
   );
 };
 
-export default ClientsTable; 
+export default ClientsTable;
