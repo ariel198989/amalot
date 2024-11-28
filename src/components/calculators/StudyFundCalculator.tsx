@@ -2,11 +2,11 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
-import { StudyFundClient } from '../../types/calculators';
+import { GemelStudyFundClient } from '../../services/ClientServiceTypes';
 import { toast } from 'react-hot-toast';
 
 const StudyFundCalculator: React.FC = () => {
-  const [clients, setClients] = React.useState<StudyFundClient[]>([]);
+  const [clients, setClients] = React.useState<GemelStudyFundClient[]>([]);
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
@@ -32,10 +32,10 @@ const StudyFundCalculator: React.FC = () => {
   ];
 
   const columns = [
+    { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
     { key: 'company', label: 'חברת ניהול' },
     { key: 'productType', label: 'סוג מוצר' },
-    { key: 'date', label: 'תאריך' },
     { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
@@ -57,12 +57,14 @@ const StudyFundCalculator: React.FC = () => {
     const scopeCommission = calculateScopeCommission(amount, scopeRate);
     const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate);
     
-    const newClient: StudyFundClient = {
+    const newClient: GemelStudyFundClient = {
       date: new Date().toLocaleDateString('he-IL'),
       name: data.name,
       company: data.company,
       productType: data.productType,
       amount: amount,
+      scopeRate: scopeRate,
+      monthlyRate: monthlyRate,
       scopeCommission: scopeCommission,
       monthlyCommission: monthlyCommission
     };
@@ -77,14 +79,14 @@ const StudyFundCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "שם הלקוח,חברת ניהול,סוג מוצר,תאריך,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
+    csvContent += "תאריך,שם הלקוח,חברת ניהול,סוג מוצר,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
     
     clients.forEach((client) => {
       const row = [
+        client.date,
         client.name,
         client.company,
         client.productType === 'study' ? 'קרן השתלמות' : 'קופת גמל',
-        client.date,
         client.amount,
         client.scopeCommission,
         client.monthlyCommission

@@ -39,6 +39,7 @@ const PolicyCalculator: React.FC = () => {
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
     { key: 'company', label: 'חברת ביטוח' },
+    { key: 'policyType', label: 'סוג פוליסה' },
     { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },

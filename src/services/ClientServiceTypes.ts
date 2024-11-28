@@ -19,6 +19,19 @@ export interface PensionSale {
   transfer_amount?: number | null;
 }
 
+export interface GemelStudyFundClient {
+  id?: string;
+  name: string;
+  company: string;
+  productType: 'study' | 'pension';
+  date: string;
+  amount: number;
+  scopeRate: number;
+  monthlyRate: number;
+  scopeCommission: number;
+  monthlyCommission: number;
+}
+
 export interface Client {
   id: string;
   user_id: string;

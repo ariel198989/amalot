@@ -26,9 +26,9 @@ const InvestmentCalculator: React.FC = () => {
   ];
 
   const columns = [
+    { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
     { key: 'company', label: 'חברת ניהול' },
-    { key: 'date', label: 'תאריך' },
     { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
@@ -69,13 +69,13 @@ const InvestmentCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "שם הלקוח,חברת ניהול,תאריך,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
+    csvContent += "תאריך,שם הלקוח,חברת ניהול,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
     
     clients.forEach((client) => {
       const row = [
+        client.date,
         client.name,
         client.company,
-        client.date,
         client.amount,
         client.scopeCommission,
         client.monthlyCommission

@@ -77,14 +77,14 @@ const InsuranceCalculator: React.FC = () => {
 
   const columns = [
     { key: 'date', label: 'תאריך' },
+    { key: 'name', label: 'שם הלקוח' },
+    { key: 'company', label: 'חברת ביטוח' },
+    { key: 'insuranceType', label: 'סוג ביטוח' },
     { key: 'premium', label: 'פרמיה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeRate', label: 'אחוז עמלת היקף' },
     { key: 'scopeCommission', label: 'עמלת היקף (חד פעמית)', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyRate', label: 'אחוז עמלת נפרעים' },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברת ביטוח' },
-    { key: 'insuranceType', label: 'סוג ביטוח' }
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
   const handleSubmit = (data: any) => {
