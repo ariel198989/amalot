@@ -4,7 +4,7 @@ import Header from './components/layout/Header';
 import Dashboard from './components/dashboard/Dashboard';
 import CalculatorSelector from './components/calculators';
 import LoginForm from './components/auth/LoginForm';
-import CustomerJourneyCalculator from './components/calculators/CustomerJourneyComponent';
+import CustomerJourneyComponent from './components/calculators/CustomerJourneyComponent';
 import { Toaster } from 'react-hot-toast';
 import Reports from './components/reports/Reports';
 import AgentAgreements from "./components/settings/AgentAgreements/AgentAgreementsComponent";
@@ -38,7 +38,7 @@ const App: React.FC = () => {
               <Route path="/reports" element={<Reports />} />
               <Route path="/clients" element={<ClientsTable />} />
               <Route path="/agreements" element={<AgentAgreements />} />
-              <Route path="/journey" element={<CustomerJourneyCalculator />} />
+              <Route path="/journey" element={<CustomerJourneyComponent />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
