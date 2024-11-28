@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import { Users, Plus, Search, Phone, Mail, Calendar } from 'lucide-react';
-import ClientDetails from './ClientDetails';
+import ClientDetails from "./ClientDetailsComponent";
 
 interface Client {
   id: string;

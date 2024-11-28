@@ -5,27 +5,13 @@ export interface Client {
   last_name: string;
   id_number: string;
   email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  status: 'active' | 'inactive';
-  notes?: string;
+  mobile_phone?: string;
+  status: string;
   created_at: string;
   updated_at: string;
-  last_contact: string;
-  birthday?: string;
-  occupation?: string;
-  preferred_contact_method?: string;
-  tags?: string[];
-  total_revenue: number;
-  total_policies: number;
-  marital_status?: string;
-  num_children?: number;
-  monthly_income?: number;
-  next_meeting?: string;
+  last_contact?: string;
   total_pension_sales: number;
-  total_insurance_sales: number;
-  total_investment_sales: number;
-  total_policy_sales: number;
+  total_revenue: number;
   total_commission: number;
-} 
+  total_policies: number;
+}

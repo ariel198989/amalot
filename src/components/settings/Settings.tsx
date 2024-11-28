@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AgentAgreements from './AgentAgreements';
+import AgentAgreements from "./AgentAgreements/AgentAgreementsComponent";
 import { Settings as SettingsIcon, User, FileText } from 'lucide-react';
 
 const Settings: React.FC = () => {
