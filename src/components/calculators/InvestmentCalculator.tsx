@@ -36,12 +36,12 @@ const InvestmentCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'company', label: 'חברת ניהול' },
+    { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'date', label: 'תאריך' }
+    { key: 'company', label: 'חברת ניהול' },
+    { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
   const calculateScopeCommission = (amount: number, scopeRate: number) => {
@@ -79,16 +79,16 @@ const InvestmentCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "עמלת נפרעים חודשית,עמלת היקף,סכום הניוד,חברת ניהול,שם הלקוח,תאריך\n";
+    csvContent += "תאריך,שם הלקוח,חברת ניהול,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
     
     clients.forEach((client) => {
       const row = [
-        client.monthlyCommission,
-        client.scopeCommission,
-        client.amount,
-        client.company,
+        client.date,
         client.name,
-        client.date
+        client.company,
+        client.amount,
+        client.scopeCommission,
+        client.monthlyCommission
       ].join(",");
       csvContent += row + "\n";
     });

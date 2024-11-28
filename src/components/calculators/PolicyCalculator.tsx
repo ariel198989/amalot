@@ -36,13 +36,13 @@ const PolicyCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'company', label: 'חברת ביטוח' },
+    { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'date', label: 'תאריך' }
+    { key: 'company', label: 'חברת ביטוח' },
+    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
   const calculateScopeCommission = (amount: number, scopeRate: number) => {
@@ -82,17 +82,17 @@ const PolicyCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "עמלת נפרעים חודשית,עמלת היקף,סה\"כ הפקדה שנתית,סכום הפקדה,חברת ביטוח,שם הלקוח,תאריך\n";
+    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת נפרעים חודשית\n";
     
     clients.forEach((client) => {
       const row = [
-        client.monthlyCommission,
-        client.oneTimeCommission,
-        client.totalDeposit,
-        client.depositAmount,
-        client.company,
+        client.date,
         client.name,
-        client.date
+        client.company,
+        client.depositAmount,
+        client.totalDeposit,
+        client.oneTimeCommission,
+        client.monthlyCommission
       ].join(",");
       csvContent += row + "\n";
     });

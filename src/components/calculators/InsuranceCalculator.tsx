@@ -72,37 +72,37 @@ const InsuranceCalculator: React.FC = () => {
         { value: 'disability', label: 'אובדן כושר עבודה' }
       ]
     },
-    { name: 'monthlyPremium', label: 'פרמיה חודשית', type: 'number', required: true }
+    { name: 'premium', label: 'פרמיה חודשית', type: 'number', required: true }
   ];
 
   const columns = [
     { key: 'date', label: 'תאריך' },
+    { key: 'premium', label: 'פרמיה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'scopeRate', label: 'אחוז עמלת היקף' },
+    { key: 'scopeCommission', label: 'עמלת היקף (חד פעמית)', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyRate', label: 'אחוז עמלת נפרעים' },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'name', label: 'שם הלקוח' },
     { key: 'company', label: 'חברת ביטוח' },
-    { key: 'insuranceType', label: 'סוג ביטוח' },
-    { key: 'monthlyPremium', label: 'פרמיה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'oneTimeCommissionRate', label: 'אחוז עמלת היקף', format: (value: number) => `${value}%` },
-    { key: 'oneTimeCommission', label: 'עמלת היקף (חד פעמית)', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommissionRate', label: 'אחוז עמלת נפרעים', format: (value: number) => `${value}%` },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשית)', format: (value: number) => `₪${value.toLocaleString()}` }
+    { key: 'insuranceType', label: 'סוג ביטוח' }
   ];
 
   const handleSubmit = (data: any) => {
-    const monthlyPremium = Number(data.monthlyPremium);
+    const premium = Number(data.premium);
     const { oneTimeRate, monthlyRate } = getCommissionRates(data.company, data.insuranceType);
     
-    const oneTimeCommission = monthlyPremium * 12 * (oneTimeRate / 100);
-    const monthlyCommission = monthlyPremium * (monthlyRate / 100);
+    const scopeCommission = premium * 12 * (oneTimeRate / 100);
+    const monthlyCommission = premium * (monthlyRate / 100);
     
     const newClient: InsuranceClient = {
       date: new Date().toLocaleDateString('he-IL'),
       name: data.name,
       company: data.company,
       insuranceType: data.insuranceType,
-      monthlyPremium: monthlyPremium,
-      oneTimeCommissionRate: oneTimeRate,
-      oneTimeCommission: oneTimeCommission,
-      monthlyCommissionRate: monthlyRate,
+      premium: premium,
+      scopeRate: oneTimeRate,
+      scopeCommission: scopeCommission,
+      monthlyRate: monthlyRate,
       monthlyCommission: monthlyCommission
     };
 
@@ -116,19 +116,19 @@ const InsuranceCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סוג ביטוח,פרמיה חודשית,אחוז עמלת היקף,עמלת היקף,אחוז עמלת נפרעים,עמלת נפרעים\n";
+    csvContent += "תאריך,פרמיה חודשית,אחוז עמלת היקף,עמלת היקף,אחוז עמלת נפרעים,עמלת נפרעים חודשית,שם הלקוח,חברת ביטוח,סוג ביטוח\n";
     
     clients.forEach((client) => {
       const row = [
         client.date,
+        client.premium,
+        client.scopeRate,
+        client.scopeCommission,
+        client.monthlyRate,
+        client.monthlyCommission,
         client.name,
         client.company,
-        client.insuranceType,
-        client.monthlyPremium,
-        client.oneTimeCommissionRate,
-        client.oneTimeCommission,
-        client.monthlyCommissionRate,
-        client.monthlyCommission
+        client.insuranceType
       ].join(",");
       csvContent += row + "\n";
     });
@@ -149,25 +149,25 @@ const InsuranceCalculator: React.FC = () => {
     }
     
     let message = "סיכום עמלות ביטוח:\n\n";
-    let totalMonthlyPremium = 0;
-    let totalOneTimeCommission = 0;
+    let totalPremium = 0;
+    let totalScopeCommission = 0;
     let totalMonthlyCommission = 0;
 
     clients.forEach((client, index) => {
-      totalMonthlyPremium += client.monthlyPremium;
-      totalOneTimeCommission += client.oneTimeCommission;
+      totalPremium += client.premium;
+      totalScopeCommission += client.scopeCommission;
       totalMonthlyCommission += client.monthlyCommission;
 
       message += `${index + 1}. ${client.name} (${client.company}):\n`;
       message += `   סוג ביטוח: ${client.insuranceType}\n`;
-      message += `   פרמיה חודשית: ${client.monthlyPremium.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף: ${client.oneTimeCommission.toLocaleString()} ₪\n`;
+      message += `   פרמיה חודשית: ${client.premium.toLocaleString()} ₪\n`;
+      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
       message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
     });
 
     message += `סיכום:\n`;
-    message += `סך פרמיות חודשיות: ${totalMonthlyPremium.toLocaleString()} ₪\n`;
-    message += `סך עמלות היקף: ${totalOneTimeCommission.toLocaleString()} ₪\n`;
+    message += `סך פרמיות חודשיות: ${totalPremium.toLocaleString()} ₪\n`;
+    message += `סך עמלות היקף: ${totalScopeCommission.toLocaleString()} ₪\n`;
     message += `סך עמלות נפרעים: ${totalMonthlyCommission.toLocaleString()} ₪\n`;
     
     const encodedMessage = encodeURIComponent(message);
@@ -196,4 +196,4 @@ const InsuranceCalculator: React.FC = () => {
   );
 };
 
-export default InsuranceCalculator; 
+export default InsuranceCalculator;
