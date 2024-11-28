@@ -4,20 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
 import { 
-  Wallet, 
-  PiggyBank, 
-  Building2, 
-  Shield,
-  Settings2,
-  CheckCircle2,
-  XCircle,
   Save,
-  RefreshCw
+  RefreshCw,
+<<<<<<< HEAD
+  Settings2
+=======
+  Settings2,
+  Wallet,
+  PiggyBank,
+  Building2,
+  Shield,
+  CheckCircle2
+>>>>>>> b8a5e704c3131fa7bc186ae0a17946ed8ad9cc44
 } from 'lucide-react';
+import { useCommissionRates } from '@/lib/commissionContext';
+import { useCustomerJourney } from '@/lib/customerJourneyContext';
 
 interface CompanyRates {
   scope_rate: number;
@@ -82,6 +87,19 @@ const COMPANIES = {
 };
 
 const AgentAgreements = () => {
+  // פונקציית עזר להמרת שמות מוצרי ביטוח
+  const getInsuranceProductName = (productType: string): string => {
+    switch (productType) {
+      case 'risk': return 'סיכונים';
+      case 'mortgage_risk': return 'סיכוני משכנתא';
+      case 'health': return 'בריאות';
+      case 'critical_illness': return 'מחלות קשות';
+      case 'service_letter': return 'כתבי שירות';
+      case 'disability': return 'אובדן כושר';
+      default: return productType;
+    }
+  };
+
   // יצירת מצב התחלתי מלא
   const initialRates: AgentRates = {
     pension_companies: Object.fromEntries(
@@ -108,12 +126,17 @@ const AgentAgreements = () => {
 
   const [rates, setRates] = React.useState<AgentRates>(initialRates);
   const [isLoading, setIsLoading] = React.useState(true);
+  const { updateRates } = useCommissionRates();
+  const { updateJourneyRates } = useCustomerJourney();
 
   // טעינת הנתונים
   const loadRates = async () => {
     try {
+      console.log('Loading rates...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
+
+      console.log('User:', user);
 
       const { data, error } = await supabase
         .from('agent_commission_rates')
@@ -121,8 +144,18 @@ const AgentAgreements = () => {
         .eq('user_id', user.id)
         .single();
 
+      console.log('Raw data from server:', data);
+      console.log('Data structure:', {
+        pension_companies: data?.pension_companies,
+        savings_and_study_companies: data?.savings_and_study_companies,
+        policy_companies: data?.policy_companies,
+        insurance_companies: data?.insurance_companies
+      });
+
       if (error) {
+        console.log('Error loading rates:', error);
         if (error.code === 'PGRST116') {
+          console.log('No rates found, saving initial rates...');
           await saveRates(initialRates);
           setRates(initialRates);
         } else {
@@ -207,7 +240,9 @@ const AgentAgreements = () => {
         });
 
       if (error) throw error;
-      toast.success('הנתונים נשמרו בהצלחה');
+      updateRates(newRates);
+      updateJourneyRates(newRates);
+      toast.success('הנתונים נשמרו בהצלחה ועודכנו במסע הלקוח');
       loadRates();
     } catch (error) {
       console.error('Error saving rates:', error);
@@ -385,7 +420,6 @@ const AgentAgreements = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>עמלות גמל והשתלמות לפי חברה</CardTitle>
-                  <CardDescription>קרנות גמל וקרנות השתלמות</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -670,19 +704,6 @@ const AgentAgreements = () => {
       </Card>
     </motion.div>
   );
-};
-
-// פונקציית עזר להמרת שמות מוצרי ביטוח
-const getInsuranceProductName = (productType: string): string => {
-  const names: Record<string, string> = {
-    risk: 'ביטוח חיים',
-    mortgage_risk: 'ביטוח משכנתא',
-    health: 'ביטוח בריאות',
-    critical_illness: 'מחלות קשות',
-    service_letter: 'כתבי שירות',
-    disability: 'אובדן כושר עבודה'
-  };
-  return names[productType] || productType;
 };
 
 export default AgentAgreements; 

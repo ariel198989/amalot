@@ -1,6 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://qdlkmgoloyyuvvndhzrs.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkbGttZ29sb3l5dXZ2bmRoenJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE5MzY3NjcsImV4cCI6MjA0NzUxMjc2N30.FbXH9iu7cWZKtfvBP_6RJTjvxdngUUJHL8Q3SwnpqoM';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseKey); 
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables');
+}
+
+// Validate URL format
+try {
+    new URL(supabaseUrl);
+} catch (error) {
+    throw new Error('Invalid VITE_SUPABASE_URL format');
+}
+
+// Create and export the typed client
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+    },
+    global: {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Prefer': 'return=minimal'
+        }
+    }
+});
