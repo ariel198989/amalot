@@ -40,6 +40,15 @@ export interface InsuranceClient {
   monthlyCommission: number;
 }
 
+export interface StudyFundClient {
+  date: string;
+  name: string;
+  company: string;
+  amount: number;
+  scopeCommission: number;
+  monthlyCommission: number;
+}
+
 export interface InvestmentCompanyData {
   scopeRate: number;
   monthlyRate: number;
