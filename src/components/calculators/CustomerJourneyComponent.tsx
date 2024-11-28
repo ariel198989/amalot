@@ -33,8 +33,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-export default function CustomerJourneyCalculator() {
-  console.log('CustomerJourneyCalculator: Component mounted');
+export default function CustomerJourneyComponent() {
+  console.log('CustomerJourneyComponent: Component mounted');
 
   const [selectedProducts, setSelectedProducts] = React.useState<ProductSelection>({
     pension: false,
@@ -42,7 +42,7 @@ export default function CustomerJourneyCalculator() {
     investment: false,
     policy: false
   });
-  console.log('CustomerJourneyCalculator: Selected products:', selectedProducts);
+  console.log('CustomerJourneyComponent: Selected products:', selectedProducts);
 
   const [selectedCompanies, setSelectedCompanies] = React.useState<CompanySelection>({
     pension: [],
@@ -50,10 +50,10 @@ export default function CustomerJourneyCalculator() {
     investment: [],
     policy: []
   });
-  console.log('CustomerJourneyCalculator: Selected companies:', selectedCompanies);
+  console.log('CustomerJourneyComponent: Selected companies:', selectedCompanies);
 
   const [journeys, setJourneys] = React.useState<CustomerJourney[]>([]);
-  console.log('CustomerJourneyCalculator: Journeys:', journeys);
+  console.log('CustomerJourneyComponent: Journeys:', journeys);
 
   const { register, handleSubmit: handleFormSubmit, watch, setValue } = useForm<FormData>();
 
@@ -80,25 +80,25 @@ export default function CustomerJourneyCalculator() {
   });
 
   const handleDownloadPDF = () => {
-    console.log('CustomerJourneyCalculator: handleDownloadPDF triggered');
+    console.log('CustomerJourneyComponent: handleDownloadPDF triggered');
     // יישום הורדת PDF
   };
 
   const handleSubmit = async (data: FormData) => {
-    console.log('CustomerJourneyCalculator: Form submitted with data:', data);
+    console.log('CustomerJourneyComponent: Form submitted with data:', data);
     try {
       // Your existing code...
     } catch (error) {
-      console.error('CustomerJourneyCalculator: Error in form submission:', error);
+      console.error('CustomerJourneyComponent: Error in form submission:', error);
     }
   };
 
   React.useEffect(() => {
-    console.log('CustomerJourneyCalculator: useEffect triggered');
+    console.log('CustomerJourneyComponent: useEffect triggered');
     try {
       // Your existing code...
     } catch (error) {
-      console.error('CustomerJourneyCalculator: Error in useEffect:', error);
+      console.error('CustomerJourneyComponent: Error in useEffect:', error);
     }
   }, []);
 
