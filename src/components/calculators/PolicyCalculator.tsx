@@ -36,12 +36,13 @@ const PolicyCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם הלקוח' },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'company', label: 'חברת ביטוח' },
-    { key: 'depositAmount', label: 'סכום ההפקדה', format: (value: number) => value ? `₪${value.toLocaleString()}` : '0' },
-    { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => value ? `₪${value.toLocaleString()}` : '0' },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => value ? `₪${value.toLocaleString()}` : '0' }
+    { key: 'name', label: 'שם הלקוח' },
+    { key: 'date', label: 'תאריך' }
   ];
 
   const calculateScopeCommission = (amount: number, scopeRate: number) => {
@@ -81,16 +82,17 @@ const PolicyCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סכום ההפקדה,עמלת היקף,עמלת נפרעים חודשית\n";
+    csvContent += "עמלת נפרעים חודשית,עמלת היקף,סה\"כ הפקדה שנתית,סכום הפקדה,חברת ביטוח,שם הלקוח,תאריך\n";
     
     clients.forEach((client) => {
       const row = [
-        client.date,
-        client.name,
-        client.company,
-        client.depositAmount,
+        client.monthlyCommission,
         client.oneTimeCommission,
-        client.monthlyCommission
+        client.totalDeposit,
+        client.depositAmount,
+        client.company,
+        client.name,
+        client.date
       ].join(",");
       csvContent += row + "\n";
     });
