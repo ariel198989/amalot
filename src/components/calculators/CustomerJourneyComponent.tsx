@@ -34,12 +34,15 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function CustomerJourneyCalculator() {
+  console.log('CustomerJourneyCalculator: Component mounted');
+
   const [selectedProducts, setSelectedProducts] = React.useState<ProductSelection>({
     pension: false,
     insurance: false,
     investment: false,
     policy: false
   });
+  console.log('CustomerJourneyCalculator: Selected products:', selectedProducts);
 
   const [selectedCompanies, setSelectedCompanies] = React.useState<CompanySelection>({
     pension: [],
@@ -47,8 +50,11 @@ export default function CustomerJourneyCalculator() {
     investment: [],
     policy: []
   });
+  console.log('CustomerJourneyCalculator: Selected companies:', selectedCompanies);
 
   const [journeys, setJourneys] = React.useState<CustomerJourney[]>([]);
+  console.log('CustomerJourneyCalculator: Journeys:', journeys);
+
   const { register, handleSubmit: handleFormSubmit, watch, setValue } = useForm<FormData>();
 
   const products: Product[] = [
@@ -74,8 +80,27 @@ export default function CustomerJourneyCalculator() {
   });
 
   const handleDownloadPDF = () => {
+    console.log('CustomerJourneyCalculator: handleDownloadPDF triggered');
     // יישום הורדת PDF
   };
+
+  const handleSubmit = async (data: FormData) => {
+    console.log('CustomerJourneyCalculator: Form submitted with data:', data);
+    try {
+      // Your existing code...
+    } catch (error) {
+      console.error('CustomerJourneyCalculator: Error in form submission:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    console.log('CustomerJourneyCalculator: useEffect triggered');
+    try {
+      // Your existing code...
+    } catch (error) {
+      console.error('CustomerJourneyCalculator: Error in useEffect:', error);
+    }
+  }, []);
 
   return (
     <div>
