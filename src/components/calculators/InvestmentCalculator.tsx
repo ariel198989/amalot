@@ -31,6 +31,8 @@ const InvestmentCalculator: React.FC = () => {
       ]
     },
     { name: 'amount', label: 'סכום הניוד', type: 'number', required: true },
+    { name: 'scopeRate', label: 'עמלת היקף למיליון', type: 'number', required: true, defaultValue: 6000 },
+    { name: 'monthlyRate', label: 'אחוז עמלת נפרעים', type: 'number', required: true, defaultValue: 0.025, step: 0.001 }
   ];
 
   const columns = [
@@ -42,20 +44,21 @@ const InvestmentCalculator: React.FC = () => {
     { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
-  const calculateScopeCommission = (amount: number, company: string) => {
-    const { scopeRate } = companyRates[company];
+  const calculateScopeCommission = (amount: number, scopeRate: number) => {
     return (amount / 1000000) * scopeRate;
   };
 
-  const calculateMonthlyCommission = (amount: number, company: string) => {
-    const { monthlyRate } = companyRates[company];
-    return amount * monthlyRate;
+  const calculateMonthlyCommission = (amount: number, monthlyRate: number) => {
+    return amount * (monthlyRate / 100);
   };
 
   const handleSubmit = (data: any) => {
-    const amount = Number(data.amount);
-    const scopeCommission = calculateScopeCommission(amount, data.company);
-    const monthlyCommission = calculateMonthlyCommission(amount, data.company);
+    const amount = Number(data.amount) || 0;
+    const scopeRate = Number(data.scopeRate) || 6000;
+    const monthlyRate = Number(data.monthlyRate) || 0.025;
+    
+    const scopeCommission = calculateScopeCommission(amount, scopeRate);
+    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate);
     
     const newClient: InvestmentClient = {
       date: new Date().toLocaleDateString('he-IL'),
@@ -139,4 +142,4 @@ const InvestmentCalculator: React.FC = () => {
   );
 };
 
-export default InvestmentCalculator; 
+export default InvestmentCalculator;
