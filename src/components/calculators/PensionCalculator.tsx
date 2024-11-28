@@ -11,12 +11,12 @@ const PensionCalculator: React.FC = () => {
 
   // עדכון נתוני העמלות לפי חברה - ערכים מציאותיים יותר
   const companyRates = {
-    'clal': { scope: 0.0025, accumulation: 0.0015 },    // 0.25% מהיקף, 0.15% מצבירה
-    'harel': { scope: 0.0023, accumulation: 0.0014 },   // 0.23% מהיקף, 0.14% מצבירה
-    'migdal': { scope: 0.0024, accumulation: 0.0015 },  // 0.24% מהיקף, 0.15% מצבירה
-    'phoenix': { scope: 0.0022, accumulation: 0.0013 }, // 0.22% מהיקף, 0.13% מצבירה
-    'meitav': { scope: 0.0021, accumulation: 0.0012 },  // 0.21% מהיקף, 0.12% מצבירה
-    'more': { scope: 0.0020, accumulation: 0.0011 }     // 0.20% מהיקף, 0.11% מצבירה
+    'clal': { scope: 0.07, accumulation: 2500 },    // 7% מהיקף, 2500 ש"ח למיליון צבירה
+    'harel': { scope: 0.07, accumulation: 2000 },   // 7% מהיקף, 2000 ש"ח למיליון צבירה
+    'migdal': { scope: 0.065, accumulation: 2200 }, // 6.5% מהיקף, 2200 ש"ח למיליון צבירה
+    'phoenix': { scope: 0.075, accumulation: 2300 }, // 7.5% מהיקף, 2300 ש"ח למיליון צבירה
+    'meitav': { scope: 0.07, accumulation: 2100 },  // 7% מהיקף, 2100 ש"ח למיליון צבירה
+    'more': { scope: 0.068, accumulation: 2000 }    // 6.8% מהיקף, 2000 ש"ח למיליון צבירה
   };
 
   const fields = [
@@ -52,9 +52,9 @@ const PensionCalculator: React.FC = () => {
     { key: 'salary', label: 'שכר חודשי', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'accumulation', label: 'סכום צבירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'provision', label: 'אחוז הפרשה', format: (value: number) => `${value}%` },
-    { key: 'scopeCommission', label: 'עמלת היקף שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'accumulationCommission', label: 'עמלה מצבירה', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'totalCommission', label: 'סה"כ עמלה', format: (value: number) => `₪${value.toLocaleString()}` }
+    { key: 'scopeCommission', label: 'עמלה מהפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'accumulationCommission', label: 'עמלה מצבירה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'totalCommission', label: 'סה"כ עמלה שנתית', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
   const handleSubmit = (data: any) => {
@@ -65,7 +65,7 @@ const PensionCalculator: React.FC = () => {
 
     // חישוב העמלות עם הערכים החדשים
     const scopeCommission = salary * 12 * rates.scope * provision;  // עמלת היקף שנתית
-    const accumulationCommission = accumulation * rates.accumulation;  // עמלת צבירה שנתית
+    const accumulationCommission = (accumulation / 1000000) * rates.accumulation;  // עמלת צבירה שנתית
     const totalCommission = scopeCommission + accumulationCommission;
     
     const newClient: PensionClient = {
