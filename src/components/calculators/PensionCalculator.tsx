@@ -46,15 +46,16 @@ const PensionCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברת ביטוח/בית השקעות' },
-    { key: 'salary', label: 'שכר חודשי', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'accumulation', label: 'סכום צבירה', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'provision', label: 'אחוז הפרשה', format: (value: number) => `${value}%` },
-    { key: 'scopeCommission', label: 'עמלה מהפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'actions', label: 'פעולות' },
+    { key: 'totalCommission', label: "סה\"כ עמלה שנתית", format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'accumulationCommission', label: 'עמלה מצבירה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'totalCommission', label: 'סה"כ עמלה שנתית', format: (value: number) => `₪${value.toLocaleString()}` }
+    { key: 'scopeCommission', label: 'עמלה מהפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'provision', label: 'אחוז הפרשה', format: (value: number) => `${value}%` },
+    { key: 'accumulation', label: 'סכום צבירה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'salary', label: 'שכר חודשי', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'company', label: 'חברת ביטוח/בית השקעות' },
+    { key: 'name', label: 'שם הלקוח' },
+    { key: 'date', label: 'תאריך' }
   ];
 
   const handleSubmit = (data: any) => {

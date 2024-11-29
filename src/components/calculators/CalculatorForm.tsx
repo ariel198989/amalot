@@ -1,10 +1,14 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
+import { CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, CreditCard, Building2, Percent } from 'lucide-react';
+import { Calculator, Loader2 } from 'lucide-react';
 
 interface Field {
   name: string;
@@ -13,6 +17,7 @@ interface Field {
   required: boolean;
   icon?: React.ElementType;
   options?: { value: string; label: string; }[];
+  defaultValue?: string;
 }
 
 interface CalculatorFormProps {
@@ -28,95 +33,88 @@ const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({
   title,
   description = "הזן את הפרטים הנדרשים לחישוב העמלות" 
 }, ref) => {
-  const { register, handleSubmit, setValue } = useForm();
+  const { register, handleSubmit, setValue, isSubmitting } = useForm();
 
   const getFieldIcon = (type: string) => {
     switch (type) {
       case 'number':
-        return CreditCard;
+        return Calculator;
       case 'select':
-        return Building2;
+        return Calculator;
       case 'percent':
-        return Percent;
+        return Calculator;
       default:
         return Calculator;
     }
   };
 
   return (
-    <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white rounded-lg shadow-sm">
-            <Calculator className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <CardTitle className="text-xl font-bold text-blue-900">{title}</CardTitle>
-            <CardDescription className="text-blue-600">{description}</CardDescription>
-          </div>
-        </div>
+    <Card className="mb-6">
+      <CardHeader className="space-y-2 bg-gray-50/80 text-right">
+        <CardTitle className="text-xl font-semibold text-gray-900">{title}</CardTitle>
+        {description && (
+          <CardDescription className="text-gray-600">{description}</CardDescription>
+        )}
       </CardHeader>
-      <CardContent className="p-6">
-        <form ref={ref} onSubmit={handleSubmit(onSubmit)} className="space-y-6" dir="rtl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {fields.map((field) => {
-              const Icon = field.icon || getFieldIcon(field.type);
-              return (
-                <div 
-                  key={field.name} 
-                  className="group relative bg-white p-4 rounded-lg border-2 border-gray-100 hover:border-blue-200 transition-all duration-200"
-                >
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {field.label}
-                    {field.required && <span className="text-red-500 mr-1">*</span>}
-                  </label>
-                  <div className="relative">
-                    {field.type === 'select' ? (
-                      <div>
-                        <Select
-                          onValueChange={(value) => setValue(field.name, value)}
-                        >
-                          <SelectTrigger className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100">
-                            <SelectValue placeholder={`בחר ${field.label}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options?.map((option) => (
-                              <SelectItem 
-                                key={option.value} 
-                                value={option.value}
-                                className="text-right"
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <input type="hidden" {...register(field.name)} />
-                      </div>
-                    ) : (
-                      <Input
-                        type={field.type}
-                        {...register(field.name, { required: field.required })}
-                        className="w-full pr-10 border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                        placeholder={`הזן ${field.label}`}
-                        dir="rtl"
-                      />
-                    )}
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </div>
+      <CardContent className="space-y-6 pt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" dir="rtl">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <div className="text-sm font-medium text-gray-700 text-right">
+                  {field.label}
+                  {field.required && <span className="text-red-500 mr-1">*</span>}
                 </div>
-              );
-            })}
+                
+                {field.type === 'select' ? (
+                  <Select
+                    onValueChange={(value) => setValue(field.name, value)}
+                    defaultValue={field.defaultValue}
+                  >
+                    <SelectTrigger className="w-full text-right">
+                      <SelectValue placeholder={`בחר ${field.label}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="text-right">
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id={field.name}
+                    type={field.type}
+                    placeholder={`הכנס ${field.label}`}
+                    className="w-full text-right"
+                    dir="rtl"
+                    {...register(field.name, { required: field.required })}
+                  />
+                )}
+              </div>
+            ))}
           </div>
-          <Button 
-            type="submit" 
-            className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 group"
-          >
-            <Calculator className="h-5 w-5 ml-2 group-hover:scale-110 transition-transform" />
-            חשב עמלות
-          </Button>
+          
+          <div className="flex justify-start">
+            <Button 
+              type="submit" 
+              className="bg-primary hover:bg-primary/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  מחשב...
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                </>
+              ) : (
+                <>
+                  חשב עמלה
+                  <Calculator className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

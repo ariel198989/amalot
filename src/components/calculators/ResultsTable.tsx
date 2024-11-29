@@ -34,12 +34,12 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   }
 
   return (
-    <Card className="mt-6">
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="mt-6 overflow-hidden border rounded-lg shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between bg-gray-50/80 px-6 py-4">
         <div className="flex items-center gap-4">
-          <CardTitle>תוצאות החישוב</CardTitle>
+          <CardTitle className="text-xl font-semibold text-gray-900">תוצאות החישוב</CardTitle>
           <div className="flex items-center gap-2">
-            <span className="text-lg">
+            <span className="text-lg font-medium text-gray-700">
               סה"כ: ₪{data.reduce((sum, row) => sum + row.totalCommission, 0).toLocaleString()}
             </span>
             <Button
@@ -60,44 +60,46 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            size="icon" 
+            size="sm" 
             onClick={onDownload} 
-            title="ייצא לאקסל"
+            className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
+            <span>ייצא לאקסל</span>
           </Button>
           <Button 
             variant="outline" 
-            size="icon" 
-            onClick={onShare} 
-            title="שתף"
+            size="sm" 
+            onClick={onShare}
+            className="flex items-center gap-2"
           >
             <Share2 className="h-4 w-4" />
+            <span>שתף</span>
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b bg-gray-50">
-                {columns.map((column) => (
-                  <th key={column.key} className="p-3 text-right font-medium text-gray-600">
+              <tr className="border-b bg-gray-50/50">
+                {columns.reverse().map((column) => (
+                  <th key={column.key} className="p-4 text-right font-medium text-gray-600 whitespace-nowrap">
                     {column.label}
                   </th>
                 ))}
-                <th className="p-3 text-right font-medium text-gray-600">פעולות</th>
+                <th className="p-4 text-right font-medium text-gray-600">פעולות</th>
               </tr>
             </thead>
             <tbody>
               {data.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b hover:bg-gray-50">
+                <tr key={rowIndex} className="border-b hover:bg-gray-50/50 transition-colors">
                   {columns.map((column) => (
-                    <td key={column.key} className="p-3 text-right">
+                    <td key={column.key} className="p-4 text-right text-gray-700 whitespace-nowrap">
                       {column.format ? column.format(row[column.key]) : row[column.key]}
                     </td>
                   ))}
-                  <td className="p-3 text-right">
+                  <td className="p-4 text-right">
                     <Button
                       variant="ghost"
                       size="icon"
