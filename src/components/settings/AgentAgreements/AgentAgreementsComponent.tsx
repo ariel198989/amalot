@@ -136,7 +136,7 @@ const AgentAgreements: React.FC = () => {
     if (!agentRates) return null;
 
     return (
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6" dir="rtl">
         {companies.map((company, index) => {
           const companyRates = agentRates[category][company] || DEFAULT_COMPANY_RATES;
           
@@ -169,7 +169,7 @@ const AgentAgreements: React.FC = () => {
                   </div>
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-700">
+                      <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
                         {category === 'pension_companies' ? 'עמלת היקף על הפקדה (%)' : 'עמלת היקף (%)'}
                       </label>
                       <Input 
@@ -182,12 +182,12 @@ const AgentAgreements: React.FC = () => {
                           'scope_rate', 
                           Number(e.target.value) / 100
                         )}
-                        className="border-2 focus:ring-2 focus:ring-blue-100 text-left"
-                        dir="ltr"
+                        className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                        dir="rtl"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-700">
+                      <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
                         {category === 'pension_companies' ? 'עמלת היקף על הצבירה (%)' : 'נפרעים (%)'}
                       </label>
                       <Input 
@@ -200,8 +200,8 @@ const AgentAgreements: React.FC = () => {
                           'monthly_rate', 
                           Number(e.target.value) / 100
                         )}
-                        className="border-2 focus:ring-2 focus:ring-blue-100 text-left"
-                        dir="ltr"
+                        className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                        dir="rtl"
                       />
                     </div>
                   </div>
@@ -221,98 +221,119 @@ const AgentAgreements: React.FC = () => {
     const productTypes = getInsuranceProductTypes();
 
     return (
-      <div className="grid grid-cols-3 gap-4">
-        {insuranceCompanies.map(company => {
+      <div className="grid grid-cols-3 gap-6" dir="rtl">
+        {insuranceCompanies.map((company, index) => {
           const companyRates = agentRates.insurance_companies[company];
           
           return (
-            <Card key={company}>
-              <CardHeader>
-                <CardTitle>{company}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Checkbox 
-                    checked={companyRates.active}
-                    onCheckedChange={(checked) => {
-                      const updatedRates = {
-                        ...agentRates,
-                        insurance_companies: {
-                          ...agentRates.insurance_companies,
-                          [company]: {
-                            ...companyRates,
-                            active: !!checked
+            <motion.div
+              key={company}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Card className="w-full overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader className="bg-gradient-to-l from-blue-50 to-purple-50 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    {companyRates.active ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    )}
+                    {company}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Checkbox 
+                      checked={companyRates.active}
+                      onCheckedChange={(checked) => {
+                        const updatedRates = {
+                          ...agentRates,
+                          insurance_companies: {
+                            ...agentRates.insurance_companies,
+                            [company]: {
+                              ...companyRates,
+                              active: !!checked
+                            }
                           }
-                        }
-                      };
-                      setAgentRates(updatedRates);
-                    }}
-                  />
-                  <span>חברה פעילה</span>
-                </div>
-                {productTypes.map(product => (
-                  <div key={product.key} className="space-y-2 mt-2">
-                    <h4>{product.hebrewName}</h4>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">עמלת היקף על הפקדה (%)</label>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        value={(companyRates.products[product.key].one_time_rate || 0) * 100} 
-                        onChange={(e) => {
-                          const updatedRates = {
-                            ...agentRates,
-                            insurance_companies: {
-                              ...agentRates.insurance_companies,
-                              [company]: {
-                                ...companyRates,
-                                products: {
-                                  ...companyRates.products,
-                                  [product.key]: {
-                                    ...companyRates.products[product.key],
-                                    one_time_rate: Number(e.target.value) / 100
-                                  }
-                                }
-                              }
-                            }
-                          };
-                          setAgentRates(updatedRates);
-                        }}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">עמלת היקף על הצבירה (%)</label>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        value={(companyRates.products[product.key].monthly_rate || 0) * 100} 
-                        onChange={(e) => {
-                          const updatedRates = {
-                            ...agentRates,
-                            insurance_companies: {
-                              ...agentRates.insurance_companies,
-                              [company]: {
-                                ...companyRates,
-                                products: {
-                                  ...companyRates.products,
-                                  [product.key]: {
-                                    ...companyRates.products[product.key],
-                                    monthly_rate: Number(e.target.value) / 100
-                                  }
-                                }
-                              }
-                            }
-                          };
-                          setAgentRates(updatedRates);
-                        }}
-                        className="mt-1"
-                      />
-                    </div>
+                        };
+                        setAgentRates(updatedRates);
+                      }}
+                      className="border-2"
+                    />
+                    <span className="font-medium">חברה פעילה</span>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                  {productTypes.map(product => (
+                    <div key={product.key} className="space-y-2 mt-4">
+                      <h4 className="text-right font-medium">{product.hebrewName}</h4>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                          עמלת היקף על הפקדה (%)
+                        </label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          value={(companyRates.products[product.key].one_time_rate || 0) * 100} 
+                          onChange={(e) => {
+                            const updatedRates = {
+                              ...agentRates,
+                              insurance_companies: {
+                                ...agentRates.insurance_companies,
+                                [company]: {
+                                  ...companyRates,
+                                  products: {
+                                    ...companyRates.products,
+                                    [product.key]: {
+                                      ...companyRates.products[product.key],
+                                      one_time_rate: Number(e.target.value) / 100
+                                    }
+                                  }
+                                }
+                              }
+                            };
+                            setAgentRates(updatedRates);
+                          }}
+                          className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                          נפרעים (%)
+                        </label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          value={(companyRates.products[product.key].monthly_rate || 0) * 100} 
+                          onChange={(e) => {
+                            const updatedRates = {
+                              ...agentRates,
+                              insurance_companies: {
+                                ...agentRates.insurance_companies,
+                                [company]: {
+                                  ...companyRates,
+                                  products: {
+                                    ...companyRates.products,
+                                    [product.key]: {
+                                      ...companyRates.products[product.key],
+                                      monthly_rate: Number(e.target.value) / 100
+                                    }
+                                  }
+                                }
+                              }
+                            };
+                            setAgentRates(updatedRates);
+                          }}
+                          className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                          dir="rtl"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
@@ -360,51 +381,43 @@ const AgentAgreements: React.FC = () => {
 
         <div className="mb-8 flex justify-between items-center">
           <div className="flex gap-8">
-            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.pension.bg}`}>
+            <button
+              onClick={() => setActiveTab('pension')}
+              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.pension.bg} ${activeTab === 'pension' ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
+            >
               <Wallet className={`w-6 h-6 mb-1 ${TabColors.pension.icon}`} />
               <span className={`text-lg font-semibold ${TabColors.pension.text}`}>פנסיה</span>
-            </div>
-            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.savings.bg}`}>
+            </button>
+            <button
+              onClick={() => setActiveTab('savings')}
+              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.savings.bg} ${activeTab === 'savings' ? 'ring-2 ring-purple-400 shadow-lg' : ''}`}
+            >
               <PiggyBank className={`w-6 h-6 mb-1 ${TabColors.savings.icon}`} />
               <span className={`text-lg font-semibold ${TabColors.savings.text}`}>חיסכון וקרנות השתלמות</span>
-            </div>
-            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.policy.bg}`}>
+            </button>
+            <button
+              onClick={() => setActiveTab('policy')}
+              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.policy.bg} ${activeTab === 'policy' ? 'ring-2 ring-emerald-400 shadow-lg' : ''}`}
+            >
               <Building2 className={`w-6 h-6 mb-1 ${TabColors.policy.icon}`} />
               <span className={`text-lg font-semibold ${TabColors.policy.text}`}>פוליסות</span>
-            </div>
-            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.insurance.bg}`}>
+            </button>
+            <button
+              onClick={() => setActiveTab('insurance')}
+              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.insurance.bg} ${activeTab === 'insurance' ? 'ring-2 ring-rose-400 shadow-lg' : ''}`}
+            >
               <Shield className={`w-6 h-6 mb-1 ${TabColors.insurance.icon}`} />
               <span className={`text-lg font-semibold ${TabColors.insurance.text}`}>ביטוח</span>
-            </div>
+            </button>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full bg-gray-100 p-2 rounded-lg mb-6">
-            <TabsTrigger
-              value="pension"
-              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-            >
-              פנסיה
-            </TabsTrigger>
-            <TabsTrigger
-              value="savings"
-              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-            >
-              חיסכון וקרנות השתלמות
-            </TabsTrigger>
-            <TabsTrigger
-              value="policy"
-              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-            >
-              פוליסות
-            </TabsTrigger>
-            <TabsTrigger
-              value="insurance"
-              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-            >
-              ביטוח
-            </TabsTrigger>
+          <TabsList className="hidden">
+            <TabsTrigger value="pension">פנסיה</TabsTrigger>
+            <TabsTrigger value="savings">חיסכון וקרנות השתלמות</TabsTrigger>
+            <TabsTrigger value="policy">פוליסות</TabsTrigger>
+            <TabsTrigger value="insurance">ביטוח</TabsTrigger>
           </TabsList>
 
           <motion.div
