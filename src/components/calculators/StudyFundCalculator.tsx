@@ -1,21 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
-import { GemelStudyFundClient } from '../../services/ClientServiceTypes';
-import { getCompanyRates } from '../../services/AgentAgreementService';
-import { toast } from 'react-hot-toast';
+import { StudyFundClient } from '../../types/calculators';
+import { calculateCommissions, getCompanyRates } from '../../services/AgentAgreementService';
 
 const StudyFundCalculator: React.FC = () => {
-  const [clients, setClients] = React.useState<GemelStudyFundClient[]>([]);
-  const [companyRates, setCompanyRates] = React.useState<{ [company: string]: any }>({});
+  const [clients, setClients] = useState<StudyFundClient[]>([]);
+  const [companyRates, setCompanyRates] = useState<{ [company: string]: any }>({});
 
   useEffect(() => {
     loadCompanyRates();
   }, []);
 
   const loadCompanyRates = async () => {
-    const rates = await getCompanyRates('savings_and_study');
+    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
+    const rates: { [company: string]: any } = {};
+    
+    for (const company of companies) {
+      const companyRate = await getCompanyRates('savings_and_study', company);
+      if (companyRate) {
+        rates[company] = companyRate;
+      }
+    }
+    
     setCompanyRates(rates);
   };
 
@@ -71,7 +79,7 @@ const StudyFundCalculator: React.FC = () => {
     const scopeCommission = calculateScopeCommission(amount, companyRate.scope_rate_per_million);
     const monthlyCommission = calculateMonthlyCommission(amount, companyRate.monthly_rate);
     
-    const newClient: GemelStudyFundClient = {
+    const newClient: StudyFundClient = {
       date: new Date().toLocaleDateString('he-IL'),
       name: data.name,
       company: data.company,

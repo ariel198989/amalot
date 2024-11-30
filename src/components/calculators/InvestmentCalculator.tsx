@@ -1,21 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { InvestmentClient } from '../../types/calculators';
-import { getCompanyRates } from '../../services/AgentAgreementService';
+import { calculateCommissions, getCompanyRates } from '../../services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
 
 const InvestmentCalculator: React.FC = () => {
-  const [clients, setClients] = React.useState<InvestmentClient[]>([]);
-  const [companyRates, setCompanyRates] = React.useState<{ [company: string]: any }>({});
+  const [clients, setClients] = useState<InvestmentClient[]>([]);
+  const [companyRates, setCompanyRates] = useState<{ [company: string]: any }>({});
 
   useEffect(() => {
     loadCompanyRates();
   }, []);
 
   const loadCompanyRates = async () => {
-    const rates = await getCompanyRates('savings_and_study');
+    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
+    const rates: { [company: string]: any } = {};
+    
+    for (const company of companies) {
+      const companyRate = await getCompanyRates('savings_and_study', company);
+      if (companyRate) {
+        rates[company] = companyRate;
+      }
+    }
+    
     setCompanyRates(rates);
   };
 

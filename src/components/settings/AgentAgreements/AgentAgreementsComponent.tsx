@@ -193,13 +193,14 @@ const AgentAgreements: React.FC = () => {
                       <Input 
                         type="number" 
                         step={category === 'pension_companies' ? "100" : "0.01"}
-                        value={category === 'pension_companies' ? companyRates.monthly_rate * 1000000 : companyRates.monthly_rate * 100} 
-                        onChange={(e) => handleRateChange(
-                          category, 
-                          company, 
-                          'monthly_rate', 
-                          category === 'pension_companies' ? Number(e.target.value) / 1000000 : Number(e.target.value) / 100
-                        )}
+                        value={category === 'pension_companies' ? (companyRates.scope_rate_per_million || 0) : companyRates.monthly_rate * 100} 
+                        onChange={(e) => {
+                          if (category === 'pension_companies') {
+                            handleRateChange(category, company, 'scope_rate_per_million', Number(e.target.value));
+                          } else {
+                            handleRateChange(category, company, 'monthly_rate', Number(e.target.value) / 100);
+                          }
+                        }}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
                       />

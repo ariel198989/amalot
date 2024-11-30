@@ -14,6 +14,7 @@ export interface PensionClient {
   name: string;
   company: string;
   salary: number;
+  accumulation: number;
   scopeCommission: number;
   monthlyCommission: number;
 }

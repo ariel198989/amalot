@@ -9,7 +9,7 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
     }
 
     const { data, error } = await supabase
-      .from('agent_rates')
+      .from('agent_commission_rates')
       .select('*')
       .eq('user_id', user.id)
       .single();
@@ -28,6 +28,7 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
 export const getCompanyRates = async (category: 'pension' | 'savings_and_study' | 'policy' | 'insurance', company: string): Promise<{
   scope_rate: number;
   monthly_rate: number;
+  scope_rate_per_million?: number;
   active: boolean;
 } | null> => {
   try {
@@ -37,16 +38,22 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
     let companyRates;
     switch (category) {
       case 'pension':
-        companyRates = rates.pension_companies[company];
-        break;
+        companyRates = rates.pension_companies?.[company];
+        if (!companyRates) return null;
+        return {
+          scope_rate: companyRates.scope_rate ?? DEFAULT_COMPANY_RATES.scope_rate,
+          monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
+          scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
+          active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
+        };
       case 'savings_and_study':
-        companyRates = rates.savings_and_study_companies[company];
+        companyRates = rates.savings_and_study_companies?.[company];
         break;
       case 'policy':
-        companyRates = rates.policy_companies[company];
+        companyRates = rates.policy_companies?.[company];
         break;
       case 'insurance':
-        if (!rates.insurance_companies[company]?.active) return null;
+        if (!rates.insurance_companies?.[company]?.active) return null;
         return {
           scope_rate: rates.insurance_companies[company].products.risk.one_time_rate,
           monthly_rate: rates.insurance_companies[company].products.risk.monthly_rate,
@@ -56,14 +63,12 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
         return null;
     }
 
-    if (!companyRates || !companyRates.active) {
-      return null;
-    }
+    if (!companyRates) return null;
 
     return {
-      scope_rate: companyRates.scope_rate,
-      monthly_rate: companyRates.monthly_rate,
-      active: companyRates.active
+      scope_rate: companyRates.scope_rate ?? DEFAULT_COMPANY_RATES.scope_rate,
+      monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
+      active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
     };
   } catch (error) {
     console.error('Error getting company rates:', error);
@@ -74,7 +79,8 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
 export const calculateCommissions = async (
   category: 'pension' | 'savings_and_study' | 'policy' | 'insurance',
   company: string,
-  amount: number
+  amount: number,
+  accumulation?: number
 ): Promise<{
   scope_commission: number;
   monthly_commission: number;
@@ -89,13 +95,14 @@ export const calculateCommissions = async (
     if (category === 'pension') {
       // בפנסיה:
       // 1. עמלת היקף על הפקדה: אחוז מההפקדה השנתית
-      const annualDeposit = amount * 0.205; // 20.5% הפרשה סטנדרטית
-      scope_commission = annualDeposit * rates.scope_rate;
+      scope_commission = amount * rates.scope_rate;
 
-      // 2. עמלת היקף על צבירה: סכום קבוע למיליון
-      // נניח שהצבירה היא פי 10 מההפקדה השנתית (הערכה גסה)
-      const estimatedAccumulation = annualDeposit * 10;
-      monthly_commission = (estimatedAccumulation / 1000000) * rates.monthly_rate;
+      // 2. עמלת היקף על צבירה: סכום קבוע למיליון מתוך הסכמי סוכן
+      if (accumulation && rates.scope_rate_per_million) {
+        // מחשב כמה מיליונים יש בצבירה ומכפיל בעמלה למיליון מהסכמי סוכן
+        const millionsInAccumulation = accumulation / 1000000;
+        monthly_commission = millionsInAccumulation * rates.scope_rate_per_million;
+      }
     } else {
       // בשאר המוצרים: שני הערכים הם אחוזים
       scope_commission = amount * rates.scope_rate;
