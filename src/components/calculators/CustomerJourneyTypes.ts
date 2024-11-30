@@ -1,10 +1,30 @@
 // Types for CustomerJourney component
 
+export interface ProductDetails {
+  pensionSalary?: number;
+  pensionAccumulation?: number;
+  pensionContribution?: number;
+  insurancePremium?: number;
+  investmentAmount?: number;
+  policyAmount?: number;
+}
+
+export interface CommissionResult {
+  scopeCommission: number;
+  monthlyCommission?: number;
+  accumulationCommission?: number;
+  annualCommission?: number;
+  oneTimeCommission?: number;
+  totalCommission: number;
+  contributionRate?: number;
+}
+
 export interface ProductSelection {
-  pension: boolean;
-  insurance: boolean;
-  investment: boolean;
-  policy: boolean;
+  id: string;
+  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy';
+  company: string;
+  details: ProductDetails;
+  commissions?: CommissionResult;
 }
 
 export interface CompanySelection {
@@ -115,6 +135,8 @@ export interface FormData {
   firstName: string;
   lastName: string;
   idNumber: string;
+  selectedProducts: ProductSelection[];
+  totalCommissions: number;
 }
 
 export interface MeetingData {

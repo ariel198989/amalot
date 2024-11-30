@@ -100,26 +100,38 @@ export const calculateCommissions = async (
 } | null> => {
   try {
     const rates = await getCompanyRates(category, company);
-    if (!rates) return null;
+    if (!rates || !rates.active) return null;
 
     let scope_commission = 0;
     let monthly_commission = 0;
 
-    if (category === 'pension') {
-      // בפנסיה:
-      // 1. עמלת היקף על הפקדה: אחוז מההפקדה השנתית
-      scope_commission = amount * rates.scope_rate;
+    switch (category) {
+      case 'pension':
+        // עמלת היקף על הפקדה שנתית (אחוז מההפקדה)
+        scope_commission = amount * (rates.scope_rate || 0);
+        
+        // עמלת נפרעים על צבירה (סכום למיליון)
+        if (accumulation && accumulation > 0) {
+          const millionsInAccumulation = accumulation / 1000000;
+          monthly_commission = millionsInAccumulation * (rates.scope_rate_per_million || 0);
+        }
+        break;
 
-      // 2. עמלת היקף על צבירה: סכום קבוע למיליון מתוך הסכמי סוכן
-      if (accumulation && rates.scope_rate_per_million) {
-        // מחשב כמה מיליונים יש בצבירה ומכפיל בעמלה למיליון מהסכמי סוכן
-        const millionsInAccumulation = accumulation / 1000000;
-        monthly_commission = millionsInAccumulation * rates.scope_rate_per_million;
-      }
-    } else {
-      // בשאר המוצרים: שני הערכים הם אחוזים
-      scope_commission = amount * rates.scope_rate;
-      monthly_commission = amount * rates.monthly_rate;
+      case 'insurance':
+        // עמלת היקף על פרמיה שנתית
+        scope_commission = amount * 12 * (rates.scope_rate || 0);
+        // עמלת נפרעים על פרמיה חודשית (מחושב לשנה אחת)
+        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
+        break;
+
+      case 'savings_and_study':
+      case 'policy':
+        // עמלת היקף לפי מיליונים
+        const millionsInAmount = amount / 1000000;
+        scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
+        // עמלת נפרעים לפי אחוז מהסכום (מחושב לשנה אחת)
+        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
+        break;
     }
 
     return {
