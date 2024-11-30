@@ -18,6 +18,7 @@ interface Field {
   icon?: React.ElementType;
   options?: { value: string; label: string; }[];
   defaultValue?: string;
+  width?: 'full' | 'half' | 'third';
 }
 
 interface CalculatorFormProps {
@@ -35,35 +36,36 @@ const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({
 }, ref) => {
   const { register, handleSubmit, setValue, isSubmitting } = useForm();
 
-  const getFieldIcon = (type: string) => {
-    switch (type) {
-      case 'number':
-        return Calculator;
-      case 'select':
-        return Calculator;
-      case 'percent':
-        return Calculator;
+  const getFieldWidth = (field: Field) => {
+    switch (field.width) {
+      case 'full':
+        return 'col-span-1 md:col-span-2 lg:col-span-3';
+      case 'half':
+        return 'col-span-1 md:col-span-1 lg:col-span-2';
+      case 'third':
       default:
-        return Calculator;
+        return 'col-span-1';
     }
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="space-y-2 bg-gray-50/80 text-right">
-        <CardTitle className="text-xl font-semibold text-gray-900">{title}</CardTitle>
+    <Card className="mb-6 max-w-7xl mx-auto">
+      <CardHeader className="space-y-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-right px-6 py-4">
+        <CardTitle className="text-2xl font-bold text-gray-900">{title}</CardTitle>
         {description && (
-          <CardDescription className="text-gray-600">{description}</CardDescription>
+          <CardDescription className="text-gray-600 text-base">{description}</CardDescription>
         )}
       </CardHeader>
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" dir="rtl">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
             {fields.map((field) => (
-              <div key={field.name} className="space-y-2">
-                <div className="text-sm font-medium text-gray-700 text-right">
-                  {field.label}
-                  {field.required && <span className="text-red-500 mr-1">*</span>}
+              <div key={field.name} className={`${getFieldWidth(field)} space-y-2`}>
+                <div className="flex items-center justify-between">
+                  <label htmlFor={field.name} className="text-sm font-medium text-gray-700">
+                    {field.label}
+                    {field.required && <span className="text-red-500 mr-1">*</span>}
+                  </label>
                 </div>
                 
                 {field.type === 'select' ? (
@@ -71,7 +73,7 @@ const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({
                     onValueChange={(value) => setValue(field.name, value)}
                     defaultValue={field.defaultValue}
                   >
-                    <SelectTrigger className="w-full text-right">
+                    <SelectTrigger className="w-full text-right h-10 px-3 py-2 bg-white">
                       <SelectValue placeholder={`בחר ${field.label}`} />
                     </SelectTrigger>
                     <SelectContent>
@@ -87,7 +89,7 @@ const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({
                     id={field.name}
                     type={field.type}
                     placeholder={`הכנס ${field.label}`}
-                    className="w-full text-right"
+                    className="w-full text-right h-10 px-3 py-2 bg-white"
                     dir="rtl"
                     {...register(field.name, { required: field.required })}
                   />
@@ -96,22 +98,22 @@ const CalculatorForm = React.forwardRef<HTMLFormElement, CalculatorFormProps>(({
             ))}
           </div>
           
-          <div className="flex justify-start">
+          <div className="flex justify-start pt-4">
             <Button 
               type="submit" 
-              className="bg-primary hover:bg-primary/90"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <>
-                  מחשב...
-                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                </>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>מחשב...</span>
+                </div>
               ) : (
-                <>
-                  חשב עמלה
-                  <Calculator className="ml-2 h-4 w-4" />
-                </>
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  <span>חשב עמלה</span>
+                </div>
               )}
             </Button>
           </div>

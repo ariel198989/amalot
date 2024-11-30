@@ -1,6 +1,13 @@
 import { supabase } from '@/lib/supabase';
 import { AgentRates } from '../components/settings/AgentAgreements/AgentAgreementsTypes';
 
+const DEFAULT_COMPANY_RATES = {
+  scope_rate: 0,
+  monthly_rate: 0,
+  scope_rate_per_million: 0,
+  active: false
+};
+
 export const getAgentRates = async (): Promise<AgentRates | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -39,19 +46,24 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
     switch (category) {
       case 'pension':
         companyRates = rates.pension_companies?.[company];
-        if (!companyRates) return null;
+        if (!companyRates?.active) return null;
         return {
           scope_rate: companyRates.scope_rate ?? DEFAULT_COMPANY_RATES.scope_rate,
           monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
           scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
           active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
         };
+
       case 'savings_and_study':
         companyRates = rates.savings_and_study_companies?.[company];
+        if (!companyRates?.active) return null;
         break;
+
       case 'policy':
         companyRates = rates.policy_companies?.[company];
+        if (!companyRates?.active) return null;
         break;
+
       case 'insurance':
         if (!rates.insurance_companies?.[company]?.active) return null;
         return {
@@ -59,6 +71,7 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
           monthly_rate: rates.insurance_companies[company].products.risk.monthly_rate,
           active: rates.insurance_companies[company].active
         };
+
       default:
         return null;
     }

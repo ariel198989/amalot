@@ -56,7 +56,10 @@ const navItems = [
     path: '/journey', 
     icon: User,
     description: 'ניהול פגישות ומכירות ללקוח'
-  },
+  }
+];
+
+const bottomNavItems = [
   { 
     title: 'הגדרות', 
     path: '/settings', 
@@ -156,19 +159,49 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
             </nav>
           </div>
           
-          {/* Mobile Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-7 py-4 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors border-t border-gray-100"
-          >
-            <div className="p-2 rounded-lg bg-gray-100">
-              <LogOut className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium">התנתק</div>
-              <div className="text-xs text-gray-500">יציאה מהמערכת</div>
-            </div>
-          </button>
+          <div className="border-t border-gray-100 py-4 px-3">
+            {bottomNavItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                  ${isActivePath(item.path) 
+                    ? 'bg-blue-50 text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className={`
+                  p-2 rounded-lg transition-colors duration-200
+                  ${isActivePath(item.path) 
+                    ? 'bg-blue-100 text-blue-600' 
+                    : 'bg-gray-100 text-gray-600'
+                  }
+                `}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-medium">{item.title}</div>
+                  <div className="text-xs text-gray-500">{item.description}</div>
+                </div>
+              </Link>
+            ))}
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            >
+              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-red-100 transition-colors">
+                <LogOut className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-medium">התנתק</div>
+                <div className="text-xs text-gray-500">יציאה מהמערכת</div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -215,19 +248,48 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
             ))}
           </nav>
 
-          {/* Desktop Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 mt-4 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200 group"
-          >
-            <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-red-100 transition-colors">
-              <LogOut className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium">התנתק</div>
-              <div className="text-xs text-gray-500">יציאה מהמערכת</div>
-            </div>
-          </button>
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            {bottomNavItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                  ${isActivePath(item.path)
+                    ? 'bg-blue-50 text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <div className={`
+                  p-2 rounded-lg transition-colors duration-200
+                  ${isActivePath(item.path)
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                  }
+                `}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-medium">{item.title}</div>
+                  <div className="text-xs text-gray-500">{item.description}</div>
+                </div>
+              </Link>
+            ))}
+
+            <button
+              onClick={handleLogout}
+              className="w-full group flex items-center gap-3 px-4 py-3 mt-2 rounded-lg transition-all duration-200 text-gray-600 hover:bg-red-50 hover:text-red-600"
+            >
+              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-red-100 transition-colors">
+                <LogOut className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-medium">התנתק</div>
+                <div className="text-xs text-gray-500">יציאה מהמערכת</div>
+              </div>
+            </button>
+          </div>
         </div>
       </aside>
 
