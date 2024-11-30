@@ -36,14 +36,14 @@ const PolicyCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברת ביטוח' },
-    { key: 'policyType', label: 'סוג פוליסה' },
-    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
+    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'policyType', label: 'סוג פוליסה' },
+    { key: 'company', label: 'חברת ביטוח' },
+    { key: 'name', label: 'שם הלקוח' },
+    { key: 'date', label: 'תאריך' }
   ];
 
   const calculateScopeCommission = (amount: number, scopeRate: number) => {

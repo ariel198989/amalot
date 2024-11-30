@@ -26,12 +26,12 @@ const InvestmentCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברת ניהול' },
-    { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` }
+    { key: 'amount', label: 'סכום הניוד', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'company', label: 'חברת ניהול' },
+    { key: 'name', label: 'שם הלקוח' },
+    { key: 'date', label: 'תאריך' }
   ];
 
   const calculateScopeCommission = (amount: number, scopeRate: number) => {

@@ -21,14 +21,14 @@ const SavingsCalculator: React.FC = () => {
   ];
 
   const columns = [
-    { key: 'actions', label: 'פעולות' },
     { key: 'totalCommission', label: "סה\"כ עמלה שנתית", format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'עמלה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'amount', label: 'סכום חיסכון', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'company', label: 'חברה' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'date', label: 'תאריך' }
+    { key: 'date', label: 'תאריך' },
+    { key: 'actions', label: 'פעולות' }
   ];
 
   const handleSubmit = (data: any) => {
