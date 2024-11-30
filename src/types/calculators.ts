@@ -1,4 +1,5 @@
 export interface SavingsClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
@@ -8,18 +9,17 @@ export interface SavingsClient {
 }
 
 export interface PensionClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
   salary: number;
-  accumulation: number;
-  provision: number;
   scopeCommission: number;
-  accumulationCommission: number;
-  totalCommission: number;
+  monthlyCommission: number;
 }
 
 export interface InvestmentClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
@@ -29,18 +29,17 @@ export interface InvestmentClient {
 }
 
 export interface InsuranceClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
-  insuranceType: string;
-  monthlyPremium: number;
-  oneTimeCommissionRate: number;
-  oneTimeCommission: number;
-  monthlyCommissionRate: number;
+  premium: number;
+  scopeCommission: number;
   monthlyCommission: number;
 }
 
 export interface StudyFundClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
@@ -49,26 +48,13 @@ export interface StudyFundClient {
   monthlyCommission: number;
 }
 
-export interface InvestmentCompanyData {
-  scopeRate: number;
-  monthlyRate: number;
-}
-
-export interface CompanyRates {
-  [key: string]: {
-    scopeRate: number;
-    monthlyRate: number;
-  };
-}
-
 export interface PolicyClient {
+  id?: string;
   date: string;
   name: string;
   company: string;
-  policyType: string;
-  depositAmount: number;
-  totalDeposit: number;
-  oneTimeCommission: number;
+  amount: number;
+  scopeCommission: number;
   monthlyCommission: number;
 }
 
@@ -130,12 +116,3 @@ export interface Journey {
   created_at?: string;
   user_id?: string;
 }
-
-export const COMPANY_RATES: CompanyRates = {
-  'harel': { scopeRate: 6000, monthlyRate: 0.00025 },
-  'migdal': { scopeRate: 7000, monthlyRate: 0.00025 },
-  'clal': { scopeRate: 7000, monthlyRate: 0.00025 },
-  'phoenix': { scopeRate: 6500, monthlyRate: 0.00025 },
-  'more': { scopeRate: 4000, monthlyRate: 0.00025 },
-  'yelin': { scopeRate: 4000, monthlyRate: 0.00025 }
-};

@@ -188,17 +188,17 @@ const AgentAgreements: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                        {category === 'pension_companies' ? 'עמלת היקף על הצבירה (%)' : 'נפרעים (%)'}
+                        {category === 'pension_companies' ? 'עמלת היקף על הצבירה (₪ למיליון)' : 'נפרעים (%)'}
                       </label>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        value={companyRates.monthly_rate * 100} 
+                        step={category === 'pension_companies' ? "100" : "0.01"}
+                        value={category === 'pension_companies' ? companyRates.monthly_rate * 1000000 : companyRates.monthly_rate * 100} 
                         onChange={(e) => handleRateChange(
                           category, 
                           company, 
                           'monthly_rate', 
-                          Number(e.target.value) / 100
+                          category === 'pension_companies' ? Number(e.target.value) / 1000000 : Number(e.target.value) / 100
                         )}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
