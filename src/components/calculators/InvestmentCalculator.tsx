@@ -130,7 +130,7 @@ const InvestmentCalculator: React.FC = () => {
       <CalculatorForm
         onSubmit={handleSubmit}
         fields={fields}
-        title="מחשבון עמלות השקעות"
+        title="מחשבון עמלות גמל והשתלמות"
       />
       <ResultsTable
         data={clients}
