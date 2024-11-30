@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
-import { InvestmentClient, COMPANY_RATES } from '../../types/calculators';
+import { InvestmentClient } from '../../types/calculators';
+import { getCompanyRates } from '../../services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
 
 const InvestmentCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<InvestmentClient[]>([]);
+  const [companyRates, setCompanyRates] = React.useState<{ [company: string]: any }>({});
+
+  useEffect(() => {
+    loadCompanyRates();
+  }, []);
+
+  const loadCompanyRates = async () => {
+    const rates = await getCompanyRates('savings_and_study');
+    setCompanyRates(rates);
+  };
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
@@ -37,15 +48,21 @@ const InvestmentCalculator: React.FC = () => {
   };
 
   const calculateMonthlyCommission = (amount: number, monthlyRate: number) => {
-    return amount * (monthlyRate / 100);
+    return amount * monthlyRate;
   };
 
   const handleSubmit = (data: any) => {
     const amount = Number(data.amount) || 0;
-    const { scopeRate, monthlyRate } = COMPANY_RATES[data.company as keyof typeof COMPANY_RATES];
     
-    const scopeCommission = calculateScopeCommission(amount, scopeRate);
-    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate * 100);
+    // Get rates from agent agreements
+    const companyRate = companyRates[data.company];
+    if (!companyRate?.active) {
+      toast.error('החברה לא פעילה בהסכמי הסוכן');
+      return;
+    }
+
+    const scopeCommission = calculateScopeCommission(amount, companyRate.scope_rate_per_million);
+    const monthlyCommission = calculateMonthlyCommission(amount, companyRate.monthly_rate);
     
     const newClient: InvestmentClient = {
       date: new Date().toLocaleDateString('he-IL'),

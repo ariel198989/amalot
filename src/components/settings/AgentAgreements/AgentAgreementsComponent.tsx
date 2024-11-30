@@ -32,6 +32,33 @@ import {
   getInsuranceProductTypes 
 } from './AgentAgreementsHelpers';
 
+const TabColors = {
+  pension: {
+    text: 'text-blue-700',
+    bg: 'bg-blue-50',
+    hover: 'hover:bg-blue-100',
+    icon: 'text-blue-600'
+  },
+  savings: {
+    text: 'text-purple-700',
+    bg: 'bg-purple-50',
+    hover: 'hover:bg-purple-100',
+    icon: 'text-purple-600'
+  },
+  policy: {
+    text: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+    hover: 'hover:bg-emerald-100',
+    icon: 'text-emerald-600'
+  },
+  insurance: {
+    text: 'text-rose-700',
+    bg: 'bg-rose-50',
+    hover: 'hover:bg-rose-100',
+    icon: 'text-rose-600'
+  }
+};
+
 const AgentAgreements: React.FC = () => {
   const [agentRates, setAgentRates] = useState<AgentRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,55 +136,78 @@ const AgentAgreements: React.FC = () => {
     if (!agentRates) return null;
 
     return (
-      <div className="grid grid-cols-3 gap-4">
-        {companies.map(company => {
+      <div className="grid grid-cols-3 gap-6">
+        {companies.map((company, index) => {
           const companyRates = agentRates[category][company] || DEFAULT_COMPANY_RATES;
           
           return (
-            <Card key={company}>
-              <CardHeader>
-                <CardTitle>{company}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Checkbox 
-                    checked={companyRates.active}
-                    onCheckedChange={(checked) => handleRateChange(category, company, 'active', !!checked)}
-                  />
-                  <span>חברה פעילה</span>
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <label>עמלת היקף (%)</label>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      value={companyRates.scope_rate * 100} 
-                      onChange={(e) => handleRateChange(
-                        category, 
-                        company, 
-                        'scope_rate', 
-                        Number(e.target.value) / 100
-                      )}
+            <motion.div
+              key={company}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Card className="w-full overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader className="bg-gradient-to-l from-blue-50 to-purple-50 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    {companyRates.active ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    )}
+                    {company}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Checkbox 
+                      checked={companyRates.active}
+                      onCheckedChange={(checked) => handleRateChange(category, company, 'active', !!checked)}
+                      className="border-2"
                     />
+                    <span className="font-medium">חברה פעילה</span>
                   </div>
-                  <div>
-                    <label>עמלה חודשית (%)</label>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      value={companyRates.monthly_rate * 100} 
-                      onChange={(e) => handleRateChange(
-                        category, 
-                        company, 
-                        'monthly_rate', 
-                        Number(e.target.value) / 100
-                      )}
-                    />
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">
+                        {category === 'pension_companies' ? 'עמלת היקף על הפקדה (%)' : 'עמלת היקף (%)'}
+                      </label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={companyRates.scope_rate * 100} 
+                        onChange={(e) => handleRateChange(
+                          category, 
+                          company, 
+                          'scope_rate', 
+                          Number(e.target.value) / 100
+                        )}
+                        className="border-2 focus:ring-2 focus:ring-blue-100 text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">
+                        {category === 'pension_companies' ? 'עמלת היקף על הצבירה (%)' : 'נפרעים (%)'}
+                      </label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={companyRates.monthly_rate * 100} 
+                        onChange={(e) => handleRateChange(
+                          category, 
+                          company, 
+                          'monthly_rate', 
+                          Number(e.target.value) / 100
+                        )}
+                        className="border-2 focus:ring-2 focus:ring-blue-100 text-left"
+                        dir="ltr"
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
@@ -204,7 +254,7 @@ const AgentAgreements: React.FC = () => {
                   <div key={product.key} className="space-y-2 mt-2">
                     <h4>{product.hebrewName}</h4>
                     <div>
-                      <label>עמלה חד פעמית (%)</label>
+                      <label className="text-sm font-medium text-gray-700">עמלת היקף על הפקדה (%)</label>
                       <Input 
                         type="number" 
                         step="0.01" 
@@ -228,10 +278,11 @@ const AgentAgreements: React.FC = () => {
                           };
                           setAgentRates(updatedRates);
                         }}
+                        className="mt-1"
                       />
                     </div>
                     <div>
-                      <label>עמלה חודשית (%)</label>
+                      <label className="text-sm font-medium text-gray-700">עמלת היקף על הצבירה (%)</label>
                       <Input 
                         type="number" 
                         step="0.01" 
@@ -255,6 +306,7 @@ const AgentAgreements: React.FC = () => {
                           };
                           setAgentRates(updatedRates);
                         }}
+                        className="mt-1"
                       />
                     </div>
                   </div>
@@ -272,68 +324,110 @@ const AgentAgreements: React.FC = () => {
   }
 
   return (
-    <div className="p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>הגדרות עמלות סוכן</CardTitle>
-          <CardDescription>
-            נהל את שיעורי העמלות עבור החברות השונות
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pension">
-                <PiggyBank className="h-4 w-4 ml-2" />
-                פנסיה
-              </TabsTrigger>
-              <TabsTrigger value="savings">
-                <Wallet className="h-4 w-4 ml-2" />
-                גמל והשתלמות
-              </TabsTrigger>
-              <TabsTrigger value="policy">
-                <Building2 className="h-4 w-4 ml-2" />
-                פוליסות
-              </TabsTrigger>
-              <TabsTrigger value="insurance">
-                <Shield className="h-4 w-4 ml-2" />
-                ביטוח
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="mt-4">
-              <TabsContent value="pension">
-                {renderCompanyRatesSection('pension_companies', [
-                  'מגדל', 'הראל', 'כלל', 'הפניקס', 'מנורה', 'מור'
-                ])}
-              </TabsContent>
-
-              <TabsContent value="savings">
-                {renderCompanyRatesSection('savings_and_study_companies', [
-                  'אלטשולר שחם', 'מיטב דש', 'הראל', 'פסגות', 'מגדל', 'כלל'
-                ])}
-              </TabsContent>
-
-              <TabsContent value="policy">
-                {renderCompanyRatesSection('policy_companies', [
-                  'הראל', 'מגדל', 'כלל', 'הפניקס'
-                ])}
-              </TabsContent>
-
-              <TabsContent value="insurance">
-                {renderInsuranceRatesSection()}
-              </TabsContent>
-            </div>
-          </Tabs>
-
-          <div className="mt-4 flex justify-end">
-            <Button onClick={saveRates}>
-              <Save className="h-4 w-4 ml-2" />
+    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              הסכמי סוכן
+            </h1>
+            <p className="text-gray-500 mt-2">
+              נהל את העמלות והתנאים שלך מול חברות הביטוח השונות
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              className="flex items-center gap-2 bg-gradient-to-l from-blue-600 to-purple-600 hover:opacity-90 transition-opacity text-white"
+              onClick={saveRates}
+            >
+              <Save className="w-4 h-4 ml-1" />
               שמור שינויים
             </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
+              onClick={loadAgentRates}
+            >
+              <RefreshCw className="w-4 h-4 ml-1" />
+              רענן
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="mb-8 flex justify-between items-center">
+          <div className="flex gap-8">
+            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.pension.bg}`}>
+              <Wallet className={`w-6 h-6 mb-1 ${TabColors.pension.icon}`} />
+              <span className={`text-lg font-semibold ${TabColors.pension.text}`}>פנסיה</span>
+            </div>
+            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.savings.bg}`}>
+              <PiggyBank className={`w-6 h-6 mb-1 ${TabColors.savings.icon}`} />
+              <span className={`text-lg font-semibold ${TabColors.savings.text}`}>חיסכון וקרנות השתלמות</span>
+            </div>
+            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.policy.bg}`}>
+              <Building2 className={`w-6 h-6 mb-1 ${TabColors.policy.icon}`} />
+              <span className={`text-lg font-semibold ${TabColors.policy.text}`}>פוליסות</span>
+            </div>
+            <div className={`flex flex-col items-center p-3 rounded-md ${TabColors.insurance.bg}`}>
+              <Shield className={`w-6 h-6 mb-1 ${TabColors.insurance.icon}`} />
+              <span className={`text-lg font-semibold ${TabColors.insurance.text}`}>ביטוח</span>
+            </div>
+          </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full bg-gray-100 p-2 rounded-lg mb-6">
+            <TabsTrigger
+              value="pension"
+              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+            >
+              פנסיה
+            </TabsTrigger>
+            <TabsTrigger
+              value="savings"
+              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+            >
+              חיסכון וקרנות השתלמות
+            </TabsTrigger>
+            <TabsTrigger
+              value="policy"
+              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+            >
+              פוליסות
+            </TabsTrigger>
+            <TabsTrigger
+              value="insurance"
+              className="flex items-center gap-2 flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+            >
+              ביטוח
+            </TabsTrigger>
+          </TabsList>
+
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <TabsContent value="pension" className="mt-0">
+              {renderCompanyRatesSection('pension_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'])}
+            </TabsContent>
+            <TabsContent value="savings" className="mt-0">
+              {renderCompanyRatesSection('savings_and_study_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'])}
+            </TabsContent>
+            <TabsContent value="policy" className="mt-0">
+              {renderCompanyRatesSection('policy_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'])}
+            </TabsContent>
+            <TabsContent value="insurance" className="mt-0">
+              {renderInsuranceRatesSection()}
+            </TabsContent>
+          </motion.div>
+        </Tabs>
+      </motion.div>
     </div>
   );
 };

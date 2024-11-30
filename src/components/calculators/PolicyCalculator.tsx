@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PolicyClient } from '../../types/calculators';
+import { getCompanyRates } from '../../services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
 
 const PolicyCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<PolicyClient[]>([]);
+  const [companyRates, setCompanyRates] = React.useState<{ [company: string]: any }>({});
 
-  // נתוני עמלות לפי חברה
-  const companyRates = {
-    'harel': { scopeRate: 7000, monthlyRate: 0.0003 },
-    'migdal': { scopeRate: 7000, monthlyRate: 0.0003 },
-    'clal': { scopeRate: 7000, monthlyRate: 0.0003 },
-    'phoenix': { scopeRate: 7000, monthlyRate: 0.0003 },
-    'menora': { scopeRate: 7000, monthlyRate: 0.0003 },
-    'ayalon': { scopeRate: 7000, monthlyRate: 0.0003 }
+  useEffect(() => {
+    loadCompanyRates();
+  }, []);
+
+  const loadCompanyRates = async () => {
+    const rates = await getCompanyRates('policy');
+    setCompanyRates(rates);
   };
 
   const fields = [
@@ -49,15 +50,21 @@ const PolicyCalculator: React.FC = () => {
   };
 
   const calculateMonthlyCommission = (amount: number, monthlyRate: number) => {
-    return amount * (monthlyRate / 100);
+    return amount * monthlyRate;
   };
 
   const handleSubmit = (data: any) => {
     const amount = Number(data.depositAmount) || 0;
-    const { scopeRate, monthlyRate } = companyRates[data.company as keyof typeof companyRates];
     
-    const scopeCommission = calculateScopeCommission(amount, scopeRate);
-    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate * 100);
+    // Get rates from agent agreements
+    const companyRate = companyRates[data.company];
+    if (!companyRate?.active) {
+      toast.error('החברה לא פעילה בהסכמי הסוכן');
+      return;
+    }
+
+    const scopeCommission = calculateScopeCommission(amount, companyRate.scope_rate_per_million);
+    const monthlyCommission = calculateMonthlyCommission(amount, companyRate.monthly_rate);
     
     const newClient: PolicyClient = {
       date: new Date().toLocaleDateString('he-IL'),
