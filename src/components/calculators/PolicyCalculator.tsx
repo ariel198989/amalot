@@ -30,9 +30,7 @@ const PolicyCalculator: React.FC = () => {
         { value: 'ayalon', label: 'איילון' }
       ]
     },
-    { name: 'depositAmount', label: 'סכום ההפקדה', type: 'number', required: true },
-    { name: 'scopeRate', label: 'עמלת היקף למיליון', type: 'number', required: true, defaultValue: 7000 },
-    { name: 'monthlyRate', label: 'אחוז עמלת נפרעים', type: 'number', required: true, defaultValue: 0.03, step: 0.01 }
+    { name: 'depositAmount', label: 'סכום ההפקדה', type: 'number', required: true }
   ];
 
   const columns = [
@@ -56,11 +54,10 @@ const PolicyCalculator: React.FC = () => {
 
   const handleSubmit = (data: any) => {
     const amount = Number(data.depositAmount) || 0;
-    const scopeRate = Number(data.scopeRate) || 7000;
-    const monthlyRate = Number(data.monthlyRate) || 0.03;
+    const { scopeRate, monthlyRate } = companyRates[data.company as keyof typeof companyRates];
     
     const scopeCommission = calculateScopeCommission(amount, scopeRate);
-    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate);
+    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate * 100);
     
     const newClient: PolicyClient = {
       date: new Date().toLocaleDateString('he-IL'),

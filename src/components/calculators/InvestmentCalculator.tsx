@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
-import { InvestmentClient } from '../../types/calculators';
+import { InvestmentClient, COMPANY_RATES } from '../../types/calculators';
 import { toast } from 'react-hot-toast';
 
 const InvestmentCalculator: React.FC = () => {
@@ -20,9 +20,7 @@ const InvestmentCalculator: React.FC = () => {
         { value: 'yelin', label: 'ילין לפידות' }
       ]
     },
-    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true },
-    { name: 'scopeRate', label: 'עמלת היקף למיליון', type: 'number', required: true, defaultValue: 6000 },
-    { name: 'monthlyRate', label: 'אחוז עמלת נפרעים', type: 'number', required: true, defaultValue: 0.025, step: 0.001 }
+    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true }
   ];
 
   const columns = [
@@ -44,11 +42,10 @@ const InvestmentCalculator: React.FC = () => {
 
   const handleSubmit = (data: any) => {
     const amount = Number(data.amount) || 0;
-    const scopeRate = Number(data.scopeRate) || 6000;
-    const monthlyRate = Number(data.monthlyRate) || 0.025;
+    const { scopeRate, monthlyRate } = COMPANY_RATES[data.company as keyof typeof COMPANY_RATES];
     
     const scopeCommission = calculateScopeCommission(amount, scopeRate);
-    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate);
+    const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate * 100);
     
     const newClient: InvestmentClient = {
       date: new Date().toLocaleDateString('he-IL'),
@@ -133,7 +130,7 @@ const InvestmentCalculator: React.FC = () => {
       <CalculatorForm
         onSubmit={handleSubmit}
         fields={fields}
-        title="מחשבון עמלות גמל והשתלמות"
+        title="מחשבון עמלות השקעות"
       />
       <ResultsTable
         data={clients}

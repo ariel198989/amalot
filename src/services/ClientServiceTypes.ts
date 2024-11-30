@@ -26,8 +26,8 @@ export interface GemelStudyFundClient {
   productType: 'study' | 'pension';
   date: string;
   amount: number;
-  scopeRate: number;
-  monthlyRate: number;
+  scopeRate?: number;
+  monthlyRate?: number;
   scopeCommission: number;
   monthlyCommission: number;
 }

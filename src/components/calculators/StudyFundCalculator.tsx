@@ -26,9 +26,7 @@ const StudyFundCalculator: React.FC = () => {
         { value: 'pension', label: 'קופת גמל' }
       ]
     },
-    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true },
-    { name: 'scopeRate', label: 'עמלת היקף למיליון', type: 'number', required: true, defaultValue: 6000 },
-    { name: 'monthlyRate', label: 'אחוז עמלת נפרעים', type: 'number', required: true, defaultValue: 0.025, step: 0.001 }
+    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true }
   ];
 
   const columns = [
@@ -51,8 +49,35 @@ const StudyFundCalculator: React.FC = () => {
 
   const handleSubmit = (data: any) => {
     const amount = Number(data.amount) || 0;
-    const scopeRate = Number(data.scopeRate) || 6000;
-    const monthlyRate = Number(data.monthlyRate) || 0.025;
+    
+    const agentAgreements = {
+      harel: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      },
+      migdal: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      },
+      clal: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      },
+      phoenix: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      },
+      more: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      },
+      yelin: {
+        study: { scopeRate: 6000, monthlyRate: 0.025 },
+        pension: { scopeRate: 6000, monthlyRate: 0.025 }
+      }
+    };
+    
+    const { scopeRate, monthlyRate } = agentAgreements[data.company as keyof typeof agentAgreements][data.productType as 'study' | 'pension'];
     
     const scopeCommission = calculateScopeCommission(amount, scopeRate);
     const monthlyCommission = calculateMonthlyCommission(amount, monthlyRate);
@@ -63,8 +88,6 @@ const StudyFundCalculator: React.FC = () => {
       company: data.company,
       productType: data.productType,
       amount: amount,
-      scopeRate: scopeRate,
-      monthlyRate: monthlyRate,
       scopeCommission: scopeCommission,
       monthlyCommission: monthlyCommission
     };
