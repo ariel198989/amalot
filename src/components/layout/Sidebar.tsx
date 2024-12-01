@@ -87,7 +87,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) => {
         className={`
           fixed top-0 right-0 h-full w-72 
           bg-white shadow-xl 
-          transform transition-transform duration-150 ease-out
+          transform transition-all duration-100 ease-in
+          will-change-transform
           z-50
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -98,14 +99,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) => {
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="hover:bg-gray-100"
+            className="hover:bg-gray-100 transition-none"
           >
             <X className="h-6 w-6 text-gray-600" />
           </Button>
         </div>
 
         {/* Sidebar Content */}
-        <div className="flex flex-col h-full p-6">
+        <div className="flex flex-col h-full p-6 overscroll-none">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-blue-100 rounded-xl">

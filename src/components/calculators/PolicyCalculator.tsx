@@ -87,7 +87,7 @@ const PolicyCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת נפרעים חודשית\n";
+    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת היקף על הצבירה\n";
     
     clients.forEach((client) => {
       const row = [
@@ -123,7 +123,7 @@ const PolicyCalculator: React.FC = () => {
       message += `   תאריך: ${client.date}\n`;
       message += `   סכום הפקדה: ${client.depositAmount.toLocaleString()} ₪\n`;
       message += `   עמלת היקף: ${client.oneTimeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת נפרעים חודשית: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
+      message += `   עמלת היקף על הצבירה: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
     });
     
     const encodedMessage = encodeURIComponent(message);

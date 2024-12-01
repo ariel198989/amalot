@@ -99,7 +99,7 @@ const StudyFundCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברת ניהול,סוג מוצר,סכום הניוד,עמלת היקף,עמלת נפרעים חודשית\n";
+    csvContent += "תאריך,שם הלקוח,חברת ניהול,סוג מוצר,סכום הניוד,עמלת היקף,עמלת היקף על הצבירה\n";
     
     clients.forEach((client) => {
       const row = [
@@ -159,23 +159,23 @@ const StudyFundCalculator: React.FC = () => {
       message += `   תאריך: ${client.date}\n`;
       message += `   סכום ניוד: ${client.amount.toLocaleString()} ₪\n`;
       message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
+      message += `   עמלת היקף על הצבירה: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
     });
 
     message += "\nסיכום קרנות השתלמות:\n";
     message += `סך ניודים: ${studyFundTotal.amount.toLocaleString()} ₪\n`;
     message += `סך עמלות היקף: ${studyFundTotal.scope.toLocaleString()} ₪\n`;
-    message += `סך עמלות נפרעים: ${studyFundTotal.monthly.toLocaleString()} ₪\n\n`;
+    message += `סך עמלות היקף על הצבירה: ${studyFundTotal.monthly.toLocaleString()} ₪\n\n`;
 
     message += "סיכום קופות גמל:\n";
     message += `סך ניודים: ${pensionTotal.amount.toLocaleString()} ₪\n`;
     message += `סך עמלות היקף: ${pensionTotal.scope.toLocaleString()} ₪\n`;
-    message += `סך עמלות נפרעים: ${pensionTotal.monthly.toLocaleString()} ₪\n\n`;
+    message += `סך עמלות היקף על הצבירה: ${pensionTotal.monthly.toLocaleString()} ₪\n\n`;
 
     message += "סיכום כללי:\n";
     message += `סך כל הניודים: ${totalAmount.toLocaleString()} ₪\n`;
     message += `סך כל עמלות היקף: ${totalScopeCommission.toLocaleString()} ₪\n`;
-    message += `סך כל עמלות נפרעים: ${totalMonthlyCommission.toLocaleString()} ₪\n`;
+    message += `סך כל עמלות היקף על הצבירה: ${totalMonthlyCommission.toLocaleString()} ₪\n`;
     
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');

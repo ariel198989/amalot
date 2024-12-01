@@ -269,7 +269,7 @@ const CustomerJourneyComponent: React.FC = () => {
       }
     }},
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'עמלת נפרעים', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת היקף על הצבירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
@@ -479,7 +479,7 @@ const CustomerJourneyComponent: React.FC = () => {
                                       <span>₪{summary.scopeCommission.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-muted-foreground">עמלת נפרעים:</span>
+                                      <span className="text-muted-foreground">עמלת היקף על הצבירה:</span>
                                       <span>₪{summary.monthlyCommission.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between font-medium pt-2 border-t">
@@ -500,7 +500,7 @@ const CustomerJourneyComponent: React.FC = () => {
                               <div className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</div>
                             </div>
                             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                              <div className="text-muted-foreground text-sm mb-2">סה"כ עמלות נפרעים</div>
+                              <div className="text-muted-foreground text-sm mb-2">סה"כ עמלות היקף על הצבירה</div>
                               <div className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</div>
                             </div>
                             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
