@@ -201,6 +201,8 @@ const CustomerJourneyComponent: React.FC = () => {
   const handleSubmit = async (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy', data: any) => {
     try {
       let commissions;
+      let nifraim = 0;
+      let scope_commission = 0;
       
       switch (type) {
         case 'pension':
@@ -212,10 +214,39 @@ const CustomerJourneyComponent: React.FC = () => {
           commissions = await calculateCommissions(type, data.company, annualContribution, accumulation);
           break;
 
-        case 'insurance':
+        case 'insurance': {
           const premium = Number(data.insurancePremium);
-          commissions = await calculateCommissions(type, data.company, premium);
+          const annualPremium = premium * 12;
+          
+          // Get rates from agent agreements
+          const rates = await getCompanyRates(type, data.company);
+          if (!rates) {
+            toast.error('לא נמצאו נתוני עמלות לחברה זו');
+            return;
+          }
+
+          // Calculate scope commission (65% of annual premium)
+          scope_commission = annualPremium * 0.65;
+          
+          // Calculate nifraim (25% of monthly premium)
+          nifraim = premium * 0.25;
+          
+          // Set commissions object
+          commissions = {
+            scope_commission,
+            monthly_commission: nifraim
+          };
+
+          console.log('Insurance calculations:', {
+            premium,
+            annualPremium,
+            scope_commission,
+            nifraim,
+            total: scope_commission + (nifraim * 12)
+          });
+
           break;
+        }
 
         case 'savings_and_study':
         case 'policy':
@@ -271,10 +302,9 @@ const CustomerJourneyComponent: React.FC = () => {
             premium: Number(data.insurancePremium),
             insurance_type: data.insuranceType || 'general',
             payment_method: data.paymentMethod || 'monthly',
-            nifraim: commissions.nifraim || 0,
-            scope_commission: commissions.scope_commission,
-            monthly_commission: commissions.monthly_commission,
-            total_commission: commissions.scope_commission + commissions.monthly_commission
+            nifraim, // Monthly nifraim amount (25% of monthly premium)
+            scope_commission: commissions.scope_commission, // 65% of annual premium
+            total_commission: commissions.scope_commission + (nifraim * 12)
           });
 
           if (error) throw error;
@@ -372,7 +402,7 @@ const CustomerJourneyComponent: React.FC = () => {
       }
     }},
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'עמלת היקף על הצבירה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת היקף על הצירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 

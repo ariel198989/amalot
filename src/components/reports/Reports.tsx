@@ -489,7 +489,7 @@ const Reports: React.FC = () => {
         <TabsContent value="pension">
           <Card>
             <CardHeader>
-              <CardTitle>מכ��רות פנסיה</CardTitle>
+              <CardTitle>מכרות פנסיה</CardTitle>
               <CardDescription>כל מכירות הפנסיה שלך במקום אחד</CardDescription>
             </CardHeader>
             <CardContent>
