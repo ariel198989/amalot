@@ -50,11 +50,20 @@ export interface InvestmentProduct extends BaseProduct {
   investment_period: number;
   investment_type: string;
   scope_commission: number;
+  nifraim: number;
 }
 
 export interface InvestmentCommission {
-  scopeCommission: number;
-  totalCommission: number;
+  scope_commission: number;
+  nifraim: number;
+  total_commission: number;
+}
+
+// Investment rates interface
+export interface InvestmentRates {
+  scope_rate_per_million: number;
+  nifraim_rate_per_million: number;
+  active: boolean;
 }
 
 // Policy specific interfaces

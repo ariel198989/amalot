@@ -231,24 +231,45 @@ const CustomerJourneyComponent: React.FC = () => {
           // Calculate nifraim (25% of monthly premium)
           nifraim = premium * 0.25;
           
-          // Set commissions object
+          commissions = {
+            scope_commission,
+            monthly_commission: nifraim
+          };
+          break;
+        }
+
+        case 'savings_and_study': {
+          const amount = Number(data.investmentAmount);
+          const millionsInAmount = amount / 1000000;
+
+          // Get rates from agent agreements
+          const rates = await getCompanyRates(type, data.company);
+          if (!rates) {
+            toast.error('לא נמצאו נתוני עמלות לחברה זו');
+            return;
+          }
+
+          // Calculate scope commission (e.g., 6000 per million)
+          scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
+          
+          // Calculate monthly nifraim (e.g., 250 per million)
+          nifraim = millionsInAmount * (rates.nifraim_rate_per_million || 0);
+          
           commissions = {
             scope_commission,
             monthly_commission: nifraim
           };
 
-          console.log('Insurance calculations:', {
-            premium,
-            annualPremium,
+          console.log('Investment calculations:', {
+            amount,
+            millionsInAmount,
             scope_commission,
             nifraim,
             total: scope_commission + (nifraim * 12)
           });
-
           break;
         }
 
-        case 'savings_and_study':
         case 'policy':
           const amount = Number(data.investmentAmount);
           commissions = await calculateCommissions(type, data.company, amount);
@@ -281,7 +302,7 @@ const CustomerJourneyComponent: React.FC = () => {
             date,
             salary: Number(data.pensionSalary),
             accumulation: Number(data.pensionAccumulation),
-            provision: Number(data.pensionContribution) * 100, // Convert to percentage
+            provision: Number(data.pensionContribution) * 100,
             scope_commission: commissions.scope_commission,
             monthly_commission: commissions.monthly_commission,
             total_commission: commissions.scope_commission + commissions.monthly_commission
@@ -302,8 +323,8 @@ const CustomerJourneyComponent: React.FC = () => {
             premium: Number(data.insurancePremium),
             insurance_type: data.insuranceType || 'general',
             payment_method: data.paymentMethod || 'monthly',
-            nifraim, // Monthly nifraim amount (25% of monthly premium)
-            scope_commission: commissions.scope_commission, // 65% of annual premium
+            nifraim,
+            scope_commission: commissions.scope_commission,
             total_commission: commissions.scope_commission + (nifraim * 12)
           });
 
@@ -322,8 +343,9 @@ const CustomerJourneyComponent: React.FC = () => {
             investment_amount: Number(data.investmentAmount),
             investment_period: data.investmentPeriod || 12,
             investment_type: data.investmentType || 'general',
-            scope_commission: commissions.scope_commission,
-            total_commission: commissions.scope_commission
+            nifraim, // Monthly nifraim amount
+            scope_commission: commissions.scope_commission, // One-time scope commission
+            total_commission: commissions.scope_commission + (nifraim * 12)
           });
 
           if (error) throw error;

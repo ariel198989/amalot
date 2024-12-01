@@ -14,7 +14,8 @@ import {
   PiggyBank,
   Wallet,
   Search,
-  ArrowUpRight
+  ArrowUpRight,
+  Printer
 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -27,6 +28,133 @@ import {
   InvestmentProduct, 
   PolicyProduct 
 } from '../calculators/CustomerJourneyTypes';
+import ReactDOM from 'react-dom';
+
+const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('he-IL', {
+      style: 'currency',
+      currency: 'ILS',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="print-container" dir="rtl">
+      <div className="no-print mb-4">
+        <Button onClick={handlePrint} className="flex items-center gap-2">
+          <Printer className="w-4 h-4" />
+          הדפס דוח
+        </Button>
+      </div>
+
+      <div className="print-content">
+        <div className="print-header">
+          <h1>דוח מכירות חודשי</h1>
+          <p>{new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</p>
+        </div>
+
+        <div className="summary-cards">
+          <div className="summary-card">
+            <h3>סה"כ מכירות</h3>
+            <div className="value">{data.total.count}</div>
+          </div>
+          <div className="summary-card">
+            <h3>סה"כ עמלות</h3>
+            <div className="value">{formatCurrency(data.total.commission)}</div>
+          </div>
+          <div className="summary-card">
+            <h3>עמלה ממוצעת</h3>
+            <div className="value">
+              {formatCurrency(data.total.count ? data.total.commission / data.total.count : 0)}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div className="card">
+            <h2>מכירות פנסיה</h2>
+            <div className="description">סה"כ: {formatCurrency(data.total.pension.commission)}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>חברה</th>
+                  <th>מספר מכירות</th>
+                  <th>עמלות</th>
+                  <th>עמלה ממוצעת</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(data.byCompany?.pension || {}).map(([company, stats]: [string, any]) => (
+                  <tr key={company}>
+                    <td>{company}</td>
+                    <td>{stats.count}</td>
+                    <td className="amount">{formatCurrency(stats.commission)}</td>
+                    <td className="amount">{formatCurrency(stats.count ? stats.commission / stats.count : 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h2>מכירות ביטוח</h2>
+            <div className="description">סה"כ: {formatCurrency(data.total.insurance.commission)}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>חברה</th>
+                  <th>מספר מכירות</th>
+                  <th>עמלות</th>
+                  <th>נפרעים</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(data.byCompany?.insurance || {}).map(([company, stats]: [string, any]) => (
+                  <tr key={company}>
+                    <td>{company}</td>
+                    <td>{stats.count}</td>
+                    <td className="amount">{formatCurrency(stats.commission)}</td>
+                    <td className="amount">{formatCurrency(stats.nifraim || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h2>מכירות השקעות</h2>
+            <div className="description">סה"כ: {formatCurrency(data.total.investment.commission)}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>חברה</th>
+                  <th>מספר מכירות</th>
+                  <th>סכום השקעה</th>
+                  <th>עמלות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(data.byCompany?.investment || {}).map(([company, stats]: [string, any]) => (
+                  <tr key={company}>
+                    <td>{company}</td>
+                    <td>{stats.count}</td>
+                    <td className="amount">{formatCurrency(stats.total_amount || 0)}</td>
+                    <td className="amount">{formatCurrency(stats.commission)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Reports: React.FC = () => {
   const [pensionSales, setPensionSales] = React.useState<PensionProduct[]>([]);
@@ -293,6 +421,7 @@ const Reports: React.FC = () => {
             <tr>
               <th className="p-3 text-right font-medium">סה"כ עמלה</th>
               <th className="p-3 text-right font-medium">עמלת היקף</th>
+              <th className="p-3 text-right font-medium">נפרעים</th>
               <th className="p-3 text-right font-medium">סכום השקעה</th>
               <th className="p-3 text-right font-medium">תקופת השקעה</th>
               <th className="p-3 text-right font-medium">סוג השקעה</th>
@@ -304,7 +433,7 @@ const Reports: React.FC = () => {
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                <td colSpan={9} className="text-center p-8 text-muted-foreground">
                   לא נמצאו תוצאות
                 </td>
               </tr>
@@ -313,6 +442,7 @@ const Reports: React.FC = () => {
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
                   <td className="p-3 font-medium">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3">{formatCurrency(sale.scope_commission)}</td>
+                  <td className="p-3">{formatCurrency(sale.nifraim)}</td>
                   <td className="p-3">{formatCurrency(sale.investment_amount)}</td>
                   <td className="p-3">{sale.investment_period} חודשים</td>
                   <td className="p-3">{sale.investment_type}</td>
@@ -534,8 +664,91 @@ const Reports: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Monthly Report Button */}
+      <div className="mb-4">
+        <Button 
+          onClick={() => {
+            const reportWindow = window.open('', '_blank');
+            if (reportWindow) {
+              reportWindow.document.write(`
+                <html dir="rtl">
+                  <head>
+                    <title>דוח חודשי</title>
+                    <style>
+                      @media print {
+                        .no-print { display: none; }
+                        .print-content { padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 8px; text-align: right; border-bottom: 1px solid #ddd; }
+                        .card { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; }
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div id="report"></div>
+                  </body>
+                </html>
+              `);
+              // Render the report in the new window
+              const reportData = {
+                total: {
+                  count: pensionSales.length + insuranceSales.length + investmentSales.length + policySales.length,
+                  commission: calculateTotalRevenue(),
+                  pension: {
+                    count: pensionSales.length,
+                    commission: pensionSales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0)
+                  },
+                  insurance: {
+                    count: insuranceSales.length,
+                    commission: insuranceSales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0)
+                  },
+                  investment: {
+                    count: investmentSales.length,
+                    commission: investmentSales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0)
+                  }
+                },
+                byCompany: {
+                  pension: groupByCompany(pensionSales),
+                  insurance: groupByCompany(insuranceSales),
+                  investment: groupByCompany(investmentSales)
+                }
+              };
+              
+              ReactDOM.render(
+                <MonthlyReport data={reportData} />,
+                reportWindow.document.getElementById('report')
+              );
+            }
+          }}
+          className="flex items-center gap-2"
+        >
+          <FileText className="w-4 h-4" />
+          הפק דוח חודשי
+        </Button>
+      </div>
     </div>
   );
+};
+
+// Helper function to group sales by company
+const groupByCompany = (sales: any[]) => {
+  return sales.reduce((acc, sale) => {
+    const company = sale.company;
+    if (!acc[company]) {
+      acc[company] = {
+        count: 0,
+        commission: 0,
+        nifraim: 0,
+        total_amount: 0
+      };
+    }
+    acc[company].count++;
+    acc[company].commission += sale.total_commission || 0;
+    acc[company].nifraim += sale.nifraim || 0;
+    acc[company].total_amount += sale.investment_amount || sale.premium || 0;
+    return acc;
+  }, {});
 };
 
 export default Reports;

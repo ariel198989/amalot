@@ -120,17 +120,24 @@ export const calculateCommissions = async (
       case 'insurance':
         // עמלת היקף על פרמיה שנתית
         scope_commission = amount * 12 * (rates.scope_rate || 0);
-        // עמלת נפרעים על פרמיה חודשית (מחושב לשנה אחת)
-        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
+        // עמלת נפרעים על פרמיה חודשית
+        monthly_commission = amount * (rates.monthly_rate || 0);
         break;
 
       case 'savings_and_study':
-      case 'policy':
-        // עמלת היקף לפי מיליונים
+        // חישוב לפי מיליונים
         const millionsInAmount = amount / 1000000;
+        // עמלת היקף - סכום קבוע למיליון (למשל 6000 ש"ח למיליון)
         scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
-        // עמלת נפרעים לפי אחוז מהסכום (מחושב לשנה אחת)
-        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
+        // נפרעים - סכום קבוע למיליון (למשל 250 ש"ח למיליון לחודש)
+        monthly_commission = millionsInAmount * (rates.monthly_rate_per_million || 0);
+        break;
+
+      case 'policy':
+        // חישוב לפי מיליונים
+        const millionsInPolicy = amount / 1000000;
+        scope_commission = millionsInPolicy * (rates.scope_rate_per_million || 0);
+        monthly_commission = millionsInPolicy * (rates.monthly_rate_per_million || 0);
         break;
     }
 

@@ -39,7 +39,41 @@ export default function ModernAnalyticsDashboard() {
     try {
       setIsLoading(true);
       const dashboardStats = await reportService.fetchDashboardStats();
-      setStats(dashboardStats);
+      
+      // Transform the data into the expected format
+      const transformedStats: DashboardStats = {
+        totalSales: dashboardStats.total.count || 0,
+        totalCommission: dashboardStats.total.commission || 0,
+        monthlySales: [],
+        productDistribution: [
+          {
+            type: 'pension',
+            count: dashboardStats.total.pension.count || 0,
+            commission: dashboardStats.total.pension.commission || 0,
+            details: []
+          },
+          {
+            type: 'insurance',
+            count: dashboardStats.total.insurance.count || 0,
+            commission: dashboardStats.total.insurance.commission || 0,
+            details: []
+          },
+          {
+            type: 'investment',
+            count: dashboardStats.total.investment.count || 0,
+            commission: dashboardStats.total.investment.commission || 0,
+            details: []
+          },
+          {
+            type: 'policy',
+            count: dashboardStats.total.policy.count || 0,
+            commission: dashboardStats.total.policy.commission || 0,
+            details: []
+          }
+        ]
+      };
+
+      setStats(transformedStats);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('שגיאה בטעינת נתוני הדשבורד');
@@ -48,60 +82,72 @@ export default function ModernAnalyticsDashboard() {
     }
   };
 
-  if (isLoading) {
-    return <div>טוען...</div>;
+  if (isLoading || !stats) {
+    return <div className="flex items-center justify-center h-screen">
+      <div className="text-lg">טוען נתונים...</div>
+    </div>;
   }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('he-IL', {
+      style: 'currency',
+      currency: 'ILS',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
   const kpiData = [
     { 
       title: 'סה"כ הכנסות', 
-      value: `₪${stats?.totalCommission.toLocaleString() || 0}`, 
+      value: formatCurrency(stats.totalCommission), 
       change: '+14.5%',
-      trend: stats?.monthlySales.slice(-6).map(sale => sale.totalCommission) || [],
+      trend: [0, 0, 0, 0, 0, stats.totalCommission],
       icon: DollarSign,
       color: 'bg-green-500',
       description: 'הכנסות מכל המוצרים'
     },
     { 
       title: 'סה"כ מכירות', 
-      value: stats?.totalSales.toString() || '0', 
+      value: stats.totalSales.toString(), 
       change: '+5.2%',
-      trend: stats?.monthlySales.slice(-6).map(sale => sale.count) || [],
+      trend: [0, 0, 0, 0, 0, stats.totalSales],
       icon: Users,
       color: 'bg-blue-500',
       description: 'סך כל המכירות'
     },
     { 
-      title: 'אחוז המרה', 
-      value: '3.24%', 
-      change: '+2.1%', 
-      trend: [2, 3, 2, 4, 3, 5],
-      icon: Target,
-      color: 'bg-purple-500',
-      description: 'יחס המרה מפגישות לסגירות'
-    },
-    { 
-      title: 'עמלות ממוצעות', 
-      value: '₪2,956', 
+      title: 'עמלה ממוצעת', 
+      value: formatCurrency(stats.totalSales ? stats.totalCommission / stats.totalSales : 0), 
       change: '+0.5%', 
-      trend: [4, 3, 5, 4, 5, 6],
+      trend: [0, 0, 0, 0, 0, stats.totalSales ? stats.totalCommission / stats.totalSales : 0],
       icon: Activity,
       color: 'bg-orange-500',
-      description: 'עמלות חודשיות ממוצעות'
+      description: 'עמלה ממוצעת למכירה'
+    },
+    { 
+      title: 'מכירות החודש', 
+      value: stats.productDistribution.reduce((sum, product) => sum + product.count, 0).toString(), 
+      change: '+2.1%', 
+      trend: stats.productDistribution.map(product => product.count),
+      icon: Target,
+      color: 'bg-purple-500',
+      description: 'מכירות בחודש הנוכחי'
     },
   ];
 
-  const monthlyData = stats?.monthlySales.map(sale => ({
-    name: new Date(sale.month).toLocaleDateString('he-IL', { month: 'short' }),
-    revenue: sale.totalRevenue,
-    commissions: sale.totalCommission
-  })) || [];
+  const monthlyData = [
+    {
+      name: 'החודש',
+      revenue: stats.totalCommission,
+      commissions: stats.totalCommission
+    }
+  ];
 
-  const productData = stats?.productDistribution.map(product => ({
+  const productData = stats.productDistribution.map(product => ({
     name: getProductHebrewName(product.type),
     value: product.count,
     color: getProductColor(product.type)
-  })) || [];
+  }));
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">

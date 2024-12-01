@@ -1,33 +1,52 @@
 export interface CompanyRates {
-  scope_rate: number;  // עמלת היקף על הפקדה
-  monthly_rate: number;  // עמלת היקף על הצבירה
-  scope_rate_per_million?: number;  // עמלת היקף למיליון
   active: boolean;
+  // For pension
+  scope_rate?: number; // Percentage
+  monthly_rate?: number; // Percentage
+  scope_rate_per_million?: number; // Amount per million
+
+  // For investments (savings and study)
+  scope_rate_per_million?: number; // Amount per million (e.g., 6000)
+  monthly_rate_per_million?: number; // Amount per million (e.g., 250)
 }
 
 export interface AgentRates {
   id?: string;
-  user_id?: string;
+  user_id: string;
+  
+  // Pension companies rates
   pension_companies: {
     [company: string]: CompanyRates;
   };
-  savings_and_study_companies: {
-    [company: string]: CompanyRates;
-  };
-  policy_companies: {
-    [company: string]: CompanyRates;
-  };
+
+  // Insurance companies rates
   insurance_companies: {
     [company: string]: {
       active: boolean;
       products: {
-        risk: { one_time_rate: number; monthly_rate: number; };  // עמלת היקף על הפקדה, עמלת היקף על הצבירה
-        mortgage_risk: { one_time_rate: number; monthly_rate: number; };
-        health: { one_time_rate: number; monthly_rate: number; };
-        critical_illness: { one_time_rate: number; monthly_rate: number; };
-        service_letter: { one_time_rate: number; monthly_rate: number; };
-        disability: { one_time_rate: number; monthly_rate: number; };
+        risk: {
+          one_time_rate: number; // 65%
+          monthly_rate: number; // 25%
+        };
       };
+    };
+  };
+
+  // Savings and study companies rates
+  savings_and_study_companies: {
+    [company: string]: {
+      active: boolean;
+      scope_rate_per_million: number; // Amount per million (e.g., 6000)
+      monthly_rate_per_million: number; // Amount per million (e.g., 250)
+    };
+  };
+
+  // Policy companies rates
+  policy_companies: {
+    [company: string]: {
+      active: boolean;
+      scope_rate_per_million: number; // Amount per million
+      monthly_rate_per_million: number; // Amount per million
     };
   };
 }

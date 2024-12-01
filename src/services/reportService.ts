@@ -154,5 +154,85 @@ export const reportService = {
       investmentSales: investmentSales || [],
       policySales: policySales || []
     };
+  },
+
+  async fetchDashboardStats() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // Get all sales data
+      const [
+        { data: pensionSales },
+        { data: insuranceSales },
+        { data: investmentSales },
+        { data: policySales }
+      ] = await Promise.all([
+        supabase.from('pension_sales').select('*').eq('user_id', user.id),
+        supabase.from('insurance_sales').select('*').eq('user_id', user.id),
+        supabase.from('investment_sales').select('*').eq('user_id', user.id),
+        supabase.from('policy_sales').select('*').eq('user_id', user.id)
+      ]);
+
+      // Calculate totals
+      const calculateTotal = (sales: any[] | null) => {
+        if (!sales) return { count: 0, commission: 0 };
+        return {
+          count: sales.length,
+          commission: sales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0)
+        };
+      };
+
+      // Get current month's data
+      const currentDate = new Date();
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString();
+
+      const filterCurrentMonth = (sales: any[] | null) => {
+        if (!sales) return [];
+        return sales.filter(sale => {
+          const saleDate = new Date(sale.date);
+          return saleDate >= new Date(startOfMonth) && saleDate <= new Date(endOfMonth);
+        });
+      };
+
+      // Calculate stats
+      const pensionStats = calculateTotal(pensionSales);
+      const insuranceStats = calculateTotal(insuranceSales);
+      const investmentStats = calculateTotal(investmentSales);
+      const policyStats = calculateTotal(policySales);
+
+      // Calculate current month stats
+      const currentMonthPensionStats = calculateTotal(filterCurrentMonth(pensionSales));
+      const currentMonthInsuranceStats = calculateTotal(filterCurrentMonth(insuranceSales));
+      const currentMonthInvestmentStats = calculateTotal(filterCurrentMonth(investmentSales));
+      const currentMonthPolicyStats = calculateTotal(filterCurrentMonth(policySales));
+
+      return {
+        total: {
+          pension: pensionStats,
+          insurance: insuranceStats,
+          investment: investmentStats,
+          policy: policyStats,
+          commission: pensionStats.commission + insuranceStats.commission + 
+                     investmentStats.commission + policyStats.commission,
+          count: pensionStats.count + insuranceStats.count + 
+                 investmentStats.count + policyStats.count
+        },
+        currentMonth: {
+          pension: currentMonthPensionStats,
+          insurance: currentMonthInsuranceStats,
+          investment: currentMonthInvestmentStats,
+          policy: currentMonthPolicyStats,
+          commission: currentMonthPensionStats.commission + currentMonthInsuranceStats.commission + 
+                     currentMonthInvestmentStats.commission + currentMonthPolicyStats.commission,
+          count: currentMonthPensionStats.count + currentMonthInsuranceStats.count + 
+                 currentMonthInvestmentStats.count + currentMonthPolicyStats.count
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      throw error;
+    }
   }
 }; 
