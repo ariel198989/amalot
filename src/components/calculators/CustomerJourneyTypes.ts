@@ -1,80 +1,76 @@
-// Types for CustomerJourney component
-
-export interface ProductDetails {
-  pension?: {
-    salary: number;
-    accumulation: number;
-    provision: number;
-  };
-  insurance?: {
-    premium: number;
-  };
-  investment?: {
-    amount: number;
-  };
-  policy?: {
-    amount: number;
-  };
-}
-
-export interface CommissionResult {
-  scopeCommission: number;
-  monthlyCommission?: number;
-  accumulationCommission?: number;
-  annualCommission?: number;
-  oneTimeCommission?: number;
-  totalCommission: number;
-  contributionRate?: number;
-}
-
-export interface ProductSelection {
-  id: string;
-  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy';
+// Base interfaces for all products
+export interface BaseProduct {
+  id?: string;
+  user_id: string;
+  journey_id?: string;
+  client_name: string;
+  client_phone?: string;
   company: string;
-  details: ProductDetails;
-  commissions?: CommissionResult;
+  date: string;
+  created_at?: string;
+  updated_at?: string;
+  total_commission: number;
 }
 
-export interface CompanySelection {
-  pension: string[];
-  insurance: string[];
-  investment: string[];
-  policy: string[];
+// Pension specific interfaces
+export interface PensionProduct extends BaseProduct {
+  salary: number;
+  accumulation: number;
+  provision: number;
+  scope_commission: number;
+  monthly_commission: number;
 }
 
-export interface CommissionDetails {
-  pension: {
-    companies: Record<string, {
-      scopeCommission: number;
-      accumulationCommission: number;
-      totalCommission: number;
-    }>;
-    total: number;
-  };
-  insurance: {
-    companies: Record<string, {
-      oneTimeCommission: number;
-      monthlyCommission: number;
-      totalCommission: number;
-    }>;
-    total: number;
-  };
-  investment: {
-    companies: Record<string, {
-      scopeCommission: number;
-      totalCommission: number;
-    }>;
-    total: number;
-  };
-  policy: {
-    companies: Record<string, {
-      scopeCommission: number;
-      totalCommission: number;
-    }>;
-    total: number;
-  };
+export interface PensionCommission {
+  scopeCommission: number;
+  monthlyCommission: number;
+  totalCommission: number;
 }
 
+// Insurance specific interfaces
+export interface InsuranceProduct extends BaseProduct {
+  premium: number;
+  insurance_type: string;
+  payment_method: string;
+  nifraim: number;
+  scope_commission: number;
+  monthly_commission: number;
+}
+
+export interface InsuranceCommission {
+  nifraim: number;
+  scopeCommission: number;
+  monthlyCommission: number;
+  totalCommission: number;
+}
+
+// Investment specific interfaces
+export interface InvestmentProduct extends BaseProduct {
+  investment_amount: number;
+  investment_period: number;
+  investment_type: string;
+  scope_commission: number;
+}
+
+export interface InvestmentCommission {
+  scopeCommission: number;
+  totalCommission: number;
+}
+
+// Policy specific interfaces
+export interface PolicyProduct extends BaseProduct {
+  policy_amount: number;
+  policy_period: number;
+  policy_type: string;
+  scope_commission: number;
+}
+
+export interface PolicyCommission {
+  scopeCommission: number;
+  totalCommission: number;
+}
+
+// Customer Journey interfaces
 export interface CustomerJourney {
   id?: string;
   user_id: string;
@@ -82,18 +78,33 @@ export interface CustomerJourney {
   date: string;
   client_name: string;
   client_phone?: string;
-  selected_products: string[];
-  selected_companies: {
-    pension: string[];
-    insurance: string[];
-    investment: string[];
-    policy: string[];
-  };
-  commission_details: CommissionDetails;
-  details?: ProductDetails;
+  selected_products: Array<{
+    type: 'pension' | 'insurance' | 'investment' | 'policy';
+    company: string;
+    details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+  }>;
   total_commission: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CommissionDetails {
+  pension: {
+    companies: Record<string, PensionCommission>;
+    total: number;
+  };
+  insurance: {
+    companies: Record<string, InsuranceCommission>;
+    total: number;
+  };
+  investment: {
+    companies: Record<string, InvestmentCommission>;
+    total: number;
+  };
+  policy: {
+    companies: Record<string, PolicyCommission>;
+    total: number;
+  };
 }
 
 export interface FormData {
@@ -108,49 +119,12 @@ export interface FormData {
   clientMaritalStatus?: string;
   clientNumChildren?: number;
   clientMonthlyIncome?: number;
-  pensionSalary?: number;
-  pensionAccumulation?: number;
-  pensionProvision?: number;
-  insurancePremium?: number;
-  insuranceType?: string;
-  investmentAmount?: number;
-  policyAmount?: number;
-  policyPeriod?: number;
-  firstName: string;
-  lastName: string;
-  idNumber: string;
-  selectedProducts: ProductSelection[];
+  selectedProducts: Array<{
+    type: 'pension' | 'insurance' | 'investment' | 'policy';
+    company: string;
+    details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+  }>;
   totalCommissions: number;
-}
-
-export interface MeetingData {
-  client_id: string | null;
-  user_id: string;
-  date: string;
-  summary: string;
-  next_steps: string;
-  status: 'completed' | 'pending' | 'cancelled';
-  created_at: string;
-  commission_details: CommissionDetails;
-  selected_products: string[];
-  selected_companies: Record<string, string[]>;
-}
-
-export interface PensionSale {
-  id?: string;
-  created_at: string;
-  user_id: string;
-  date: string;
-  client_name: string;
-  client_phone?: string;
-  company: string;
-  salary: number;
-  accumulation: number;
-  provision: number;
-  scope_commission: number;
-  accumulation_commission: number;
-  total_commission: number;
-  journey_id?: string;
 }
 
 export interface Product {

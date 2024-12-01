@@ -199,65 +199,154 @@ const CustomerJourneyComponent: React.FC = () => {
   };
 
   const handleSubmit = async (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy', data: any) => {
-    let commissions;
-    
-    switch (type) {
-      case 'pension':
-        const salary = Number(data.pensionSalary);
-        const accumulation = Number(data.pensionAccumulation);
-        const contributionRate = Number(data.pensionContribution);
-        const annualContribution = salary * 12 * contributionRate;
-        
-        commissions = await calculateCommissions(type, data.company, annualContribution, accumulation);
-        break;
+    try {
+      let commissions;
+      
+      switch (type) {
+        case 'pension':
+          const salary = Number(data.pensionSalary);
+          const accumulation = Number(data.pensionAccumulation);
+          const contributionRate = Number(data.pensionContribution);
+          const annualContribution = salary * 12 * contributionRate;
+          
+          commissions = await calculateCommissions(type, data.company, annualContribution, accumulation);
+          break;
 
-      case 'insurance':
-        const premium = Number(data.insurancePremium);
-        commissions = await calculateCommissions(type, data.company, premium);
-        break;
+        case 'insurance':
+          const premium = Number(data.insurancePremium);
+          commissions = await calculateCommissions(type, data.company, premium);
+          break;
 
-      case 'savings_and_study':
-      case 'policy':
-        const amount = Number(data.investmentAmount);
-        commissions = await calculateCommissions(type, data.company, amount);
-        break;
+        case 'savings_and_study':
+        case 'policy':
+          const amount = Number(data.investmentAmount);
+          commissions = await calculateCommissions(type, data.company, amount);
+          break;
+      }
+
+      if (!commissions) {
+        toast.error('אין הסכם פעיל עבור חברה זו');
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('משתמש לא מחובר');
+        return;
+      }
+
+      const journeyId = crypto.randomUUID();
+      const date = new Date().toISOString();
+
+      // Save to appropriate table based on type
+      switch (type) {
+        case 'pension': {
+          const { error } = await supabase.from('pension_sales').insert({
+            user_id: user.id,
+            journey_id: journeyId,
+            client_name: clientName,
+            client_phone: data.clientPhone || '',
+            company: data.company,
+            date,
+            salary: Number(data.pensionSalary),
+            accumulation: Number(data.pensionAccumulation),
+            provision: Number(data.pensionContribution) * 100, // Convert to percentage
+            scope_commission: commissions.scope_commission,
+            monthly_commission: commissions.monthly_commission,
+            total_commission: commissions.scope_commission + commissions.monthly_commission
+          });
+
+          if (error) throw error;
+          break;
+        }
+
+        case 'insurance': {
+          const { error } = await supabase.from('insurance_sales').insert({
+            user_id: user.id,
+            journey_id: journeyId,
+            client_name: clientName,
+            client_phone: data.clientPhone || '',
+            company: data.company,
+            date,
+            premium: Number(data.insurancePremium),
+            insurance_type: data.insuranceType || 'general',
+            payment_method: data.paymentMethod || 'monthly',
+            nifraim: commissions.nifraim || 0,
+            scope_commission: commissions.scope_commission,
+            monthly_commission: commissions.monthly_commission,
+            total_commission: commissions.scope_commission + commissions.monthly_commission
+          });
+
+          if (error) throw error;
+          break;
+        }
+
+        case 'savings_and_study': {
+          const { error } = await supabase.from('investment_sales').insert({
+            user_id: user.id,
+            journey_id: journeyId,
+            client_name: clientName,
+            client_phone: data.clientPhone || '',
+            company: data.company,
+            date,
+            investment_amount: Number(data.investmentAmount),
+            investment_period: data.investmentPeriod || 12,
+            investment_type: data.investmentType || 'general',
+            scope_commission: commissions.scope_commission,
+            total_commission: commissions.scope_commission
+          });
+
+          if (error) throw error;
+          break;
+        }
+
+        case 'policy': {
+          const { error } = await supabase.from('policy_sales').insert({
+            user_id: user.id,
+            journey_id: journeyId,
+            client_name: clientName,
+            client_phone: data.clientPhone || '',
+            company: data.company,
+            date,
+            policy_amount: Number(data.investmentAmount),
+            policy_period: data.policyPeriod || 12,
+            policy_type: data.policyType || 'general',
+            scope_commission: commissions.scope_commission,
+            total_commission: commissions.scope_commission
+          });
+
+          if (error) throw error;
+          break;
+        }
+      }
+
+      // Update local state
+      const newClient: CustomerJourneyClient = {
+        id: journeyId,
+        date: new Date().toLocaleDateString('he-IL'),
+        name: clientName,
+        company: data.company,
+        type: type,
+        details: {
+          pensionSalary: data.pensionSalary,
+          pensionAccumulation: data.pensionAccumulation,
+          pensionContribution: data.pensionContribution,
+          insurancePremium: data.insurancePremium,
+          investmentAmount: data.investmentAmount,
+          policyAmount: data.investmentAmount
+        },
+        scopeCommission: commissions.scope_commission,
+        monthlyCommission: commissions.monthly_commission,
+        totalCommission: commissions.scope_commission + commissions.monthly_commission
+      };
+
+      setClients([...clients, newClient]);
+      toast.success('הנתונים נשמרו בהצלחה');
+
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('שגיאה בשמירת הנתונים');
     }
-
-    if (!commissions) {
-      toast.error('אין הסכם פעיל עבור חברה זו');
-      return;
-    }
-
-    const newClient: CustomerJourneyClient = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toLocaleDateString('he-IL'),
-      name: clientName,
-      company: data.company,
-      type: type,
-      details: {
-        pensionSalary: data.pensionSalary,
-        pensionAccumulation: data.pensionAccumulation,
-        pensionContribution: data.pensionContribution,
-        insurancePremium: data.insurancePremium,
-        investmentAmount: data.investmentAmount,
-        policyAmount: data.investmentAmount
-      },
-      scopeCommission: commissions.scope_commission,
-      monthlyCommission: commissions.monthly_commission,
-      totalCommission: commissions.scope_commission + commissions.monthly_commission
-    };
-
-    setClients([...clients, newClient]);
-    setSelectedProducts(prev => ({ ...prev, [type]: true }));
-    
-    toast.success('המוצר נוסף בהצלחה למסע הלקוח', {
-      icon: '🎉',
-      style: {
-        borderRadius: '10px',
-        background: '#333',
-        color: '#fff',
-      },
-    });
   };
 
   const calculateCategorySummary = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy'): CategorySummary => {
