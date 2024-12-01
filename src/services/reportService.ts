@@ -43,15 +43,15 @@ export const reportService = {
       supabase.from('pension_sales')
         .select('*')
         .eq('user_id', user.id)
-        .order('date', { ascending: false }),
+        .order('created_at', { ascending: false }),
       supabase.from('insurance_sales')
         .select('*')
         .eq('user_id', user.id)
-        .order('date', { ascending: false }),
+        .order('created_at', { ascending: false }),
       supabase.from('investment_sales')
         .select('*')
         .eq('user_id', user.id)
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
     ]);
 
     // חישוב סה"כ מכירות ועמלות

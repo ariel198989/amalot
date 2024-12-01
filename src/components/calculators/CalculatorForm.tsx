@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,7 +23,7 @@ interface CalculatorFormProps {
 }
 
 const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title }) => {
-  const { register, handleSubmit, setValue } = useForm();
+  const { control, handleSubmit } = useForm();
 
   const handleFormSubmit = (data: any) => {
     onSubmit(data);
@@ -40,28 +40,40 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
               {field.required && <span className="text-red-500 mr-1">*</span>}
             </label>
             {field.type === 'select' ? (
-              <Select
-                onValueChange={(value) => setValue(field.name, value)}
-                {...register(field.name, { required: field.required })}
-              >
-                <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
-                  <SelectValue placeholder={`בחר ${field.label}`} />
-                </SelectTrigger>
-                <SelectContent className={cn("bg-white", field.popoverClassName)}>
-                  {field.options?.map((option) => (
-                    <SelectItem key={option.value} value={option.value} className="text-right">
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name={field.name}
+                control={control}
+                rules={{ required: field.required }}
+                render={({ field: { onChange, value } }) => (
+                  <Select onValueChange={onChange} value={value}>
+                    <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
+                      <SelectValue placeholder={`בחר ${field.label}`} />
+                    </SelectTrigger>
+                    <SelectContent className={cn("bg-white", field.popoverClassName)}>
+                      {field.options?.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="text-right">
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             ) : (
-              <Input
-                type={field.type}
-                placeholder={`הכנס ${field.label}`}
-                dir="rtl"
-                {...register(field.name, { required: field.required })}
-                className={cn("bg-white", field.className)}
+              <Controller
+                name={field.name}
+                control={control}
+                rules={{ required: field.required }}
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    type={field.type}
+                    placeholder={`הכנס ${field.label}`}
+                    dir="rtl"
+                    value={value || ''}
+                    onChange={onChange}
+                    className={cn("bg-white", field.className)}
+                  />
+                )}
               />
             )}
           </div>
