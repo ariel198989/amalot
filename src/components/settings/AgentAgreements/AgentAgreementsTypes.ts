@@ -1,7 +1,6 @@
 export interface CompanyRates {
-  scope_rate: number;  // עמלת היקף על הפקדה
-  monthly_rate: number;  // עמלת היקף על הצבירה
-  scope_rate_per_million?: number;  // עמלת היקף למיליון
+  scope_rate_per_million: number;  // עמלת היקף חד פעמית למיליון (למשל 3000 ש"ח למיליון)
+  monthly_rate: number;  // עמלת נפרעים חודשית באחוזים (למשל 0.025%)
   active: boolean;
 }
 
@@ -21,7 +20,7 @@ export interface AgentRates {
     [company: string]: {
       active: boolean;
       products: {
-        risk: { one_time_rate: number; monthly_rate: number; };  // עמלת היקף על הפקדה, עמלת היקף על הצבירה
+        risk: { one_time_rate: number; monthly_rate: number; };
         mortgage_risk: { one_time_rate: number; monthly_rate: number; };
         health: { one_time_rate: number; monthly_rate: number; };
         critical_illness: { one_time_rate: number; monthly_rate: number; };
@@ -38,8 +37,7 @@ export interface InsuranceProductType {
 }
 
 export const DEFAULT_COMPANY_RATES: CompanyRates = {
-  scope_rate: 0.07,  // 7% עמלת היקף על הפקדה
-  monthly_rate: 0.0025,  // 0.25% עמלת היקף על הצבירה
-  scope_rate_per_million: 7000,  // 7,000 ₪ למיליון
+  scope_rate_per_million: 3000,  // 3,000 ₪ למיליון עמלת היקף חד פעמית
+  monthly_rate: 0.00025,  // 0.025% עמלת נפרעים חודשית
   active: true
 };

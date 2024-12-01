@@ -170,17 +170,17 @@ const AgentAgreements: React.FC = () => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                        {category === 'pension_companies' ? 'עמלת היקף על הפקדה (%)' : 'עמלת היקף (%)'}
+                        עמלת היקף למיליון (₪)
                       </label>
                       <Input 
                         type="number" 
-                        step="0.01" 
-                        value={companyRates.scope_rate * 100} 
+                        step="100" 
+                        value={companyRates.scope_rate_per_million} 
                         onChange={(e) => handleRateChange(
                           category, 
                           company, 
-                          'scope_rate', 
-                          Number(e.target.value) / 100
+                          'scope_rate_per_million', 
+                          Number(e.target.value)
                         )}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
@@ -188,19 +188,18 @@ const AgentAgreements: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                        {category === 'pension_companies' ? 'עמלת היקף על הצבירה (₪ למיליון)' : 'נפרעים (%)'}
+                        נפרעים (%)
                       </label>
                       <Input 
                         type="number" 
-                        step={category === 'pension_companies' ? "100" : "0.01"}
-                        value={category === 'pension_companies' ? (companyRates.scope_rate_per_million || 0) : companyRates.monthly_rate * 100} 
-                        onChange={(e) => {
-                          if (category === 'pension_companies') {
-                            handleRateChange(category, company, 'scope_rate_per_million', Number(e.target.value));
-                          } else {
-                            handleRateChange(category, company, 'monthly_rate', Number(e.target.value) / 100);
-                          }
-                        }}
+                        step="0.001"
+                        value={companyRates.monthly_rate * 100} 
+                        onChange={(e) => handleRateChange(
+                          category, 
+                          company, 
+                          'monthly_rate', 
+                          Number(e.target.value) / 100
+                        )}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
                       />

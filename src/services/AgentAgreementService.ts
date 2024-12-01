@@ -33,9 +33,8 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
 };
 
 export const getCompanyRates = async (category: 'pension' | 'savings_and_study' | 'policy' | 'insurance', company: string): Promise<{
-  scope_rate: number;
+  scope_rate_per_million: number;
   monthly_rate: number;
-  scope_rate_per_million?: number;
   active: boolean;
 } | null> => {
   try {
@@ -48,9 +47,8 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
         companyRates = rates.pension_companies?.[company];
         if (!companyRates?.active) return null;
         return {
-          scope_rate: companyRates.scope_rate ?? DEFAULT_COMPANY_RATES.scope_rate,
-          monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
           scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
+          monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
           active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
         };
 
@@ -67,7 +65,7 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
       case 'insurance':
         if (!rates.insurance_companies?.[company]?.active) return null;
         return {
-          scope_rate: rates.insurance_companies[company].products.risk.one_time_rate,
+          scope_rate_per_million: rates.insurance_companies[company].products.risk.one_time_rate * 1000000,
           monthly_rate: rates.insurance_companies[company].products.risk.monthly_rate,
           active: rates.insurance_companies[company].active
         };
@@ -79,7 +77,7 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
     if (!companyRates) return null;
 
     return {
-      scope_rate: companyRates.scope_rate ?? DEFAULT_COMPANY_RATES.scope_rate,
+      scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
       monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
       active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
     };
@@ -98,6 +96,7 @@ export const calculateCommissions = async (
 ): Promise<{
   scope_commission: number;
   monthly_commission: number;
+  total_commission: number;
 } | null> => {
   try {
     const rates = await getCompanyRates(category, company);
@@ -105,48 +104,38 @@ export const calculateCommissions = async (
 
     let scope_commission = 0;
     let monthly_commission = 0;
+    let total_commission = 0;
 
-    switch (category) {
-      case 'pension':
-        // עמלת היקף על הפקדה שנתית
-        // נוסחה: שכר * 12 חודשים * אחוז עמלה * אחוז הפרשה
-        const depositCalc = amount * 12 * rates.scope_rate * contributionRate;
-        console.log('Pension calculation:', {
-          salary: amount,
-          contributionRate,
-          scopeRate: rates.scope_rate,
-          depositCalc,
-          formula: `${amount} * 12 * ${rates.scope_rate} * ${contributionRate}`
-        });
-        scope_commission = depositCalc;
-        
-        // עמלת נפרעים על צבירה (סכום למיליון)
-        if (accumulation && accumulation > 0) {
-          const millionsInAccumulation = accumulation / 1000000;
-          monthly_commission = millionsInAccumulation * (rates.scope_rate_per_million || 0);
-        }
-        break;
-
-      case 'insurance':
-        // עמלת היקף על פרמיה שנתית
-        scope_commission = amount * 12 * (rates.scope_rate || 0);
-        // עמלת נפרעים על פרמיה חודשית (מחושב לשנה אחת)
-        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
-        break;
-
-      case 'savings_and_study':
-      case 'policy':
-        // עמלת היקף לפי מיליונים
-        const millionsInAmount = amount / 1000000;
-        scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
-        // עמלת נפרעים לפי אחוז מהסכום (מחושב לשנה אחת)
-        monthly_commission = amount * (rates.monthly_rate || 0) * 12;
-        break;
-    }
+    // חישוב עמלת היקף חד פעמית - סכום קבוע למיליון
+    const millionsInAmount = amount / 1000000;
+    scope_commission = Math.round(millionsInAmount * rates.scope_rate_per_million);
+    
+    // חישוב עמלת נפרעים חודשית - אחוז קבוע מהסכום
+    monthly_commission = Math.round(amount * rates.monthly_rate);
+    
+    // סה"כ עמלה שנתית: עמלת היקף + (עמלת נפרעים * 12)
+    total_commission = scope_commission + (monthly_commission * 12);
+    
+    console.log('Commission calculation:', {
+      category,
+      amount,
+      millions_in_amount: millionsInAmount,
+      scope_rate_per_million: rates.scope_rate_per_million,
+      monthly_rate: rates.monthly_rate,
+      scope_commission,
+      monthly_commission,
+      total_commission,
+      formula: {
+        scope: `${millionsInAmount} מיליון * ${rates.scope_rate_per_million} = ${scope_commission} ש"ח`,
+        monthly: `${amount} * ${rates.monthly_rate} = ${monthly_commission} ש"ח`,
+        total: `${scope_commission} + (${monthly_commission} * 12) = ${total_commission} ש"ח`
+      }
+    });
 
     return {
-      scope_commission: Math.round(scope_commission),
-      monthly_commission: Math.round(monthly_commission)
+      scope_commission,
+      monthly_commission,
+      total_commission
     };
   } catch (error) {
     console.error('Error calculating commissions:', error);
