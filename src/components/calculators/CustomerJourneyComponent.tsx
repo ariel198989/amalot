@@ -4,6 +4,7 @@ import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabaseClient';
 import { 
   Wallet, 
   PiggyBank, 
@@ -14,13 +15,17 @@ import {
   User,
   Check,
   X,
-  CreditCard
+  CreditCard,
+  FileText,
+  Download
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
+import { reportService } from '@/services/reportService';
+import { useNavigate } from 'react-router-dom';
 
 interface CustomerJourneyClient {
   id: string;
@@ -64,7 +69,16 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
   }
 };
 
+// Add type mapping
+const typeToReportKey = {
+  'pension': 'pension',
+  'insurance': 'insurance',
+  'savings_and_study': 'investment',
+  'policy': 'policy'
+} as const;
+
 const CustomerJourneyComponent: React.FC = () => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
   const [companyRates, setCompanyRates] = useState<{ [company: string]: any }>({});
   const [clientName, setClientName] = useState<string>('');
@@ -330,6 +344,98 @@ const CustomerJourneyComponent: React.FC = () => {
     totalCommission: clients.reduce((sum, client) => sum + client.totalCommission, 0)
   };
 
+  const handleSendToReports = async () => {
+    if (clients.length === 0) {
+      toast.error('אין נתונים לשליחה לדוחות');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('משתמש לא מחובר');
+        return;
+      }
+
+      // Create commission details structure
+      const commissionDetails = {
+        pension: {
+          companies: {},
+          total: 0
+        },
+        insurance: {
+          companies: {},
+          total: 0
+        },
+        investment: {
+          companies: {},
+          total: 0
+        },
+        policy: {
+          companies: {},
+          total: 0
+        }
+      };
+
+      // Group clients by product type and company
+      clients.forEach(client => {
+        const type = typeToReportKey[client.type];
+        const company = client.company;
+        
+        if (!commissionDetails[type].companies[company]) {
+          commissionDetails[type].companies[company] = {
+            scopeCommission: 0,
+            accumulationCommission: 0,
+            oneTimeCommission: 0,
+            monthlyCommission: 0,
+            totalCommission: 0
+          };
+        }
+
+        commissionDetails[type].companies[company].scopeCommission += client.scopeCommission;
+        commissionDetails[type].companies[company].totalCommission += client.totalCommission;
+        
+        if (type === 'pension') {
+          commissionDetails[type].companies[company].accumulationCommission += client.monthlyCommission;
+        } else if (type === 'insurance') {
+          commissionDetails[type].companies[company].oneTimeCommission += client.scopeCommission;
+          commissionDetails[type].companies[company].monthlyCommission += client.monthlyCommission;
+        }
+
+        commissionDetails[type].total += client.totalCommission;
+      });
+
+      // Create journey object
+      const journey: CustomerJourney = {
+        id: Math.random().toString(36).substr(2, 9),
+        user_id: user.id,
+        journey_date: new Date().toISOString(),
+        date: new Date().toLocaleDateString('he-IL'),
+        client_name: clientName,
+        selected_products: Object.entries(selectedProducts)
+          .filter(([_, value]) => value)
+          .map(([key]) => key),
+        selected_companies: {
+          pension: clients.filter(c => c.type === 'pension').map(c => c.company),
+          insurance: clients.filter(c => c.type === 'insurance').map(c => c.company),
+          investment: clients.filter(c => c.type === 'savings_and_study').map(c => c.company),
+          policy: clients.filter(c => c.type === 'policy').map(c => c.company)
+        },
+        commission_details: commissionDetails,
+        total_commission: totalSummary.totalCommission,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      await reportService.saveCustomerJourney(journey);
+      toast.success('הנתונים נשלחו בהצלחה לדוחות');
+      navigate('/reports');
+    } catch (error) {
+      console.error('Error sending to reports:', error);
+      toast.error('שגיאה בשליחת הנתונים לדוחות');
+    }
+  };
+
   return (
     <div dir="rtl" className="p-6 max-w-7xl mx-auto">
       {isStarting ? (
@@ -540,6 +646,19 @@ const CustomerJourneyComponent: React.FC = () => {
             </CardContent>
           </Card>
         </>
+      )}
+      
+      {clients.length > 0 && (
+        <div className="flex justify-end gap-4 mt-6">
+          <Button onClick={handleDownload} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            הורד דוח
+          </Button>
+          <Button onClick={handleSendToReports} className="gap-2 bg-primary">
+            <FileText className="w-4 h-4" />
+            שלח לדוחות
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { CustomerJourney, ProductDetails } from '@/components/calculators/CustomerJourneyTypes';
 
 export interface SalesData {
   id: string;
@@ -99,6 +100,144 @@ export const reportService = {
       monthlySales,
       productDistribution
     };
+  },
+
+  async saveCustomerJourney(journey: CustomerJourney) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('משתמש לא מחובר');
+
+      // Save pension sales
+      if (journey.selected_products.includes('pension')) {
+        const pensionDetails = journey.commission_details.pension;
+        for (const [company, details] of Object.entries(pensionDetails.companies)) {
+          const pensionData = {
+            user_id: user.id,
+            client_name: journey.client_name,
+            client_phone: journey.client_phone || '',
+            company: company,
+            date: journey.date,
+            pensionsalary: Number(journey.details?.pension?.salary || 0),
+            pensionaccumulation: Number(journey.details?.pension?.accumulation || 0),
+            pensioncontribution: Number(journey.details?.pension?.provision || 0),
+            scope_commission: Number(details.scopeCommission || 0),
+            monthly_commission: Number(details.accumulationCommission || 0),
+            total_commission: Number(details.totalCommission || 0),
+            journey_id: journey.id || '',
+            notes: ''
+          };
+          
+          console.log('Pension data to insert:', JSON.stringify(pensionData, null, 2));
+          const { data, error } = await supabase
+            .from('pension_sales')
+            .insert([pensionData])
+            .select();
+
+          if (error) {
+            console.error('Full error details:', error);
+            throw error;
+          }
+          console.log('Inserted pension data:', data);
+        }
+      }
+
+      // Save insurance sales
+      if (journey.selected_products.includes('insurance')) {
+        const insuranceDetails = journey.commission_details.insurance;
+        for (const [company, details] of Object.entries(insuranceDetails.companies)) {
+          const insuranceData = {
+            user_id: user.id,
+            client_name: journey.client_name,
+            client_phone: journey.client_phone || '',
+            company: company,
+            date: journey.date,
+            insurancepremium: Number(journey.details?.insurance?.premium || 0),
+            scope_commission: Number(details.oneTimeCommission || 0),
+            monthly_commission: Number(details.monthlyCommission || 0),
+            total_commission: Number(details.totalCommission || 0),
+            journey_id: journey.id || '',
+            notes: ''
+          };
+
+          console.log('Insurance data to insert:', JSON.stringify(insuranceData, null, 2));
+          const { data, error } = await supabase
+            .from('insurance_sales')
+            .insert([insuranceData])
+            .select();
+
+          if (error) {
+            console.error('Full error details:', error);
+            throw error;
+          }
+          console.log('Inserted insurance data:', data);
+        }
+      }
+
+      // Save investment sales
+      if (journey.selected_products.includes('savings_and_study')) {
+        const investmentDetails = journey.commission_details.investment;
+        for (const [company, details] of Object.entries(investmentDetails.companies)) {
+          const investmentData = {
+            user_id: user.id,
+            client_name: journey.client_name,
+            client_phone: journey.client_phone || '',
+            company: company,
+            date: journey.date,
+            investmentamount: Number(journey.details?.investment?.amount || 0),
+            scope_commission: Number(details.scopeCommission || 0),
+            total_commission: Number(details.totalCommission || 0),
+            journey_id: journey.id || '',
+            notes: ''
+          };
+
+          console.log('Investment data to insert:', JSON.stringify(investmentData, null, 2));
+          const { data, error } = await supabase
+            .from('investment_sales')
+            .insert([investmentData])
+            .select();
+
+          if (error) {
+            console.error('Full error details:', error);
+            throw error;
+          }
+          console.log('Inserted investment data:', data);
+        }
+      }
+
+      // Save policy sales
+      if (journey.selected_products.includes('policy')) {
+        const policyDetails = journey.commission_details.policy;
+        for (const [company, details] of Object.entries(policyDetails.companies)) {
+          const policyData = {
+            user_id: user.id,
+            client_name: journey.client_name,
+            client_phone: journey.client_phone || '',
+            company: company,
+            date: journey.date,
+            policyamount: Number(journey.details?.policy?.amount || 0),
+            scope_commission: Number(details.scopeCommission || 0),
+            total_commission: Number(details.totalCommission || 0),
+            journey_id: journey.id || '',
+            notes: ''
+          };
+
+          console.log('Policy data to insert:', JSON.stringify(policyData, null, 2));
+          const { data, error } = await supabase
+            .from('policy_sales')
+            .insert([policyData])
+            .select();
+
+          if (error) {
+            console.error('Full error details:', error);
+            throw error;
+          }
+          console.log('Inserted policy data:', data);
+        }
+      }
+    } catch (error) {
+      console.error('Error in saveCustomerJourney:', error);
+      throw error;
+    }
   }
 };
 

@@ -1,12 +1,20 @@
 // Types for CustomerJourney component
 
 export interface ProductDetails {
-  pensionSalary?: number;
-  pensionAccumulation?: number;
-  pensionContribution?: number;
-  insurancePremium?: number;
-  investmentAmount?: number;
-  policyAmount?: number;
+  pension?: {
+    salary: number;
+    accumulation: number;
+    provision: number;
+  };
+  insurance?: {
+    premium: number;
+  };
+  investment?: {
+    amount: number;
+  };
+  policy?: {
+    amount: number;
+  };
 }
 
 export interface CommissionResult {
@@ -36,80 +44,56 @@ export interface CompanySelection {
 
 export interface CommissionDetails {
   pension: {
-    companies: {
-      [company: string]: {
-        scopeCommission: number;
-        accumulationCommission: number;
-        totalCommission: number;
-      }
-    };
-    total: number;
-  };
-  companies: {
-    [company: string]: {
+    companies: Record<string, {
       scopeCommission: number;
       accumulationCommission: number;
       totalCommission: number;
-    }
+    }>;
+    total: number;
   };
-  scopeCommission: number;
-  accumulationCommission: number;
-  totalCommission: number;
-  total: number;
-  
   insurance: {
-    companies: {
-      [company: string]: {
-        oneTimeCommission: number;
-        monthlyCommission: number;
-        totalCommission: number;
-      }
-    };
+    companies: Record<string, {
+      oneTimeCommission: number;
+      monthlyCommission: number;
+      totalCommission: number;
+    }>;
     total: number;
   };
-  oneTimeCommission: number;
-  monthlyCommission: number;
-  totalCommission: number;
-  
   investment: {
-    companies: {
-      [company: string]: {
-        scopeCommission: number;
-        totalCommission: number;
-      }
-    };
+    companies: Record<string, {
+      scopeCommission: number;
+      totalCommission: number;
+    }>;
     total: number;
   };
-  scopeCommission: number;
-  totalCommission: number;
-  
   policy: {
-    companies: {
-      [company: string]: {
-        scopeCommission: number;
-        totalCommission: number;
-      }
-    };
+    companies: Record<string, {
+      scopeCommission: number;
+      totalCommission: number;
+    }>;
     total: number;
   };
-  total: number;
 }
 
 export interface CustomerJourney {
   id?: string;
   user_id: string;
-  client_id?: string;
   journey_date: string;
   date: string;
   client_name: string;
   client_phone?: string;
   selected_products: string[];
-  selected_companies: Record<string, string[]>;
+  selected_companies: {
+    pension: string[];
+    insurance: string[];
+    investment: string[];
+    policy: string[];
+  };
   commission_details: CommissionDetails;
+  details?: ProductDetails;
   total_commission: number;
-  created_at: string;
-  updated_at: string;
-  email?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface FormData {
