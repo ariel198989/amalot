@@ -93,7 +93,8 @@ export const calculateCommissions = async (
   category: 'pension' | 'savings_and_study' | 'policy' | 'insurance',
   company: string,
   amount: number,
-  accumulation?: number
+  accumulation?: number,
+  contributionRate?: number
 ): Promise<{
   scope_commission: number;
   monthly_commission: number;
@@ -107,8 +108,17 @@ export const calculateCommissions = async (
 
     switch (category) {
       case 'pension':
-        // עמלת היקף על הפקדה שנתית (אחוז מההפקדה)
-        scope_commission = amount * (rates.scope_rate || 0);
+        // עמלת היקף על הפקדה שנתית
+        // נוסחה: שכר * 12 חודשים * אחוז עמלה * אחוז הפרשה
+        const depositCalc = amount * 12 * rates.scope_rate * contributionRate;
+        console.log('Pension calculation:', {
+          salary: amount,
+          contributionRate,
+          scopeRate: rates.scope_rate,
+          depositCalc,
+          formula: `${amount} * 12 * ${rates.scope_rate} * ${contributionRate}`
+        });
+        scope_commission = depositCalc;
         
         // עמלת נפרעים על צבירה (סכום למיליון)
         if (accumulation && accumulation > 0) {
