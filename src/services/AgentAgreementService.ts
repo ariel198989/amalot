@@ -106,7 +106,6 @@ export const calculateCommissions = async (
     let monthly_commission = 0;
     let total_commission = 0;
 
-<<<<<<< HEAD
     switch (category) {
       case 'pension':
         // עמלת היקף על הפקדה שנתית (אחוז מההפקדה)
@@ -132,43 +131,32 @@ export const calculateCommissions = async (
         // עמלת היקף - סכום קבוע למיליון (למשל 6000 ש"ח למיליון)
         scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
         // נפרעים - סכום קבוע למיליון (למשל 250 ש"ח למיליון לחודש)
-        monthly_commission = millionsInAmount * (rates.monthly_rate_per_million || 0);
+        monthly_commission = millionsInAmount * (rates.monthly_rate || 0);
         break;
 
       case 'policy':
         // חישוב לפי מיליונים
         const millionsInPolicy = amount / 1000000;
         scope_commission = millionsInPolicy * (rates.scope_rate_per_million || 0);
-        monthly_commission = millionsInPolicy * (rates.monthly_rate_per_million || 0);
+        monthly_commission = millionsInPolicy * (rates.monthly_rate || 0);
         break;
     }
-=======
-    // חישוב עמלת היקף חד פעמית - סכום קבוע למיליון
-    const millionsInAmount = amount / 1000000;
-    scope_commission = Math.round(millionsInAmount * rates.scope_rate_per_million);
-    
-    // חישוב עמלת נפרעים חודשית - אחוז קבוע מהסכום
-    monthly_commission = Math.round(amount * rates.monthly_rate);
-    
+
     // סה"כ עמלה שנתית: עמלת היקף + (עמלת נפרעים * 12)
     total_commission = scope_commission + (monthly_commission * 12);
     
     console.log('Commission calculation:', {
       category,
       amount,
-      millions_in_amount: millionsInAmount,
-      scope_rate_per_million: rates.scope_rate_per_million,
-      monthly_rate: rates.monthly_rate,
       scope_commission,
       monthly_commission,
       total_commission,
       formula: {
-        scope: `${millionsInAmount} מיליון * ${rates.scope_rate_per_million} = ${scope_commission} ש"ח`,
-        monthly: `${amount} * ${rates.monthly_rate} = ${monthly_commission} ש"ח`,
+        scope: `${scope_commission} ש"ח`,
+        monthly: `${monthly_commission} ש"ח`,
         total: `${scope_commission} + (${monthly_commission} * 12) = ${total_commission} ש"ח`
       }
     });
->>>>>>> ccc4860a90dcfca3c6cd1b30a04ed802e605921f
 
     return {
       scope_commission,
