@@ -3,11 +3,7 @@ export interface CompanyRates {
   // For pension
   scope_rate?: number; // Percentage
   monthly_rate?: number; // Percentage
-  scope_rate_per_million?: number; // Amount per million
-
-  // For investments (savings and study)
-  scope_rate_per_million?: number; // Amount per million (e.g., 6000)
-  monthly_rate_per_million?: number; // Amount per million (e.g., 250)
+  scope_rate_per_million?: number; // Amount per million (למשל 3000 ש"ח למיליון)
 }
 
 export interface AgentRates {

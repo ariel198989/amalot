@@ -40,6 +40,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
               {field.required && <span className="text-red-500 mr-1">*</span>}
             </label>
             {field.type === 'select' ? (
+<<<<<<< HEAD
               <Controller
                 name={field.name}
                 control={control}
@@ -59,6 +60,23 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
                   </Select>
                 )}
               />
+=======
+              <Select
+                onValueChange={(value) => setValue(field.name, value)}
+                defaultValue=""
+              >
+                <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
+                  <SelectValue placeholder={`בחר ${field.label}`} />
+                </SelectTrigger>
+                <SelectContent className={cn("bg-white", field.popoverClassName)}>
+                  {field.options?.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="text-right">
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+>>>>>>> ccc4860a90dcfca3c6cd1b30a04ed802e605921f
             ) : (
               <Controller
                 name={field.name}
