@@ -202,9 +202,14 @@ const CustomerJourneyComponent: React.FC = () => {
           const salary = Number(data.pensionSalary);
           const accumulation = Number(data.pensionAccumulation);
           const contributionRate = Number(data.pensionContribution);
-          const annualContribution = salary * 12 * contributionRate;
           
-          commissions = await calculateCommissions(type, data.company, annualContribution, accumulation);
+          commissions = await calculateCommissions(type, data.company, salary, accumulation, contributionRate);
+          console.log('Pension commission calculation:', {
+            salary,
+            accumulation,
+            contributionRate,
+            commissions
+          });
           break;
 
         case 'insurance': {
@@ -428,7 +433,7 @@ const CustomerJourneyComponent: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,סה\"כ\n";
+    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,ה\"כ\n";
     
     clients.forEach((client) => {
       const row = [
@@ -566,8 +571,15 @@ const CustomerJourneyComponent: React.FC = () => {
       navigate('/reports');
     } catch (error) {
       console.error('Error sending to reports:', error);
-      toast.error('שגיאה בשליחת ה��תונים לדוחות');
+      toast.error('שגיאה בשליחת התונים לדוחות');
     }
+  };
+
+  const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
+    if (type === 'pension') {
+      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
+    }
+    return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
   };
 
   return (
@@ -704,14 +716,14 @@ const CustomerJourneyComponent: React.FC = () => {
                             </h4>
                             <div className="grid grid-cols-3 gap-4">
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלת היקף</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'pension')
                                   .reduce((sum, client) => sum + client.scopeCommission, 0)
                                   .toLocaleString()}</p>
                               </div>
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלת היקף על הצבירה</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'pension')
                                   .reduce((sum, client) => sum + client.monthlyCommission, 0)
@@ -737,14 +749,14 @@ const CustomerJourneyComponent: React.FC = () => {
                             </h4>
                             <div className="grid grid-cols-3 gap-4">
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלת היקף</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'insurance')
                                   .reduce((sum, client) => sum + client.scopeCommission, 0)
                                   .toLocaleString()}</p>
                               </div>
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">נפרעים</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'insurance')
                                   .reduce((sum, client) => sum + client.monthlyCommission, 0)
@@ -770,14 +782,14 @@ const CustomerJourneyComponent: React.FC = () => {
                             </h4>
                             <div className="grid grid-cols-3 gap-4">
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלת היקף</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'savings_and_study')
                                   .reduce((sum, client) => sum + client.scopeCommission, 0)
                                   .toLocaleString()}</p>
                               </div>
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלה חודשית</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'savings_and_study')
                                   .reduce((sum, client) => sum + client.monthlyCommission, 0)
@@ -803,14 +815,14 @@ const CustomerJourneyComponent: React.FC = () => {
                             </h4>
                             <div className="grid grid-cols-3 gap-4">
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלת היקף</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'policy')
                                   .reduce((sum, client) => sum + client.scopeCommission, 0)
                                   .toLocaleString()}</p>
                               </div>
                               <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">עמלה חודשית</p>
+                                <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
                                 <p className="text-xl font-bold">₪{clients
                                   .filter(client => client.type === 'policy')
                                   .reduce((sum, client) => sum + client.monthlyCommission, 0)

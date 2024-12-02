@@ -135,6 +135,21 @@ const AgentAgreements: React.FC = () => {
   ) => {
     if (!agentRates) return null;
 
+    const getFieldLabels = (category: string) => {
+      if (category === 'pension_companies') {
+        return {
+          scope: 'עמלת היקף על השכר (%)',
+          monthly: 'עמלת היקף על צבירה (₪ למיליון)'
+        };
+      }
+      return {
+        scope: 'עמלת היקף למיליון (₪)',
+        monthly: 'נפרעים (%)'
+      };
+    };
+
+    const labels = getFieldLabels(category);
+
     return (
       <div className="grid grid-cols-3 gap-6" dir="rtl">
         {companies.map((company, index) => {
@@ -170,17 +185,19 @@ const AgentAgreements: React.FC = () => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                        עמלת היקף למיליון (₪)
+                        {labels.scope}
                       </label>
                       <Input 
                         type="number" 
-                        step="100" 
-                        value={companyRates.scope_rate_per_million} 
+                        step={category === 'pension_companies' ? '0.01' : '100'} 
+                        value={category === 'pension_companies' ? 
+                          (companyRates.scope_rate || 0) * 100 : 
+                          companyRates.scope_rate_per_million} 
                         onChange={(e) => handleRateChange(
                           category, 
                           company, 
-                          'scope_rate_per_million', 
-                          Number(e.target.value)
+                          category === 'pension_companies' ? 'scope_rate' : 'scope_rate_per_million', 
+                          category === 'pension_companies' ? Number(e.target.value) / 100 : Number(e.target.value)
                         )}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
@@ -188,17 +205,19 @@ const AgentAgreements: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                        נפרעים (%)
+                        {labels.monthly}
                       </label>
                       <Input 
                         type="number" 
-                        step="0.001"
-                        value={companyRates.monthly_rate * 100} 
+                        step={category === 'pension_companies' ? '100' : '0.001'}
+                        value={category === 'pension_companies' ? 
+                          companyRates.scope_rate_per_million : 
+                          (companyRates.monthly_rate || 0) * 100} 
                         onChange={(e) => handleRateChange(
                           category, 
                           company, 
-                          'monthly_rate', 
-                          Number(e.target.value) / 100
+                          category === 'pension_companies' ? 'scope_rate_per_million' : 'monthly_rate', 
+                          category === 'pension_companies' ? Number(e.target.value) : Number(e.target.value) / 100
                         )}
                         className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
                         dir="rtl"
