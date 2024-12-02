@@ -33,8 +33,9 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
 };
 
 export const getCompanyRates = async (category: 'pension' | 'savings_and_study' | 'policy' | 'insurance', company: string): Promise<{
+  scope_rate?: number;
   scope_rate_per_million: number;
-  monthly_rate: number;
+  monthly_rate?: number;
   active: boolean;
 } | null> => {
   try {
@@ -47,9 +48,9 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
         companyRates = rates.pension_companies?.[company];
         if (!companyRates?.active) return null;
         return {
-          scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
-          monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
-          active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
+          scope_rate: companyRates.scope_rate,
+          scope_rate_per_million: companyRates.scope_rate_per_million,
+          active: companyRates.active
         };
 
       case 'savings_and_study':
@@ -108,14 +109,31 @@ export const calculateCommissions = async (
 
     switch (category) {
       case 'pension':
-        // עמלת היקף על הפקדה שנתית (אחוז מההפקדה)
-        scope_commission = amount * (rates.scope_rate || 0);
+        // עמלת היקף על השכר = שכר * אחוז עמלה * 12 * אחוז הפרשה
+        if (amount && contributionRate && rates.scope_rate) {
+          scope_commission = amount * rates.scope_rate * 12 * contributionRate;
+          console.log('Pension scope commission calculation:', {
+            salary: amount,
+            scope_rate: rates.scope_rate,
+            contributionRate,
+            formula: `${amount} * ${rates.scope_rate} * 12 * ${contributionRate} = ${scope_commission}`
+          });
+        }
         
-        // עמלת נפרעים על צבירה (סכום למיליון)
+        // עמלת היקף על צבירה - סכום קבוע למיליון
         if (accumulation && accumulation > 0) {
           const millionsInAccumulation = accumulation / 1000000;
           monthly_commission = millionsInAccumulation * (rates.scope_rate_per_million || 0);
+          console.log('Pension accumulation commission calculation:', {
+            accumulation,
+            millionsInAccumulation,
+            rate_per_million: rates.scope_rate_per_million,
+            formula: `${millionsInAccumulation} * ${rates.scope_rate_per_million} = ${monthly_commission}`
+          });
         }
+
+        // בפנסיה אין נפרעים - סה"כ הוא סכום שתי עמלות ההיקף
+        total_commission = scope_commission + monthly_commission;
         break;
 
       case 'insurance':

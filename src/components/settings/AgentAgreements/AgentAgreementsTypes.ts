@@ -1,9 +1,7 @@
 export interface CompanyRates {
   active: boolean;
-  // For pension
-  scope_rate?: number; // Percentage
-  monthly_rate?: number; // Percentage
-  scope_rate_per_million?: number; // Amount per million (למשל 3000 ש"ח למיליון)
+  scope_rate?: number; // אחוז עמלת היקף על השכר בפנסיה
+  scope_rate_per_million?: number; // סכום למיליון בצבירה
 }
 
 export interface AgentRates {
@@ -12,7 +10,11 @@ export interface AgentRates {
   
   // Pension companies rates
   pension_companies: {
-    [company: string]: CompanyRates;
+    [company: string]: {
+      active: boolean;
+      scope_rate: number; // אחוז עמלת היקף על השכר (למשל 8%)
+      scope_rate_per_million: number; // סכום למיליון בצבירה (למשל 7000)
+    };
   };
 
   // Insurance companies rates
