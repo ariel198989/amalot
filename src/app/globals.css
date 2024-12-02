@@ -1,5 +1,4 @@
-/* Add Heebo font */
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
+/* ... existing styles ... */
 
 /* RTL and Right Alignment Fixes */
 .rtl {
@@ -228,5 +227,96 @@
 .print-content {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* Add Heebo font */
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
+
+/* Calendar Styles */
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  background: white !important;
+  font-family: 'Heebo', sans-serif !important;
+  direction: rtl !important;
+}
+
+.react-calendar__navigation {
+  display: flex;
+  flex-direction: row-reverse;
+  margin-bottom: 1rem;
+}
+
+.react-calendar__navigation button {
+  min-width: 44px;
+  background: none;
+  font-size: 16px;
+  color: #1e293b;
+  padding: 8px;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: #f1f5f9;
+  border-radius: 8px;
+}
+
+.react-calendar__month-view__weekdays {
+  text-align: right;
+  text-transform: uppercase;
+  font-weight: bold;
+  font-size: 0.75em;
+  color: #64748b;
+}
+
+.react-calendar__month-view__days {
+  direction: rtl;
+}
+
+.react-calendar__month-view__days__day {
+  padding: 8px;
+  color: #1e293b;
+}
+
+.react-calendar__tile {
+  text-align: right;
+  position: relative;
+  padding: 0.75em 0.5em !important;
+  max-width: 100%;
+  background: none;
+  text-align: center;
+  line-height: 16px;
+  font-size: 14px;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background-color: #f1f5f9;
+  border-radius: 8px;
+}
+
+.react-calendar__tile--now {
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+.react-calendar__tile--active {
+  background: #2563eb !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background: #1d4ed8 !important;
+}
+
+.event-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </file>
