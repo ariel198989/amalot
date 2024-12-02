@@ -583,79 +583,90 @@ const CustomerJourneyComponent: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex items-center gap-3 mb-8">
+        <Brain className="w-16 h-16 text-[#4361ee]" />
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
+          <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
+        </div>
+      </div>
+
       <div className="flex gap-12">
         <Card className="flex-1 shadow-lg">
           <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
             <h2 className="text-2xl font-semibold text-center">פרטי לקוח</h2>
             <p className="text-center text-sm opacity-90">הזן את שם הלקוח ובחר את המוצרים הרלוונטיים</p>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             {isStarting ? (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="relative">
                   <Input
                     type="text"
                     placeholder="שם הלקוח"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg"
                   />
-                  <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                  <User className="absolute right-3 top-3.5 h-6 w-6 text-gray-400" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-colors",
-                      selectedProducts.insurance ? "border-green-500 bg-green-50" : "hover:border-green-200"
-                    )}
-                    onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
-                  >
-                    <Shield className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                    <p className="text-center font-medium">ביטוח</p>
-                  </motion.div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 text-gray-700">בחר מוצרים:</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={cn(
+                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                        selectedProducts.pension ? "border-blue-500 bg-blue-50 shadow-md" : "hover:border-blue-200"
+                      )}
+                      onClick={() => setSelectedProducts(prev => ({ ...prev, pension: !prev.pension }))}
+                    >
+                      <Building2 className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                      <p className="text-center font-medium text-lg">פנסיה</p>
+                    </motion.div>
 
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-colors",
-                      selectedProducts.pension ? "border-blue-500 bg-blue-50" : "hover:border-blue-200"
-                    )}
-                    onClick={() => setSelectedProducts(prev => ({ ...prev, pension: !prev.pension }))}
-                  >
-                    <Building2 className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                    <p className="text-center font-medium">פנסיה</p>
-                  </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={cn(
+                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                        selectedProducts.insurance ? "border-green-500 bg-green-50 shadow-md" : "hover:border-green-200"
+                      )}
+                      onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
+                    >
+                      <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                      <p className="text-center font-medium text-lg">ביטוח</p>
+                    </motion.div>
 
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-colors",
-                      selectedProducts.policy ? "border-orange-500 bg-orange-50" : "hover:border-orange-200"
-                    )}
-                    onClick={() => setSelectedProducts(prev => ({ ...prev, policy: !prev.policy }))}
-                  >
-                    <Wallet className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-                    <p className="text-center font-medium">פוליסה</p>
-                  </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={cn(
+                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                        selectedProducts.savings_and_study ? "border-purple-500 bg-purple-50 shadow-md" : "hover:border-purple-200"
+                      )}
+                      onClick={() => setSelectedProducts(prev => ({ ...prev, savings_and_study: !prev.savings_and_study }))}
+                    >
+                      <PiggyBank className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+                      <p className="text-center font-medium text-lg">השקעות</p>
+                    </motion.div>
 
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-colors",
-                      selectedProducts.savings_and_study ? "border-purple-500 bg-purple-50" : "hover:border-purple-200"
-                    )}
-                    onClick={() => setSelectedProducts(prev => ({ ...prev, savings_and_study: !prev.savings_and_study }))}
-                  >
-                    <PiggyBank className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                    <p className="text-center font-medium">חסכון ולימודים</p>
-                  </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={cn(
+                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                        selectedProducts.policy ? "border-orange-500 bg-orange-50 shadow-md" : "hover:border-orange-200"
+                      )}
+                      onClick={() => setSelectedProducts(prev => ({ ...prev, policy: !prev.policy }))}
+                    >
+                      <Wallet className="w-12 h-12 text-orange-500 mx-auto mb-3" />
+                      <p className="text-center font-medium text-lg">פוליסות</p>
+                    </motion.div>
+                  </div>
                 </div>
 
                 <Button 
-                  className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-2 rounded-lg transition-colors"
+                  className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
                   onClick={() => {
                     if (!clientName) {
                       toast.error('נא להזין שם לקוח');
@@ -896,41 +907,35 @@ const CustomerJourneyComponent: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Right side - Info */}
-        <div className="w-80 space-y-8">
-          <div className="flex items-center gap-3">
-            <Brain className="w-12 h-12 text-[#4361ee]" />
-            <h1 className="text-2xl font-bold">מסע לקוח חכם</h1>
-          </div>
-          
+        <div className="w-96 space-y-8">
           <div className="space-y-6">
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1 rounded-full bg-green-100">
-                <User className="w-4 h-4 text-green-600" />
+            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+              <div className="mt-1 p-2 rounded-full bg-green-100">
+                <User className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h3 className="font-medium">חישוב עמלות אוטומטי</h3>
-                <p className="text-sm text-gray-600">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
+                <p className="text-gray-600">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1 rounded-full bg-blue-100">
-                <Shield className="w-4 h-4 text-blue-600" />
+            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+              <div className="mt-1 p-2 rounded-full bg-blue-100">
+                <Shield className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-medium">ניהול מוצרים מתקדם</h3>
-                <p className="text-sm text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
+                <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
+                <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <div className="mt-1 p-1 rounded-full bg-purple-100">
-                <PiggyBank className="w-4 h-4 text-purple-600" />
+            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+              <div className="mt-1 p-2 rounded-full bg-purple-100">
+                <PiggyBank className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <h3 className="font-medium">דוחות מפורטים</h3>
-                <p className="text-sm text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
+                <h3 className="font-medium text-lg">דוחות מפורטים</h3>
+                <p className="text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
               </div>
             </div>
           </div>
