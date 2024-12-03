@@ -10,6 +10,7 @@ import Reports from './components/reports/Reports';
 import AgentAgreements from "./components/settings/AgentAgreements/AgentAgreementsComponent";
 import Settings from './components/settings/Settings';
 import ClientsTable from './components/clients/ClientsTable';
+import AnnualWorkPlan from './pages/AnnualWorkPlan';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -40,6 +41,7 @@ const App: React.FC = () => {
               <Route path="/agreements" element={<AgentAgreements />} />
               <Route path="/journey" element={<CustomerJourneyComponent />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/work-plan" element={<AnnualWorkPlan />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Header>

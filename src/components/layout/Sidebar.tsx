@@ -18,7 +18,8 @@ import {
   Receipt,
   BadgeDollarSign,
   CircleDollarSign,
-  Landmark
+  Landmark,
+  CalendarDays
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,12 @@ const navItems = [
     path: '/', 
     icon: LayoutDashboard,
     description: 'סקירה כללית של הנתונים'
+  },
+  { 
+    title: 'תכנית עבודה שנתית', 
+    path: '/work-plan', 
+    icon: CalendarDays,
+    description: 'ניהול תכנית עבודה ויעדים שנתיים'
   },
   { 
     title: 'מחשבוני עמלות', 
