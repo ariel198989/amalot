@@ -21,25 +21,34 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-secondary-50">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-md z-50">
-        <div className="flex items-center justify-between px-4 h-full">
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-secondary-200 z-50">
+        <div className="container mx-auto flex items-center justify-between h-full">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="hover:bg-gray-100 transition-colors"
+            className="hover:bg-secondary-100 transition-all duration-200"
           >
-            <Menu className="h-6 w-6 text-gray-600" />
+            <Menu className="h-6 w-6 text-secondary-600" />
           </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gray-900">מערכת עמלות</span>
-            <Calculator className="h-6 w-6 text-blue-600" />
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+              מערכת עמלות
+            </span>
+            <Calculator className="h-6 w-6 text-primary-600" />
           </div>
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 transition-colors">
-            <Bell className="h-5 w-5 text-gray-600" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hover:bg-secondary-100 transition-all duration-200 relative"
+            >
+              <Bell className="h-5 w-5 text-secondary-600" />
+              <span className="absolute top-1 right-1 h-2 w-2 bg-primary-500 rounded-full"></span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -48,8 +57,10 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col pt-16">
-        <main className="flex-1 overflow-auto bg-gray-50">
-          {children}
+        <main className="flex-1 overflow-auto bg-secondary-50 p-6">
+          <div className="container mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
