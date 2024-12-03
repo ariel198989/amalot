@@ -16,7 +16,12 @@ interface YearlyData {
   [key: string]: ProductData;
 }
 
-const SalesTrackingTable = () => {
+export interface SalesTrackingTableProps {
+  agent_id: string;
+  year: number;
+}
+
+const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year }) => {
   const monthNames = [
     'ינואר 24׳', 'פברואר 24׳', 'מרץ 24׳', 'אפריל 24׳', 'מאי 24׳', 'יוני 24׳',
     'יולי 24׳', 'אוגוסט 24׳', 'ספטמבר 24׳', 'אוקטובר 24׳', 'נובמבר 24׳', 'דצמבר 24׳'

@@ -11,6 +11,7 @@ import AgentAgreements from "./components/settings/AgentAgreements/AgentAgreemen
 import Settings from './components/settings/Settings';
 import ClientsTable from './components/clients/ClientsTable';
 import AnnualWorkPlan from './pages/AnnualWorkPlan';
+import { UserProvider } from './contexts/UserContext';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -28,31 +29,33 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <div className="h-screen" dir="rtl">
-        <Toaster position="top-center" />
-        {isAuthenticated ? (
-          <Header onLogout={handleLogout}>
+    <UserProvider>
+      <Router>
+        <div className="h-screen" dir="rtl">
+          <Toaster position="top-center" />
+          {isAuthenticated ? (
+            <Header onLogout={handleLogout}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/calculators" element={<CalculatorSelector />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/clients" element={<ClientsTable />} />
+                <Route path="/agreements" element={<AgentAgreements />} />
+                <Route path="/journey" element={<CustomerJourneyComponent />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/work-plan" element={<AnnualWorkPlan />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Header>
+          ) : (
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/calculators" element={<CalculatorSelector />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/clients" element={<ClientsTable />} />
-              <Route path="/agreements" element={<AgentAgreements />} />
-              <Route path="/journey" element={<CustomerJourneyComponent />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/work-plan" element={<AnnualWorkPlan />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-          </Header>
-        ) : (
-          <Routes>
-            <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        )}
-      </div>
-    </Router>
+          )}
+        </div>
+      </Router>
+    </UserProvider>
   );
 };
 
