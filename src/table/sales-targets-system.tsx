@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ActivityAverages {
   insurance: string;
@@ -29,7 +30,6 @@ interface RecruitmentSources {
 interface ProductTarget {
   target: string;
   achieved: string;
-  rate: string;
 }
 
 interface Product {
@@ -97,38 +97,22 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
       insurance: {
         monthlyTarget: '',
         unitValue: '',
-        targets: monthNames.map(() => ({
-          target: '',
-          achieved: '',
-          rate: ''
-        }))
+        targets: Array(12).fill({ target: '', achieved: '' })
       },
       pension: {
         monthlyTarget: '',
         unitValue: '',
-        targets: monthNames.map(() => ({
-          target: '',
-          achieved: '',
-          rate: ''
-        }))
+        targets: Array(12).fill({ target: '', achieved: '' })
       },
       finance: {
         monthlyTarget: '',
         unitValue: '',
-        targets: monthNames.map(() => ({
-          target: '',
-          achieved: '',
-          rate: ''
-        }))
+        targets: Array(12).fill({ target: '', achieved: '' })
       },
       providentFund: {
         monthlyTarget: '',
         unitValue: '',
-        targets: monthNames.map(() => ({
-          target: '',
-          achieved: '',
-          rate: ''
-        }))
+        targets: Array(12).fill({ target: '', achieved: '' })
       }
     }
   });
@@ -257,28 +241,19 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
     setHasChanges(true);
   };
 
-  const handleProductInputChange = (product: keyof Products, field: keyof Product, value: string) => {
+  const handleProductInputChange = (
+    productType: keyof Products,
+    monthIndex: number,
+    field: keyof ProductTarget,
+    value: string
+  ) => {
     setYearlyTargets(prev => ({
       ...prev,
       products: {
         ...prev.products,
-        [product]: {
-          ...prev.products[product],
-          [field]: value
-        }
-      }
-    }));
-    setHasChanges(true);
-  };
-
-  const handleTargetInputChange = (product: keyof Products, monthIndex: number, field: keyof ProductTarget, value: string) => {
-    setYearlyTargets(prev => ({
-      ...prev,
-      products: {
-        ...prev.products,
-        [product]: {
-          ...prev.products[product],
-          targets: prev.products[product].targets.map((target, idx) =>
+        [productType]: {
+          ...prev.products[productType],
+          targets: prev.products[productType].targets.map((target, idx) =>
             idx === monthIndex ? { ...target, [field]: value } : target
           )
         }
@@ -319,7 +294,8 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* היעדים הקיימים */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* טבלה 1 - נתונים בסיסיים */}
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
@@ -652,7 +628,7 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
                     <Input
                       type="number"
                       value={product.targets[monthIndex].target}
-                      onChange={(e) => handleTargetInputChange(productKey, monthIndex, 'target', e.target.value)}
+                      onChange={(e) => handleProductInputChange(productKey, monthIndex, 'target', e.target.value)}
                       className="w-full text-right"
                       min="0"
                     />
@@ -668,8 +644,96 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
         </table>
       </div>
 
-      {/* כפתורי שמירה */}
-      <div className="flex justify-end gap-2 mt-6">
+      {/* כבלת תוצאות */}
+      <Card className="shadow-md">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
+          תוצאות חודשיות
+        </div>
+        <div className="p-4">
+          <Tabs defaultValue="insurance" className="w-full">
+            <TabsList className="grid grid-cols-4 gap-2 bg-slate-100 p-1 rounded-lg mb-4">
+              {Object.entries({
+                insurance: 'ביטוחים',
+                pension: 'ניוד פנסיה',
+                finance: 'ניוד פיננסים',
+                providentFund: 'משכנתא'
+              }).map(([key, label]) => (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
+                >
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {Object.keys(yearlyTargets.products).map((productType) => (
+              <TabsContent key={productType} value={productType}>
+                <table className="w-full">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="py-2 px-3 text-right font-medium text-slate-700">חודש</th>
+                      <th className="py-2 px-3 text-right font-medium text-slate-700">יעד</th>
+                      <th className="py-2 px-3 text-right font-medium text-slate-700">ביצוע</th>
+                      <th className="py-2 px-3 text-right font-medium text-slate-700">אחוז עמידה</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {monthNames.map((month, index) => (
+                      <tr key={month} className="hover:bg-slate-50">
+                        <td className="py-2 px-3">{month}</td>
+                        <td className="py-2 px-3">
+                          <Input
+                            type="number"
+                            value={yearlyTargets.products[productType as keyof Products].targets[index].target}
+                            onChange={(e) => handleProductInputChange(productType as keyof Products, index, 'target', e.target.value)}
+                            className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <Input
+                            type="number"
+                            value={yearlyTargets.products[productType as keyof Products].targets[index].achieved}
+                            onChange={(e) => handleProductInputChange(productType as keyof Products, index, 'achieved', e.target.value)}
+                            className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="py-2 px-3 text-slate-700">
+                          {calculatePercentage(
+                            yearlyTargets.products[productType as keyof Products].targets[index].achieved,
+                            yearlyTargets.products[productType as keyof Products].targets[index].target
+                          )}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-50 font-medium">
+                    <tr>
+                      <td className="py-2 px-3">סה"כ</td>
+                      <td className="py-2 px-3">
+                        {calculateTotal(yearlyTargets.products[productType as keyof Products].targets, 'target')}
+                      </td>
+                      <td className="py-2 px-3">
+                        {calculateTotal(yearlyTargets.products[productType as keyof Products].targets, 'achieved')}
+                      </td>
+                      <td className="py-2 px-3">
+                        {calculatePercentage(
+                          calculateTotal(yearlyTargets.products[productType as keyof Products].targets, 'achieved'),
+                          calculateTotal(yearlyTargets.products[productType as keyof Products].targets, 'target')
+                        )}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+      </Card>
+
+      {/* כפתור שמירה */}
+      <div className="flex justify-end gap-2">
         <Button
           onClick={handleSave}
           disabled={isLoading || !hasChanges}
@@ -689,3 +753,15 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
 };
 
 export default SalesTargetsSystem;
+
+// Helper functions
+const calculatePercentage = (achieved: string | number = '0', target: string | number = '0') => {
+  const achievedNum = Number(achieved);
+  const targetNum = Number(target);
+  if (targetNum === 0) return 0;
+  return Math.round((achievedNum / targetNum) * 100);
+};
+
+const calculateTotal = (targets: any[], field: string) => {
+  return targets.reduce((sum, target) => sum + Number(target?.[field] || 0), 0);
+};
