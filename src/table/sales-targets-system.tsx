@@ -55,6 +55,13 @@ interface YearlyTargets {
   products: Products;
 }
 
+interface MonthlyData {
+  workDays: number;
+  potentialMeetings: number;
+  percentage: number;
+  execution: number;
+}
+
 export interface SalesTargetsSystemProps {
   agent_id: string;
   year: number;
@@ -115,6 +122,21 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
         targets: Array(12).fill({ target: '', achieved: '' })
       }
     }
+  });
+
+  const [monthlyData, setMonthlyData] = useState<{ [key: string]: MonthlyData }>({
+    'ינואר 24׳': { workDays: 22, potentialMeetings: 44, percentage: 9.6, execution: 0 },
+    'פברואר 24׳': { workDays: 21, potentialMeetings: 42, percentage: 9.2, execution: 0 },
+    'מרץ 24׳': { workDays: 18, potentialMeetings: 36, percentage: 7.9, execution: 0 },
+    'אפריל 24׳': { workDays: 16, potentialMeetings: 32, percentage: 7.0, execution: 0 },
+    'מאי 24׳': { workDays: 18, potentialMeetings: 36, percentage: 7.9, execution: 0 },
+    'יוני 24׳': { workDays: 18, potentialMeetings: 36, percentage: 7.9, execution: 0 },
+    'יולי 24׳': { workDays: 22, potentialMeetings: 44, percentage: 9.6, execution: 0 },
+    'אוגוסט 24׳': { workDays: 19, potentialMeetings: 38, percentage: 8.3, execution: 0 },
+    'ספטמבר 24׳': { workDays: 22, potentialMeetings: 44, percentage: 9.6, execution: 0 },
+    'אוקטובר 24׳': { workDays: 13, potentialMeetings: 26, percentage: 5.7, execution: 0 },
+    'נובמבר 24׳': { workDays: 20, potentialMeetings: 40, percentage: 8.8, execution: 0 },
+    'דצמבר 24׳': { workDays: 19, potentialMeetings: 38, percentage: 8.3, execution: 0 }
   });
 
   // Load data on component mount
@@ -293,10 +315,20 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
     }
   };
 
+  const handleMonthlyDataChange = (month: string, field: keyof MonthlyData, value: number) => {
+    setMonthlyData(prev => ({
+      ...prev,
+      [month]: {
+        ...prev[month],
+        [field]: value
+      }
+    }));
+  };
+
   return (
     <div className="space-y-6">
-      {/* היעדים הקיימים */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Three columns section */}
+      <div className="grid grid-cols-3 gap-4">
         {/* טבלה 1 - נתונים בסיסיים */}
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
@@ -565,86 +597,33 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
         </Card>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {Object.entries(yearlyTargets.products).map(([key, product]) => {
-          const colors = {
-            insurance: { bg: 'bg-blue-50', text: 'text-blue-900', value: 'text-blue-700', sub: 'text-blue-600' },
-            pension: { bg: 'bg-emerald-50', text: 'text-emerald-900', value: 'text-emerald-700', sub: 'text-emerald-600' },
-            finance: { bg: 'bg-purple-50', text: 'text-purple-900', value: 'text-purple-700', sub: 'text-purple-600' },
-            providentFund: { bg: 'bg-amber-50', text: 'text-amber-900', value: 'text-amber-700', sub: 'text-amber-600' }
-          };
-          const color = colors[key];
-          const titles = {
-            insurance: 'ביטוחים',
-            pension: 'ניוד פנסיה',
-            finance: 'ניוד פיננסים',
-            providentFund: 'גמל והשתלמות'
-          };
-
-          return (
-            <div key={key} className={`${color.bg} rounded-lg p-4`}>
-              <h3 className={`text-sm font-semibold mb-2 ${color.text}`}>{titles[key]}</h3>
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  value={product.monthlyTarget}
-                  onChange={(e) => handleProductInputChange(key, 'monthlyTarget', e.target.value)}
-                  className="w-full text-right"
-                  min="0"
-                  placeholder="יעד חודשי"
-                />
-                <Input
-                  type="number"
-                  value={product.unitValue}
-                  onChange={(e) => handleProductInputChange(key, 'unitValue', e.target.value)}
-                  className="w-full text-right"
-                  min="0"
-                  placeholder="ערך יחידה"
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-slate-100">
-              <th className="border border-slate-200 p-2 text-right">חודש</th>
-              <th className="border border-slate-200 p-2 text-right">ביטוחים</th>
-              <th className="border border-slate-200 p-2 text-right">ניוד פנסיה</th>
-              <th className="border border-slate-200 p-2 text-right">ניוד פיננסים</th>
-              <th className="border border-slate-200 p-2 text-right">גמל והשתלמות</th>
-              <th className="border border-slate-200 p-2 text-right">סה״כ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {monthNames.map((month, monthIndex) => (
-              <tr key={monthIndex} className="hover:bg-slate-50">
-                <td className="border border-slate-200 p-2">{month}</td>
-                {Object.entries(yearlyTargets.products).map(([productKey, product]) => (
-                  <td key={productKey} className="border border-slate-200 p-2">
-                    <Input
-                      type="number"
-                      value={product.targets[monthIndex].target}
-                      onChange={(e) => handleProductInputChange(productKey, monthIndex, 'target', e.target.value)}
-                      className="w-full text-right"
-                      min="0"
-                    />
-                  </td>
+      {/* Monthly Table with blue headers */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-right font-medium min-w-[180px]">
+                  נתונים
+                </th>
+                {Object.keys(monthlyData).map(month => (
+                  <th 
+                    key={month}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-right font-medium min-w-[100px]"
+                  >
+                    {month}
+                  </th>
                 ))}
-                <td className="border border-slate-200 p-2 font-bold">
-                  ₪{Object.values(yearlyTargets.products).reduce((acc, product) => 
-                    acc + (Number(product.targets[monthIndex].target) || 0), 0).toLocaleString()}
-                </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {/* ... existing monthly table rows ... */}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-      {/* כבלת תוצאות */}
+      {/* Results Table */}
       <Card className="shadow-md">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
           תוצאות חודשיות
@@ -732,7 +711,7 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
         </div>
       </Card>
 
-      {/* כפתור שמירה */}
+      {/* Save Button */}
       <div className="flex justify-end gap-2">
         <Button
           onClick={handleSave}
