@@ -8,6 +8,8 @@ import { ArrowUpIcon, TrendingUp, Users, DollarSign, Clock, Target, Activity, Ar
 import { reportService } from '@/services/reportService';
 import { toast } from 'react-hot-toast';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DashboardStats {
   total: {
@@ -201,25 +203,40 @@ export default function ModernAnalyticsDashboard() {
   ];
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white" dir="rtl">
+    <div className="p-6 space-y-8 bg-gradient-to-br from-secondary-50 to-white" dir="rtl">
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {kpiData.map((kpi, index) => (
-          <Card key={index} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-t-4 hover:scale-102" style={{ borderTopColor: kpi.color.replace('bg-', '#').replace('green-500', '#10B981').replace('blue-500', '#3B82F6').replace('orange-500', '#F97316').replace('purple-500', '#8B5CF6') }}>
+          <Card 
+            key={index} 
+            className={cn(
+              "overflow-hidden transition-all duration-300",
+              "hover:shadow-lg hover:shadow-primary-100/50",
+              "border-t-4 hover:-translate-y-1"
+            )} 
+            style={{ 
+              borderTopColor: kpi.color
+                .replace('bg-', '#')
+                .replace('green-500', '#0ea5e9')
+                .replace('blue-500', '#0ea5e9')
+                .replace('orange-500', '#0ea5e9')
+                .replace('purple-500', '#0ea5e9') 
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="space-y-1">
-                <CardTitle className="text-sm font-medium text-gray-600">{kpi.title}</CardTitle>
-                <CardDescription>{kpi.description}</CardDescription>
+                <CardTitle className="text-sm font-medium text-secondary-600">{kpi.title}</CardTitle>
+                <CardDescription className="text-secondary-500">{kpi.description}</CardDescription>
               </div>
-              <div className={`p-2 rounded-lg ${kpi.color} bg-opacity-20 transition-all duration-300 hover:bg-opacity-30`}>
-                <kpi.icon className={`h-5 w-5 ${kpi.color.replace('bg-', 'text-')}`} />
+              <div className={cn(
+                "p-2 rounded-lg transition-all duration-300",
+                "bg-primary-100 text-primary-600"
+              )}>
+                <kpi.icon className="h-5 w-5" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r" 
-                style={{ 
-                  backgroundImage: `linear-gradient(to right, ${kpi.color.replace('bg-', '#').replace('green-500', '#10B981').replace('blue-500', '#3B82F6').replace('orange-500', '#F97316').replace('purple-500', '#8B5CF6')}, ${kpi.color.replace('bg-', '#').replace('green-500', '#059669').replace('blue-500', '#2563EB').replace('orange-500', '#EA580C').replace('purple-500', '#7C3AED')})` 
-                }}>
+              <div className="text-2xl font-bold text-primary-600">
                 {kpi.value}
               </div>
             </CardContent>
@@ -227,97 +244,103 @@ export default function ModernAnalyticsDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Calendar Card */}
-        <Card className="col-span-1 hover:shadow-lg transition-all duration-300 border border-gray-200">
-          <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardTitle className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">לוח שנה</CardTitle>
-            <CardDescription>מכירות לפי תאריך</CardDescription>
+        <Card className="col-span-1 transition-all duration-300 hover:shadow-lg hover:shadow-primary-100/50">
+          <CardHeader className="border-b bg-gradient-to-r from-primary-50 to-primary-100/50">
+            <CardTitle className="text-lg font-semibold text-primary-600">לוח שנה</CardTitle>
+            <CardDescription className="text-secondary-500">מכירות לפי תאריך</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="rounded-lg border border-secondary-200 overflow-hidden">
               <Calendar
                 mode="single"
                 selected={date}
                 onSelect={handleDateChange}
                 modifiers={{ hasEvent: (date) => events[date.toISOString().split('T')[0]] > 0 }}
                 modifiersClassNames={{
-                  hasEvent: 'bg-blue-50 font-semibold hover:bg-blue-100 transition-colors duration-200'
+                  hasEvent: 'bg-primary-50 font-semibold hover:bg-primary-100 transition-colors duration-200'
                 }}
                 className="p-3"
                 classNames={{
                   months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
                   month: "space-y-4",
-                  caption: "flex justify-center pt-1 relative items-center text-sm font-semibold text-gray-900",
-                  caption_label: "text-sm font-medium",
+                  caption: "flex justify-center pt-1 relative items-center text-secondary-600 font-semibold",
+                  caption_label: "text-sm",
                   nav: "space-x-1 flex items-center",
-                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 transition-opacity duration-200 hover:bg-gray-100 rounded-full",
+                  nav_button: cn(
+                    "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 transition-opacity",
+                    "hover:bg-primary-50 rounded-lg text-primary-600"
+                  ),
                   nav_button_previous: "absolute left-1",
                   nav_button_next: "absolute right-1",
                   table: "w-full border-collapse space-y-1",
                   head_row: "flex",
-                  head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
+                  head_cell: "text-secondary-500 rounded-md w-8 font-normal text-[0.8rem]",
                   row: "flex w-full mt-2",
-                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-blue-50 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
-                  day: "h-9 w-9 p-0 font-normal hover:bg-gray-100 rounded-full transition-colors duration-200",
-                  day_selected: "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white rounded-full transition-colors duration-200",
-                  day_today: "bg-gray-100 font-semibold text-gray-900",
-                  day_outside: "text-gray-400 opacity-50",
-                  day_disabled: "text-gray-400 opacity-50",
-                  day_range_middle: "aria-selected:bg-blue-50 aria-selected:text-gray-900",
-                  day_hidden: "invisible"
+                  cell: cn(
+                    "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-primary-50",
+                    "first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
+                  ),
+                  day: cn(
+                    "h-8 w-8 p-0 font-normal aria-selected:opacity-100 transition-colors",
+                    "hover:bg-primary-100 hover:text-primary-600 rounded-lg"
+                  ),
+                  day_range_end: "day-range-end",
+                  day_selected: "bg-primary-600 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-600 focus:text-white",
+                  day_today: "bg-secondary-100 text-secondary-900",
+                  day_outside: "text-secondary-400 opacity-50",
+                  day_disabled: "text-secondary-400 opacity-50",
+                  day_range_middle: "aria-selected:bg-primary-50 aria-selected:text-primary-600",
+                  day_hidden: "invisible",
+                }}
+                components={{
+                  IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+                  IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
                 }}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Revenue Chart */}
-        <Card className="col-span-1 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>הכנסות לפי מוצרים</CardTitle>
-            <CardDescription>התפלגות הכנסות לפי סוגי מוצרים</CardDescription>
+        {/* Trends Card */}
+        <Card className="col-span-1 lg:col-span-2 transition-all duration-300 hover:shadow-lg hover:shadow-primary-100/50">
+          <CardHeader className="border-b bg-gradient-to-r from-primary-50 to-primary-100/50">
+            <CardTitle className="text-lg font-semibold text-primary-600">מגמות מכירה</CardTitle>
+            <CardDescription className="text-secondary-500">השוואה בין החודש הנוכחי לקודם</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={[
-                {
-                  name: 'פנסיה',
-                  הכנסות: stats.total.pension.commission || 0
-                },
-                {
-                  name: 'ביטוח',
-                  הכנסות: stats.total.insurance.commission || 0
-                },
-                {
-                  name: 'השקעות',
-                  הכנסות: stats.total.investment.commission || 0
-                },
-                {
-                  name: 'פוליסות',
-                  הכנסות: stats.total.policy.commission || 0
-                }
-              ]}>
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Bar dataKey="הכנסות" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              {trends.map((trend, index) => (
+                <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary-50 transition-colors">
+                  <div>
+                    <div className="font-medium text-secondary-900">{trend.title}</div>
+                    <div className="text-sm text-secondary-500">
+                      {trend.current} מכירות החודש
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getTrendIcon(trend.change)}
+                    <span className={cn(
+                      "text-sm font-medium",
+                      trend.change > 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {Math.abs(trend.change).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Distribution Pie Chart */}
-        <Card className="hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardTitle className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-              התפלגות מכירות
-            </CardTitle>
-            <CardDescription>התפלגות מכירות לפי סוגי מוצרים</CardDescription>
+        {/* Distribution Card */}
+        <Card className="col-span-1 lg:col-span-3 transition-all duration-300 hover:shadow-lg hover:shadow-primary-100/50">
+          <CardHeader className="border-b bg-gradient-to-r from-primary-50 to-primary-100/50">
+            <CardTitle className="text-lg font-semibold text-primary-600">התפלגות מכירות</CardTitle>
+            <CardDescription className="text-secondary-500">התפלגות המכירות לפי סוג מוצר</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -334,49 +357,14 @@ export default function ModernAnalyticsDashboard() {
                     {pieData.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]}
-                        className="hover:opacity-80 transition-opacity duration-300"
+                        fill={`hsl(${200 + index * 30}, 84%, ${60 - index * 10}%)`}
                       />
                     ))}
                   </Pie>
-                  <Legend 
-                    layout="horizontal" 
-                    verticalAlign="bottom" 
-                    align="center"
-                    formatter={(value, entry: any) => (
-                      <span className="text-sm font-medium text-gray-700">{value}</span>
-                    )}
-                  />
+                  <Legend />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trends Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>מגמות חודשיות</CardTitle>
-            <CardDescription>השוואה לחודש קודם</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {trends.map((trend, index) => (
-                <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium">{trend.title}</div>
-                    <div className="text-sm text-gray-500">
-                      {trend.current} מכירות (חודש נוכחי)
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getTrendIcon(trend.change)}
-                    <span className={`text-sm font-medium ${trend.change > 0 ? 'text-green-500' : trend.change < 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                      {Math.abs(trend.change).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
