@@ -319,37 +319,49 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        {/* מטרות יסוד */}
-        <Card>
-          <div className="bg-[#1e3a8a] text-white p-2 text-center font-bold rounded-t-lg">
-            מטרות יסוד
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* טבלה 1 - נתונים בסיסיים */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
+            נתונים בסיסיים
           </div>
-          <div className="p-4">
-            <table className="w-full">
-              <tbody>
-                <tr>
-                  <td className="py-2">פגישות ליום</td>
+          <div className="p-4 bg-white rounded-b-lg">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">ימי עבודה</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.workingDays}
+                      onChange={(e) => handleBasicInputChange('workingDays', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">פגישות ליום</td>
                   <td className="py-2">
                     <Input
                       type="number"
                       value={yearlyTargets.meetingsPerDay}
                       onChange={(e) => handleBasicInputChange('meetingsPerDay', e.target.value)}
-                      className="w-24 text-left"
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       max="10"
                     />
                   </td>
                 </tr>
-                <tr>
-                  <td className="py-2">אחוז סגירה</td>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">אחוז סגירה</td>
                   <td className="py-2">
                     <Input
                       type="number"
                       value={yearlyTargets.closureRate}
                       onChange={(e) => handleBasicInputChange('closureRate', e.target.value)}
-                      className="w-24 text-left"
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       max="100"
                     />
@@ -360,73 +372,217 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
           </div>
         </Card>
 
-        {/* ממוצע פעילות לפגישה */}
-        <Card>
-          <div className="bg-[#1e3a8a] text-white p-2 text-center font-bold rounded-t-lg">
+        {/* טבלה 2 - ממוצע פעילות לפגישה */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
             ממוצע פעילות לפגישה
           </div>
-          <div className="p-4">
-            <table className="w-full">
-              <tbody>
-                {Object.entries({
-                  'סיכונים': 'insurance',
-                  'פרמיוני': 'premium',
-                  'ניוד פנסיה': 'pensionTransfer',
-                  'פיננסים ניוד': 'financeTransfer',
-                  'משכנתא': 'mortgage'
-                }).map(([label, key]) => (
-                  <tr key={key}>
-                    <td className="py-2">{label}</td>
-                    <td className="py-2">
-                      <Input
-                        type="number"
-                        value={yearlyTargets.activityAverages[key]}
-                        onChange={(e) => handleActivityChange(key, e.target.value)}
-                        className="w-32 text-left"
-                        min="0"
-                      />
-                    </td>
-                  </tr>
-                ))}
+          <div className="p-4 bg-white rounded-b-lg">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">סיכונים</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.activityAverages.insurance}
+                      onChange={(e) => handleActivityChange('insurance', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">פנסיוני</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.activityAverages.premium}
+                      onChange={(e) => handleActivityChange('premium', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">ניוד פנסיה</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.activityAverages.pensionTransfer}
+                      onChange={(e) => handleActivityChange('pensionTransfer', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">ניוד פיננסים</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.activityAverages.financeTransfer}
+                      onChange={(e) => handleActivityChange('financeTransfer', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">הפקדה שוטפת</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.activityAverages.mortgage}
+                      onChange={(e) => handleActivityChange('mortgage', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
         </Card>
 
-        {/* ממוצע מקורות גיוס */}
-        <Card>
-          <div className="bg-[#1e3a8a] text-white p-2 text-center font-bold rounded-t-lg">
-            ממוצע מקורות גיוס
+        {/* טבלה 3 - ממוצע לפגישה מוצרי גולה */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
+            ממוצע לפגישה מוצרי גולה
           </div>
-          <div className="p-4">
-            <table className="w-full">
-              <tbody>
-                {Object.entries({
-                  'תכנון טלפוני': 'phonePlanning',
-                  'כלכלת המשפחה': 'familyEconomics',
-                  'תערוכה': 'exhibition',
-                  'שיווק דיגיטלי': 'digitalMarketing',
-                  'נדל״ן': 'realEstate',
-                  'גיוס אחרים': 'otherRecruitment',
-                  'משכנתא': 'mortgage',
-                  'חידושים': 'renewals',
-                  'הלוואות': 'loans',
-                  'אחרים': 'others'
-                }).map(([label, key]) => (
-                  <tr key={key}>
-                    <td className="py-2">{label}</td>
-                    <td className="py-2">
-                      <Input
-                        type="number"
-                        value={yearlyTargets.recruitmentSources[key]}
-                        onChange={(e) => handleRecruitmentChange(key, e.target.value)}
-                        className="w-24 text-left"
-                        min="0"
-                        max="100"
-                      />
-                    </td>
-                  </tr>
-                ))}
+          <div className="p-4 bg-white rounded-b-lg">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">תכנון פיננסי</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.phonePlanning}
+                      onChange={(e) => handleRecruitmentChange('phonePlanning', e.target.value)}
+                      className="w-20 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">כלכלת המשפחה</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.familyEconomics}
+                      onChange={(e) => handleRecruitmentChange('familyEconomics', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">תעסוקה</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.exhibition}
+                      onChange={(e) => handleRecruitmentChange('exhibition', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">ייעוץ עסקי ארגוני</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.digitalMarketing}
+                      onChange={(e) => handleRecruitmentChange('digitalMarketing', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">פרישה</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.realEstate}
+                      onChange={(e) => handleRecruitmentChange('realEstate', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">גיוס ארגונים</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.otherRecruitment}
+                      onChange={(e) => handleRecruitmentChange('otherRecruitment', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">משכנתא</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.mortgage}
+                      onChange={(e) => handleRecruitmentChange('mortgage', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">מנוי חודשי</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.renewals}
+                      onChange={(e) => handleRecruitmentChange('renewals', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">הלוואות</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.loans}
+                      onChange={(e) => handleRecruitmentChange('loans', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 transition-colors">
+                  <td className="py-2.5 text-slate-700 font-medium">נדל"ן</td>
+                  <td className="py-2">
+                    <Input
+                      type="number"
+                      value={yearlyTargets.recruitmentSources.others}
+                      onChange={(e) => handleRecruitmentChange('others', e.target.value)}
+                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                      max="100"
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -512,17 +668,22 @@ const SalesTargetsSystem: React.FC<SalesTargetsSystemProps> = ({ agent_id, year 
         </table>
       </div>
 
-      {hasChanges && (
-        <div className="flex justify-end mt-4">
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="bg-slate-800 hover:bg-slate-700"
-          >
-            {isLoading ? "שומר..." : "שמור שינויים"}
-          </Button>
-        </div>
-      )}
+      {/* כפתורי שמירה */}
+      <div className="flex justify-end gap-2 mt-6">
+        <Button
+          onClick={handleSave}
+          disabled={isLoading || !hasChanges}
+          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 text-sm px-6 py-2 rounded-md shadow-sm hover:shadow transition-all duration-200"
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="animate-spin">⏳</span> שומר...
+            </span>
+          ) : (
+            'שמור שינויים'
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
