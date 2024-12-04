@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Save, FileDown } from 'lucide-react';
+import { Plus, Save, FileDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface WorkPlanTableProps {
@@ -62,6 +62,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout>();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const currentYearData = loadYearData(selectedYear);
@@ -217,117 +218,69 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
     debouncedSave(updatedWorkPlan);
   };
 
+  const scrollLeft = () => {
+    if (tableRef.current) {
+      tableRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (tableRef.current) {
+      tableRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+      <Card className="overflow-hidden relative">
+        <button
+          onClick={scrollLeft}
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-r-lg shadow-md z-10 hover:bg-white"
+          aria-label="גלול שמאלה"
+        >
+          <ChevronLeft className="h-6 w-6 text-blue-600" />
+        </button>
+        
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-l-lg shadow-md z-10 hover:bg-white"
+          aria-label="גלול ימינה"
+        >
+          <ChevronRight className="h-6 w-6 text-blue-600" />
+        </button>
+
+        <div 
+          ref={tableRef} 
+          className="overflow-x-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-100"
+          style={{ scrollBehavior: 'smooth' }}
+        >
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium">
-                  שנתי
-                </th>
-                {yearlyWorkPlan?.monthlyTargets.map(month => (
-                  <th key={month.month} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium min-w-[120px]">
-                    {month.month}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {/* ימי עבודה */}
-              <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">ימי עבודה בחודש</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4">
-                    <Input
-                      type="number"
-                      value={month.workDays}
-                      onChange={(e) => handleInputChange(idx, 'workDays', e.target.value)}
-                      className="w-full text-right bg-transparent border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                      min="0"
-                      max="31"
-                    />
-                  </td>
-                ))}
-              </tr>
-
-              {/* פגישות */}
-              <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">פוטנציאל פגישות ביום</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4">
-                    <Input
-                      type="number"
-                      value={month.potentialMeetings}
-                      onChange={(e) => handleInputChange(idx, 'potentialMeetings', e.target.value)}
-                      className="w-full text-right bg-transparent border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </td>
-                ))}
-              </tr>
-
-              {/* ביצוע */}
-              <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">ביצוע</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4">
-                    <Input
-                      type="number"
-                      value={month.actualMeetings}
-                      onChange={(e) => handleInputChange(idx, 'actualMeetings', e.target.value)}
-                      className="w-full text-right bg-transparent border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </td>
-                ))}
-              </tr>
-
-              {/* אחוז ביצוע */}
-              <tr className="bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">אחוז ביצוע</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => {
-                  const target = Number(month.workDays || 0) * Number(month.potentialMeetings || 0);
-                  const actual = Number(month.actualMeetings || 0);
-                  const percentage = target ? ((actual / target) * 100).toFixed(1) : '0';
-                  return (
-                    <td key={idx} className="p-4 text-right font-medium">
-                      <span className={`
-                        ${Number(percentage) >= 100 ? 'text-green-600' : ''}
-                        ${Number(percentage) >= 80 && Number(percentage) < 100 ? 'text-yellow-600' : ''}
-                        ${Number(percentage) < 80 ? 'text-red-600' : ''}
-                      `}>
-                        {percentage}%
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium">
+                <th className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium w-48">
                   חודש
                 </th>
                 {yearlyWorkPlan?.monthlyTargets.map(month => (
-                  <th key={month.month} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium min-w-[120px]">
+                  <th key={month.month} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-center font-medium min-w-[120px]">
                     {month.month}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
+              {/* יותרת משנה - נתוני פגישות */}
+              <tr>
+                <td colSpan={yearlyWorkPlan?.monthlyTargets?.length + 1 || 1} 
+                    className="bg-gradient-to-r from-gray-100 to-gray-50 p-3 font-semibold text-gray-800 border-y border-gray-200">
+                  נתוני פגישות
+                </td>
+              </tr>
+
               {/* ימי עבודה בחודש */}
               <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">ימי עבודה בחודש</td>
+                <td className="p-4 font-medium text-gray-700 bg-white">ימי עבודה בחודש</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4 text-center">
+                  <td key={idx} className="p-4 text-center bg-white">
                     {month.workDays || '0'}
                   </td>
                 ))}
@@ -335,9 +288,9 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
 
               {/* פוטנציאל פגישות ביום */}
               <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">פוטנציאל פגישות ביום</td>
+                <td className="p-4 font-medium text-gray-700 bg-white">פוטנציאל פגישות ביום</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4 text-center">
+                  <td key={idx} className="p-4 text-center bg-white">
                     {Number(month.workDays || 0) * 2}
                   </td>
                 ))}
@@ -345,20 +298,42 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
 
               {/* אחוז חודשי */}
               <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">אחוז חודשי</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4 text-center">
-                    {((Number(month.workDays || 0) * 2 / (yearlyWorkPlan.monthlyTargets.reduce((sum, m) => 
-                      sum + Number(m.workDays || 0) * 2, 0))) * 100).toFixed(1)}%
-                  </td>
-                ))}
+                <td className="p-4 font-medium text-gray-700 bg-white">אחוז חודשי</td>
+                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => {
+                  // חישוב פגישות חודשיות
+                  const monthlyMeetings = Number(month.workDays || 0) * 2;
+                  
+                  // חישוב סך פגישות שנתי
+                  const yearlyTotalMeetings = yearlyWorkPlan.monthlyTargets.reduce((sum, m) => 
+                    sum + (Number(m.workDays || 0) * 2), 0
+                  );
+                  
+                  // חישוב האחוז
+                  const percentage = yearlyTotalMeetings > 0 
+                    ? ((monthlyMeetings / yearlyTotalMeetings) * 100).toFixed(1)
+                    : '0';
+
+                  return (
+                    <td key={idx} className="p-4 text-center bg-white">
+                      {percentage}%
+                    </td>
+                  );
+                })}
+              </tr>
+
+              {/* בותרת משנה - סיכום ביצועים */}
+              <tr>
+                <td colSpan={yearlyWorkPlan?.monthlyTargets?.length + 1 || 1} 
+                    className="bg-gradient-to-r from-gray-100 to-gray-50 p-3 font-semibold text-gray-800 border-y border-gray-200">
+                  סיכום ביצועים
+                </td>
               </tr>
 
               {/* ביצוע פגישות */}
               <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">ביצוע פגישות</td>
+                <td className="p-4 font-medium text-gray-700 bg-white">ביצוע פגישות</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4 text-center">
+                  <td key={idx} className="p-4 text-center bg-white">
                     {month.actualMeetings || '0'}
                   </td>
                 ))}
@@ -366,12 +341,22 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
 
               {/* אחוז ביצוע */}
               <tr className="hover:bg-gray-50">
-                <td className="p-4 font-medium text-gray-700">אחוז ביצוע</td>
+                <td className="p-4 font-medium text-gray-700 bg-white">אחוז ביצוע</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
-                  <td key={idx} className="p-4 text-center">
+                  <td key={idx} className="p-4 text-center bg-white">
                     {((Number(month.actualMeetings || 0) / (Number(month.workDays || 0) * 2)) * 100).toFixed(1)}%
                   </td>
                 ))}
+              </tr>
+
+              {/* שיכום שנתי */}
+              <tr>
+                <td colSpan={yearlyWorkPlan?.monthlyTargets?.length + 1 || 1} 
+                    className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 font-bold text-gray-800 border-t-2 border-blue-200">
+                  סה"כ פגישות שנתי: {yearlyWorkPlan?.monthlyTargets.reduce((sum, month) => 
+                    sum + (Number(month.workDays || 0) * 2), 0
+                  )}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -395,26 +380,15 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
             <table className="w-full text-sm">
               <tbody className="divide-y divide-slate-100">
                 <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 text-slate-700 font-medium">ימי עבודה</td>
-                  <td className="py-2">
-                    <Input
-                      type="number"
-                      value={yearlyWorkPlan?.monthlyTargets[0]?.workDays || ''}
-                      onChange={(e) => handleInputChange(0, 'workDays', e.target.value)}
-                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                      min="0"
-                    />
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 transition-colors">
                   <td className="py-2.5 text-slate-700 font-medium">פגישות ליום</td>
                   <td className="py-2">
                     <Input
                       type="number"
-                      value={yearlyWorkPlan?.monthlyTargets[0]?.potentialMeetings || ''}
-                      onChange={(e) => handleInputChange(0, 'potentialMeetings', e.target.value)}
+                      value="2"
+                      onChange={(e) => handleInputChange(0, 'meetingsPerDay', e.target.value)}
                       className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
+                      max="10"
                     />
                   </td>
                 </tr>
@@ -423,7 +397,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                   <td className="py-2">
                     <Input
                       type="number"
-                      value={yearlyWorkPlan?.monthlyTargets[0]?.closureRate || '43'}
+                      value="43"
                       onChange={(e) => handleInputChange(0, 'closureRate', e.target.value)}
                       className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
