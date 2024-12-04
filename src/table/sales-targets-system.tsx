@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 
 interface TableData {
   id: string;
@@ -17,123 +18,147 @@ interface TabData {
 }
 
 const SalesTargetsSystem: React.FC = () => {
+  const { 
+    closingRate, 
+    monthlyMeetings, 
+    isDirty,
+    saveChanges 
+  } = useSalesTargets();
   const [openTable, setOpenTable] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'investments' | 'services'>('investments');
+  const [tablesData, setTablesData] = useState<TabData[]>([]);
 
-  const tabs: TabData[] = [
-    {
-      id: 'investments',
-      title: 'השקעות ופיננסים',
-      color: 'bg-blue-50',
-      tables: [
-        {
-          id: "risks",
-          title: "סיכונים",
-          bgColor: "bg-blue-50",
-          targets: [5700, 6000, 3900, 6600, 5700, 6600, 5400, 5400, 4800, 5400, 6300, 6600],
-          yearlyTotal: 68400
-        },
-        { 
-          id: "pension", 
-          title: "פנסיוני", 
-          bgColor: "bg-blue-50",
-          targets: [57000, 60000, 39000, 66000, 57000, 66000, 54000, 54000, 48000, 54000, 63000, 66000],
-          yearlyTotal: 684000
-        },
-        { 
-          id: "pension-transfer", 
-          title: "ניוד פנסיה", 
-          bgColor: "bg-blue-50",
-          targets: [5700000, 6000000, 3900000, 6600000, 5700000, 6600000, 5400000, 5400000, 4800000, 5400000, 6300000, 6600000],
-          yearlyTotal: 68400000
-        },
-        { 
-          id: "finance-transfer", 
-          title: "פיננסים ניוד", 
-          bgColor: "bg-blue-50",
-          targets: [7600000, 8000000, 5200000, 8800000, 7600000, 8800000, 7200000, 7200000, 6400000, 7200000, 8400000, 8800000],
-          yearlyTotal: 91200000
-        },
-        { 
-          id: "regular-deposit", 
-          title: "הפקדה שוטפת", 
-          bgColor: "bg-blue-50",
-          targets: [19000, 20000, 13000, 22000, 19000, 22000, 18000, 18000, 16000, 18000, 21000, 22000],
-          yearlyTotal: 228000
-        }
-      ]
-    },
-    {
-      id: 'services',
-      title: 'שירותים',
-      color: 'bg-orange-50',
-      tables: [
-        {
-          id: "financial-planning",
-          title: "תכנון פיננסי",
-          bgColor: "bg-orange-50",
-          targets: [13.3, 14.0, 9.1, 15.4, 13.3, 15.4, 12.6, 12.6, 11.2, 12.6, 14.7, 15.4],
-          yearlyTotal: 159.6
-        },
-        { 
-          id: "family-economics", 
-          title: "כלכלת המשפחה", 
-          bgColor: "bg-orange-50",
-          targets: [9.5, 10.0, 6.5, 11.0, 9.5, 11.0, 9.0, 9.0, 8.0, 9.0, 10.5, 11.0],
-          yearlyTotal: 114.0
-        },
-        { 
-          id: "employment", 
-          title: "תעסוקה", 
-          bgColor: "bg-orange-50",
-          targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
-          yearlyTotal: 45.6
-        },
-        { 
-          id: "organizational-consulting", 
-          title: "ייעוץ עסקי ארגוני", 
-          bgColor: "bg-orange-50",
-          targets: [1.9, 2.0, 1.3, 2.2, 1.9, 2.2, 1.8, 1.8, 1.6, 1.8, 2.1, 2.2],
-          yearlyTotal: 22.8
-        },
-        { 
-          id: "retirement", 
-          title: "פרישה", 
-          bgColor: "bg-orange-50",
-          targets: [2.66, 2.8, 1.82, 3.08, 2.66, 3.08, 2.52, 2.52, 2.24, 2.52, 2.94, 3.08],
-          yearlyTotal: 31.9
-        },
-        { 
-          id: "organizational-recruitment", 
-          title: "גיוס ארגונים", 
-          bgColor: "bg-orange-50",
-          targets: [5.7, 6.0, 3.9, 6.6, 5.7, 6.6, 5.4, 5.4, 4.8, 5.4, 6.3, 6.6],
-          yearlyTotal: 68.4
-        },
-        { 
-          id: "loans", 
-          title: "הלוואות", 
-          bgColor: "bg-orange-50",
-          targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
-          yearlyTotal: 91.2
-        },
-        { 
-          id: "real-estate", 
-          title: "נדל\"ן", 
-          bgColor: "bg-orange-50",
-          targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
-          yearlyTotal: 91.2
-        },
-        { 
-          id: "mortgage", 
-          title: "משכנתא", 
-          bgColor: "bg-orange-50",
-          targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
-          yearlyTotal: 45.6
-        }
-      ]
-    }
-  ];
+  // פונקציה לחישוב יעד חודשי
+  const calculateMonthlyTarget = (baseAmount: number, percentage: number = 100) => {
+    return (baseAmount * (closingRate / 100) * monthlyMeetings * (percentage / 100));
+  };
+
+  // חישוב היעדים החודשיים לפי הנוסחה
+  const getUpdatedTargets = (baseAmount: number, percentage: number = 100) => {
+    const monthlyDistribution = [1, 1.05, 0.7, 1.15, 1, 1.15, 0.95, 0.95, 0.85, 0.95, 1.1, 1.15];
+    const baseTarget = calculateMonthlyTarget(baseAmount, percentage);
+    return monthlyDistribution.map(factor => Math.round(baseTarget * factor));
+  };
+
+  // עדכון הטבלאות כשיש שינוי בפרמטרים
+  useEffect(() => {
+    const updatedTabs: TabData[] = [
+      {
+        id: 'investments',
+        title: 'השקעות ופיננסים',
+        color: 'bg-blue-50',
+        tables: [
+          {
+            id: "risks",
+            title: "סיכונים",
+            bgColor: "bg-blue-50",
+            targets: getUpdatedTargets(150),
+            yearlyTotal: calculateMonthlyTarget(150) * 12
+          },
+          { 
+            id: "pension", 
+            title: "פנסיוני", 
+            bgColor: "bg-blue-50",
+            targets: getUpdatedTargets(1500),
+            yearlyTotal: calculateMonthlyTarget(1500) * 12
+          },
+          { 
+            id: "pension-transfer", 
+            title: "ניוד פנסיה", 
+            bgColor: "bg-blue-50",
+            targets: [5700000, 6000000, 3900000, 6600000, 5700000, 6600000, 5400000, 5400000, 4800000, 5400000, 6300000, 6600000],
+            yearlyTotal: 68400000
+          },
+          { 
+            id: "finance-transfer", 
+            title: "פיננסים ניוד", 
+            bgColor: "bg-blue-50",
+            targets: [7600000, 8000000, 5200000, 8800000, 7600000, 8800000, 7200000, 7200000, 6400000, 7200000, 8400000, 8800000],
+            yearlyTotal: 91200000
+          },
+          { 
+            id: "regular-deposit", 
+            title: "הפקדה שוטפת", 
+            bgColor: "bg-blue-50",
+            targets: [19000, 20000, 13000, 22000, 19000, 22000, 18000, 18000, 16000, 18000, 21000, 22000],
+            yearlyTotal: 228000
+          }
+        ]
+      },
+      {
+        id: 'services',
+        title: 'שירותים',
+        color: 'bg-orange-50',
+        tables: [
+          {
+            id: "financial-planning",
+            title: "תכנון פיננסי",
+            bgColor: "bg-orange-50",
+            targets: getUpdatedTargets(500, 35),
+            yearlyTotal: calculateMonthlyTarget(500, 35) * 12
+          },
+          { 
+            id: "family-economics", 
+            title: "כלכלת המשפחה", 
+            bgColor: "bg-orange-50",
+            targets: [9.5, 10.0, 6.5, 11.0, 9.5, 11.0, 9.0, 9.0, 8.0, 9.0, 10.5, 11.0],
+            yearlyTotal: 114.0
+          },
+          { 
+            id: "employment", 
+            title: "תעסוקה", 
+            bgColor: "bg-orange-50",
+            targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
+            yearlyTotal: 45.6
+          },
+          { 
+            id: "organizational-consulting", 
+            title: "ייעוץ עסקי ארגוני", 
+            bgColor: "bg-orange-50",
+            targets: [1.9, 2.0, 1.3, 2.2, 1.9, 2.2, 1.8, 1.8, 1.6, 1.8, 2.1, 2.2],
+            yearlyTotal: 22.8
+          },
+          { 
+            id: "retirement", 
+            title: "פרישה", 
+            bgColor: "bg-orange-50",
+            targets: [2.66, 2.8, 1.82, 3.08, 2.66, 3.08, 2.52, 2.52, 2.24, 2.52, 2.94, 3.08],
+            yearlyTotal: 31.9
+          },
+          { 
+            id: "organizational-recruitment", 
+            title: "גיוס ארגונים", 
+            bgColor: "bg-orange-50",
+            targets: [5.7, 6.0, 3.9, 6.6, 5.7, 6.6, 5.4, 5.4, 4.8, 5.4, 6.3, 6.6],
+            yearlyTotal: 68.4
+          },
+          { 
+            id: "loans", 
+            title: "הלוואות", 
+            bgColor: "bg-orange-50",
+            targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
+            yearlyTotal: 91.2
+          },
+          { 
+            id: "real-estate", 
+            title: "נדל\"ן", 
+            bgColor: "bg-orange-50",
+            targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
+            yearlyTotal: 91.2
+          },
+          { 
+            id: "mortgage", 
+            title: "משכנתא", 
+            bgColor: "bg-orange-50",
+            targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
+            yearlyTotal: 45.6
+          }
+        ]
+      }
+    ];
+
+    setTablesData(updatedTabs);
+  }, [closingRate, monthlyMeetings]); // תלות בערכים שמשתנים
 
   const months = ['ינואר 24׳', 'פברואר 24׳', 'מרץ 24׳', 'אפריל 24׳', 'מאי 24׳', 'יוני 24׳',
                  'יולי 24׳', 'אוגוסט 24׳', 'ספטמבר 24׳', 'אוקטובר 24׳', 'נובמבר 24׳', 'דצמבר 24׳'];
@@ -183,6 +208,28 @@ const SalesTargetsSystem: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between mb-4 p-4 bg-gray-100 rounded">
+        <div>
+          <p>אחוז סגירה נוכחי: {closingRate}%</p>
+          <p>פגישות בחודש: {monthlyMeetings}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          {isDirty && (
+            <span className="text-orange-500">* יש שינויים שלא נשמרו</span>
+          )}
+          <button
+            onClick={saveChanges}
+            className={`px-4 py-2 rounded ${
+              isDirty 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-gray-300 text-gray-600'
+            } transition-colors`}
+            disabled={!isDirty}
+          >
+            שמור נתונים
+          </button>
+        </div>
+      </div>
       {/* Tabs */}
       <div className="flex space-x-4 rtl:space-x-reverse border-b">
         {['investments', 'services'].map((tab) => (
@@ -210,7 +257,7 @@ const SalesTargetsSystem: React.FC = () => {
           transition={{ duration: 0.2 }}
           className="space-y-4"
         >
-          {tabs.find(t => t.id === activeTab)?.tables.map((table) => (
+          {tablesData.find(t => t.id === activeTab)?.tables.map((table) => (
             <motion.div
               key={table.id}
               initial={{ opacity: 0, height: 0 }}
