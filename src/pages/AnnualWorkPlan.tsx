@@ -3,7 +3,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkPlanTable from '../table/work-plan-system';
 import SalesTargetsSystem from '../table/sales-targets-system';
-import SalesTrackingTable from '../table/sales-targets-system-v3';
 import { useUser } from '../contexts/UserContext';
 import { SalesTargetsProvider } from '@/contexts/SalesTargetsContext';
 import SalesTargetsTab from '../components/dashboard/sales-targets-tab';
@@ -31,7 +30,7 @@ const AnnualWorkPlan = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" dir="rtl">
-        <TabsList className="grid grid-cols-3 gap-4 bg-transparent h-auto p-0">
+        <TabsList className="grid grid-cols-2 gap-4 bg-transparent h-auto p-0">
           <TabsTrigger
             value="work-plan"
             className={`data-[state=active]:bg-slate-800 data-[state=active]:text-white px-6 py-3 rounded-lg text-lg font-medium transition-all
@@ -45,13 +44,6 @@ const AnnualWorkPlan = () => {
               ${activeTab === 'sales-targets' ? '' : 'bg-white hover:bg-slate-50'}`}
           >
             יעדי מכירות
-          </TabsTrigger>
-          <TabsTrigger
-            value="sales-tracking"
-            className={`data-[state=active]:bg-slate-800 data-[state=active]:text-white px-6 py-3 rounded-lg text-lg font-medium transition-all
-              ${activeTab === 'sales-tracking' ? '' : 'bg-white hover:bg-slate-50'}`}
-          >
-            מעקב מכירות
           </TabsTrigger>
         </TabsList>
 
@@ -78,17 +70,6 @@ const AnnualWorkPlan = () => {
               </CardContent>
             </Card>
           </SalesTargetsProvider>
-        </TabsContent>
-
-        <TabsContent value="sales-tracking" className="mt-6">
-          <Card className="bg-white shadow-lg">
-            <CardHeader className="border-b border-slate-200">
-              <CardTitle className="text-xl text-slate-800">מעקב ביצועי מכירות</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <SalesTrackingTable agent_id={user.id} year={selectedYear} />
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

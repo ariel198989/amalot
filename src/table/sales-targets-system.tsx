@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
+import html2pdf from 'html2pdf.js';
 
 interface TableData {
   id: string;
@@ -206,6 +207,100 @@ const SalesTargetsSystem: React.FC = () => {
     </table>
   );
 
+  const generateCommissionReport = () => {
+    try {
+      // יצירת אלמנט HTML זמני לדוח
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="color: #1e3a8a; text-align: center; margin-bottom: 20px;">דוח עמלות שנתי</h1>
+          
+          <div style="margin-bottom: 20px;">
+            <p style="margin: 5px 0;">תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}</p>
+            <p style="margin: 5px 0;">אחוז סגירה: ${closingRate}%</p>
+            <p style="margin: 5px 0;">פגישות בחודש: ${monthlyMeetings}</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background-color: #1e3a8a; color: white;">
+                <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">קטגוריה</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">יעד שנתי</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">אחוז עמלה</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">עמלה שנתית</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tablesData
+                .find(t => t.id === activeTab)
+                ?.tables.map(table => {
+                  const yearlyTarget = table.yearlyTotal;
+                  const commission = calculateCommission(table.id, yearlyTarget);
+                  const commissionAmount = (yearlyTarget * commission) / 100;
+                  return `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                      <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${table.title}</td>
+                      <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">₪${yearlyTarget.toLocaleString()}</td>
+                      <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${commission}%</td>
+                      <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">₪${commissionAmount.toLocaleString()}</td>
+                    </tr>
+                  `;
+                }).join('')}
+            </tbody>
+          </table>
+
+          <div style="text-align: left; margin-top: 20px; padding-top: 10px; border-top: 2px solid #e5e7eb;">
+            <h3 style="color: #1e3a8a;">
+              סה"כ עמלות שנתי: ₪${tablesData
+                .find(t => t.id === activeTab)
+                ?.tables.reduce((sum, table) => {
+                  const commission = calculateCommission(table.id, table.yearlyTotal);
+                  return sum + (table.yearlyTotal * commission) / 100;
+                }, 0).toLocaleString()}
+            </h3>
+          </div>
+        </div>
+      `;
+
+      // הגדרות ל-PDF
+      const opt = {
+        margin: 10,
+        filename: `דוח_עמלות_שנתי_${new Date().getFullYear()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait'
+        }
+      };
+
+      // יצירת ה-PDF
+      html2pdf().from(element).set(opt).save();
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('אירעה שגיאה בהפקת הדוח. אנא נסה שוב.');
+    }
+  };
+
+  // פונקציה לחישוב אחוז העמלה לפי קטגוריה
+  const calculateCommission = (categoryId: string, amount: number): number => {
+    const commissionRates: { [key: string]: number } = {
+      'risks': 30,
+      'pension': 25,
+      'pension-transfer': 20,
+      'finance-transfer': 15,
+      'financial-planning': 40,
+      // ... הוסף עוד קטגוריות לפי הצורך
+    };
+    return commissionRates[categoryId] || 20; // ברירת מחדל 20%
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4 p-4 bg-gray-100 rounded">
@@ -299,6 +394,19 @@ const SalesTargetsSystem: React.FC = () => {
           ))}
         </motion.div>
       </AnimatePresence>
+
+      {/* כפתור הפקת דוח */}
+      <div className="flex justify-end">
+        <button
+          onClick={generateCommissionReport}
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          הפק דוח עמלות שנתי
+        </button>
+      </div>
     </div>
   );
 };
