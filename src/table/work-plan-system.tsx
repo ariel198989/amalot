@@ -54,6 +54,28 @@ interface RecruitmentSources {
   others: string;
 }
 
+interface SalesTarget {
+  target: number;
+  achieved: number;
+  percentage: number;
+}
+
+interface MonthlySalesData {
+  insurance: SalesTarget;
+  pension: SalesTarget;
+  pensionTransfer: SalesTarget;
+  financeTransfer: SalesTarget;
+  mortgage: SalesTarget;
+  familyEconomics: SalesTarget;
+  employment: SalesTarget;
+  businessConsulting: SalesTarget;
+  retirement: SalesTarget;
+  organizationalRecruitment: SalesTarget;
+  monthlySubscription: SalesTarget;
+  loans: SalesTarget;
+  realEstate: SalesTarget;
+}
+
 const STORAGE_KEY_PREFIX = 'workPlanData_';
 
 const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
@@ -64,6 +86,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
   const saveTimeout = useRef<NodeJS.Timeout>();
   const tableRef = useRef<HTMLDivElement>(null);
   const [meetingsPerDay, setMeetingsPerDay] = useState<number>(2);
+  const [closureRate, setClosureRate] = useState<number>(43);
 
   useEffect(() => {
     const currentYearData = loadYearData(selectedYear);
@@ -252,6 +275,27 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
     debouncedSave(updatedWorkPlan);
   };
 
+  const handleClosureRateChange = (value: string) => {
+    const newValue = Number(value);
+    setClosureRate(newValue);
+    
+    if (!yearlyWorkPlan) return;
+
+    const newMonthlyTargets = yearlyWorkPlan.monthlyTargets.map(target => ({
+      ...target,
+      closureRate: String(newValue)
+    }));
+
+    const updatedWorkPlan = {
+      ...yearlyWorkPlan,
+      monthlyTargets: newMonthlyTargets,
+      lastModified: new Date().toISOString()
+    };
+
+    setYearlyWorkPlan(updatedWorkPlan);
+    debouncedSave(updatedWorkPlan);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden relative">
@@ -419,8 +463,8 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                   <td className="py-2 flex items-center">
                     <Input
                       type="number"
-                      value="43"
-                      onChange={(e) => handleInputChange(0, 'closureRate', e.target.value)}
+                      value={closureRate}
+                      onChange={(e) => handleClosureRateChange(e.target.value)}
                       className="w-16 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       max="100"
