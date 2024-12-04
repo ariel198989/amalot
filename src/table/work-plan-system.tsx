@@ -63,6 +63,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
   const [showSaved, setShowSaved] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout>();
   const tableRef = useRef<HTMLDivElement>(null);
+  const [meetingsPerDay, setMeetingsPerDay] = useState<number>(2);
 
   useEffect(() => {
     const currentYearData = loadYearData(selectedYear);
@@ -230,6 +231,27 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
     }
   };
 
+  const handleMeetingsPerDayChange = (value: string) => {
+    const newValue = Number(value);
+    setMeetingsPerDay(newValue);
+    
+    if (!yearlyWorkPlan) return;
+
+    const newMonthlyTargets = yearlyWorkPlan.monthlyTargets.map(target => ({
+      ...target,
+      potentialMeetings: String(Number(target.workDays || 0) * newValue)
+    }));
+
+    const updatedWorkPlan = {
+      ...yearlyWorkPlan,
+      monthlyTargets: newMonthlyTargets,
+      lastModified: new Date().toISOString()
+    };
+
+    setYearlyWorkPlan(updatedWorkPlan);
+    debouncedSave(updatedWorkPlan);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden relative">
@@ -291,7 +313,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                 <td className="p-4 font-medium text-gray-700 bg-white">פוטנציאל פגישות ביום</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
                   <td key={idx} className="p-4 text-center bg-white">
-                    {Number(month.workDays || 0) * 2}
+                    {Number(month.workDays || 0) * meetingsPerDay}
                   </td>
                 ))}
               </tr>
@@ -301,11 +323,11 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                 <td className="p-4 font-medium text-gray-700 bg-white">אחוז חודשי</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => {
                   // חישוב פגישות חודשיות
-                  const monthlyMeetings = Number(month.workDays || 0) * 2;
+                  const monthlyMeetings = Number(month.workDays || 0) * meetingsPerDay;
                   
                   // חישוב סך פגישות שנתי
                   const yearlyTotalMeetings = yearlyWorkPlan.monthlyTargets.reduce((sum, m) => 
-                    sum + (Number(m.workDays || 0) * 2), 0
+                    sum + (Number(m.workDays || 0) * meetingsPerDay), 0
                   );
                   
                   // חישוב האחוז
@@ -344,7 +366,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                 <td className="p-4 font-medium text-gray-700 bg-white">אחוז ביצוע</td>
                 {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
                   <td key={idx} className="p-4 text-center bg-white">
-                    {((Number(month.actualMeetings || 0) / (Number(month.workDays || 0) * 2)) * 100).toFixed(1)}%
+                    {((Number(month.actualMeetings || 0) / (Number(month.workDays || 0) * meetingsPerDay)) * 100).toFixed(1)}%
                   </td>
                 ))}
               </tr>
@@ -354,7 +376,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                 <td colSpan={yearlyWorkPlan?.monthlyTargets?.length + 1 || 1} 
                     className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 font-bold text-gray-800 border-t-2 border-blue-200">
                   סה"כ פגישות שנתי: {yearlyWorkPlan?.monthlyTargets.reduce((sum, month) => 
-                    sum + (Number(month.workDays || 0) * 2), 0
+                    sum + (Number(month.workDays || 0) * meetingsPerDay), 0
                   )}
                 </td>
               </tr>
@@ -384,8 +406,8 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                   <td className="py-2">
                     <Input
                       type="number"
-                      value="2"
-                      onChange={(e) => handleInputChange(0, 'meetingsPerDay', e.target.value)}
+                      value={meetingsPerDay}
+                      onChange={(e) => handleMeetingsPerDayChange(e.target.value)}
                       className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       max="10"
@@ -394,15 +416,16 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
                 </tr>
                 <tr className="hover:bg-slate-50 transition-colors">
                   <td className="py-2.5 text-slate-700 font-medium">אחוז סגירה</td>
-                  <td className="py-2">
+                  <td className="py-2 flex items-center">
                     <Input
                       type="number"
                       value="43"
                       onChange={(e) => handleInputChange(0, 'closureRate', e.target.value)}
-                      className="w-24 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      className="w-16 h-8 text-left text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       min="0"
                       max="100"
                     />
+                    <span className="mr-2 text-slate-600">%</span>
                   </td>
                 </tr>
               </tbody>
