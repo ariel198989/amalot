@@ -19,6 +19,7 @@ import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
 import { reportService } from '@/services/reportService';
 import { useNavigate } from 'react-router-dom';
+import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 
 interface CustomerJourneyClient {
   id: string;
@@ -87,6 +88,7 @@ const CustomerJourneyComponent: React.FC = () => {
     savings_and_study: false,
     policy: false
   });
+  const { updatePerformance } = useSalesTargets();
 
   useEffect(() => {
     loadCompanyRates();
@@ -196,6 +198,7 @@ const CustomerJourneyComponent: React.FC = () => {
       let commissions;
       let nifraim = 0;
       let scope_commission = 0;
+      const currentMonth = new Date().getMonth() + 1;
       
       switch (type) {
         case 'pension':
@@ -210,6 +213,9 @@ const CustomerJourneyComponent: React.FC = () => {
             contributionRate,
             commissions
           });
+
+          // עדכון הביצועים עבור ניוד פנסיה
+          await updatePerformance('pension-transfer', accumulation, currentMonth);
           break;
 
         case 'insurance': {
@@ -233,13 +239,15 @@ const CustomerJourneyComponent: React.FC = () => {
             scope_commission,
             monthly_commission: nifraim
           };
+
+          // עדכון הביצועים עבור סיכונים - מכניס רק את הפרמיה החודשית
+          await updatePerformance('risks', premium, currentMonth);
           break;
         }
 
         case 'savings_and_study': {
           const amount = Number(data.investmentAmount);
-          const millionsInAmount = amount / 1000000;
-
+          
           // Get rates from agent agreements
           const rates = await getCompanyRates(type, data.company);
           if (!rates) {
@@ -248,10 +256,10 @@ const CustomerJourneyComponent: React.FC = () => {
           }
 
           // Calculate scope commission (e.g., 6000 per million)
-          scope_commission = millionsInAmount * (rates.scope_rate_per_million || 0);
+          scope_commission = amount / 1000000 * (rates.scope_rate_per_million || 0);
           
           // Calculate monthly nifraim (e.g., 250 per million)
-          nifraim = millionsInAmount * (rates.nifraim_rate_per_million || 0);
+          nifraim = amount / 1000000 * (rates.nifraim_rate_per_million || 0);
           
           commissions = {
             scope_commission,
@@ -260,18 +268,26 @@ const CustomerJourneyComponent: React.FC = () => {
 
           console.log('Investment calculations:', {
             amount,
-            millionsInAmount,
+            millionsInAmount: amount / 1000000,
             scope_commission,
             nifraim,
             total: scope_commission + (nifraim * 12)
           });
+
+          // עדכון הביצועים עבור ניוד פיננסים
+          await updatePerformance('finance-transfer', amount, currentMonth);
           break;
         }
 
-        case 'policy':
+        case 'policy': {
           const amount = Number(data.investmentAmount);
+          
           commissions = await calculateCommissions(type, data.company, amount);
+
+          // עדכון הביצועים עבור הפקדה שוטפת
+          await updatePerformance('regular-deposit', amount, currentMonth);
           break;
+        }
       }
 
       if (!commissions) {
@@ -394,8 +410,8 @@ const CustomerJourneyComponent: React.FC = () => {
       toast.success('הנתונים נשמרו בהצלחה');
 
     } catch (error) {
-      console.error('Error saving data:', error);
-      toast.error('שגיאה בשמירת הנתונים');
+      console.error('Error in handleSubmit:', error);
+      toast.error('אירעה שגיאה בשמירת הנתונים');
     }
   };
 
@@ -673,7 +689,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       return;
                     }
                     if (!Object.values(selectedProducts).some(Boolean)) {
-                      toast.error('נא לבחור לפחות מוצר אחד');
+                      toast.error('נא בחור לפחות מוצר אחד');
                       return;
                     }
                     setIsStarting(false);

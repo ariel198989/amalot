@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { supabase } from '@/lib/supabase';
 
 interface SalesTargetsContextType {
   closingRate: number;
@@ -9,6 +10,7 @@ interface SalesTargetsContextType {
   updateMonthlyMeetings: (meetings: number) => void;
   saveChanges: () => Promise<void>;
   discardChanges: () => void;
+  updatePerformance: (category: string, amount: number, month: number) => Promise<void>;
 }
 
 const SalesTargetsContext = createContext<SalesTargetsContextType | undefined>(undefined);
@@ -78,6 +80,50 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     toast.success('השינויים בוטלו');
   };
 
+  const updatePerformance = async (category: string, amount: number, month: number) => {
+    try {
+      const year = new Date().getFullYear();
+      console.log('מעדכן ביצועים:', { category, amount, month, year });
+      
+      // קודם כל מנסים לקבל את הנתונים הקיימים
+      const { data: existingData, error: fetchError } = await supabase
+        .from('sales_targets')
+        .select('performance')
+        .eq('month', month)
+        .eq('year', year)
+        .eq('category', category)
+        .maybeSingle();
+
+      console.log('נתונים קיימים:', existingData, 'שגיאה:', fetchError);
+
+      const currentPerformance = existingData?.performance || 0;
+      const newPerformance = currentPerformance + amount;
+
+      console.log('חישוב ביצועים חדש:', { currentPerformance, newPerformance });
+
+      // משתמשים ב-upsert במקום insert
+      const { data: upsertResult, error: upsertError } = await supabase
+        .from('sales_targets')
+        .upsert({
+          category,
+          month,
+          year,
+          performance: newPerformance
+        }, {
+          onConflict: 'category,month,year'
+        });
+
+      console.log('תוצאת העדכון:', { data: upsertResult, error: upsertError });
+
+      if (upsertError) throw upsertError;
+
+      toast.success('הביצועים עודכנו בהצלחה');
+    } catch (error) {
+      console.error('שגיאה בעדכון הביצועים:', error);
+      toast.error('שגיאה בעדכון הביצועים');
+    }
+  };
+
   useEffect(() => {
     console.log('Context values updated:', {
       closingRate: tempValues.closingRate,
@@ -94,7 +140,8 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       updateClosingRate,
       updateMonthlyMeetings,
       saveChanges,
-      discardChanges
+      discardChanges,
+      updatePerformance
     }}>
       {children}
     </SalesTargetsContext.Provider>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
+import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
 
 interface TableData {
@@ -9,6 +10,7 @@ interface TableData {
   bgColor: string;
   targets: number[];
   yearlyTotal: number;
+  performances?: number[];
 }
 
 interface TabData {
@@ -25,9 +27,11 @@ const SalesTargetsSystem: React.FC = () => {
     isDirty,
     saveChanges 
   } = useSalesTargets();
+  const [performances, setPerformances] = useState<Record<string, number[]>>({});
   const [openTable, setOpenTable] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'investments' | 'services'>('investments');
   const [tablesData, setTablesData] = useState<TabData[]>([]);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // פונקציה לחישוב יעד חודשי
   const calculateMonthlyTarget = (baseAmount: number, percentage: number = 100) => {
@@ -41,8 +45,69 @@ const SalesTargetsSystem: React.FC = () => {
     return monthlyDistribution.map(factor => Math.round(baseTarget * factor));
   };
 
+  // עעינת הביצועים מהדאטאבייס
+  useEffect(() => {
+    const loadPerformances = async () => {
+      console.log('Loading performances...');
+      const currentYear = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from('sales_targets')
+        .select('*')
+        .eq('year', currentYear);
+
+      console.log('Loaded data from supabase:', { data, error });
+
+      if (error) {
+        console.error('Error loading performances:', error);
+        return;
+      }
+
+      // ארגון הנתונים לפי קטגוריה וחודש
+      const performancesByCategory: Record<string, number[]> = {};
+      
+      // אתחול מערכים ריקים לכל הקטגוריות
+      const categories = ['risks', 'pension', 'pension-transfer', 'finance-transfer', 
+                         'regular-deposit', 'financial-planning', 'family-economics',
+                         'employment', 'organizational-consulting', 'retirement',
+                         'organizational-recruitment', 'loans', 'real-estate', 'mortgage'];
+      
+      categories.forEach(category => {
+        performancesByCategory[category] = Array(12).fill(0);
+      });
+
+      // מילוי הנתונים מהדאטאבייס
+      data?.forEach(row => {
+        if (performancesByCategory[row.category]) {
+          performancesByCategory[row.category][row.month - 1] = row.performance;
+          console.log(`Updated performance for ${row.category} month ${row.month}:`, row.performance);
+        }
+      });
+
+      console.log('Organized performances by category:', performancesByCategory);
+      setPerformances(performancesByCategory);
+    };
+
+    loadPerformances();
+  }, [lastUpdate]); // תלות בעדכון האחרון
+
+  // פונקציה לרענון הנתונים
+  const refreshData = () => {
+    setLastUpdate(Date.now());
+  };
+
+  // רענון כל 5 שניות
+  useEffect(() => {
+    console.log('Setting up refresh interval');
+    const interval = setInterval(() => {
+      console.log('Refreshing data...');
+      setLastUpdate(Date.now());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // עדכון הטבלאות כשיש שינוי בפרמטרים
   useEffect(() => {
+    console.log('Updating tables with performances:', performances);
     const updatedTabs: TabData[] = [
       {
         id: 'investments',
@@ -54,35 +119,40 @@ const SalesTargetsSystem: React.FC = () => {
             title: "סיכונים",
             bgColor: "bg-blue-50",
             targets: getUpdatedTargets(150),
-            yearlyTotal: calculateMonthlyTarget(150) * 12
+            yearlyTotal: calculateMonthlyTarget(150) * 12,
+            performances: performances['risks'] || Array(12).fill(0)
           },
           { 
             id: "pension", 
             title: "פנסיוני", 
             bgColor: "bg-blue-50",
             targets: getUpdatedTargets(1500),
-            yearlyTotal: calculateMonthlyTarget(1500) * 12
+            yearlyTotal: calculateMonthlyTarget(1500) * 12,
+            performances: performances['pension'] || Array(12).fill(0)
           },
           { 
             id: "pension-transfer", 
             title: "ניוד פנסיה", 
             bgColor: "bg-blue-50",
             targets: [5700000, 6000000, 3900000, 6600000, 5700000, 6600000, 5400000, 5400000, 4800000, 5400000, 6300000, 6600000],
-            yearlyTotal: 68400000
+            yearlyTotal: 68400000,
+            performances: performances['pension-transfer'] || Array(12).fill(0)
           },
           { 
             id: "finance-transfer", 
             title: "פיננסים ניוד", 
             bgColor: "bg-blue-50",
             targets: [7600000, 8000000, 5200000, 8800000, 7600000, 8800000, 7200000, 7200000, 6400000, 7200000, 8400000, 8800000],
-            yearlyTotal: 91200000
+            yearlyTotal: 91200000,
+            performances: performances['finance-transfer'] || Array(12).fill(0)
           },
           { 
             id: "regular-deposit", 
             title: "הפקדה שוטפת", 
             bgColor: "bg-blue-50",
             targets: [19000, 20000, 13000, 22000, 19000, 22000, 18000, 18000, 16000, 18000, 21000, 22000],
-            yearlyTotal: 228000
+            yearlyTotal: 228000,
+            performances: performances['regular-deposit'] || Array(12).fill(0)
           }
         ]
       },
@@ -96,70 +166,80 @@ const SalesTargetsSystem: React.FC = () => {
             title: "תכנון פיננסי",
             bgColor: "bg-orange-50",
             targets: getUpdatedTargets(500, 35),
-            yearlyTotal: calculateMonthlyTarget(500, 35) * 12
+            yearlyTotal: calculateMonthlyTarget(500, 35) * 12,
+            performances: performances['financial-planning'] || Array(12).fill(0)
           },
           { 
             id: "family-economics", 
             title: "כלכלת המשפחה", 
             bgColor: "bg-orange-50",
             targets: [9.5, 10.0, 6.5, 11.0, 9.5, 11.0, 9.0, 9.0, 8.0, 9.0, 10.5, 11.0],
-            yearlyTotal: 114.0
+            yearlyTotal: 114.0,
+            performances: performances['family-economics'] || Array(12).fill(0)
           },
           { 
             id: "employment", 
             title: "תעסוקה", 
             bgColor: "bg-orange-50",
             targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
-            yearlyTotal: 45.6
+            yearlyTotal: 45.6,
+            performances: performances['employment'] || Array(12).fill(0)
           },
           { 
             id: "organizational-consulting", 
             title: "ייעוץ עסקי ארגוני", 
             bgColor: "bg-orange-50",
             targets: [1.9, 2.0, 1.3, 2.2, 1.9, 2.2, 1.8, 1.8, 1.6, 1.8, 2.1, 2.2],
-            yearlyTotal: 22.8
+            yearlyTotal: 22.8,
+            performances: performances['organizational-consulting'] || Array(12).fill(0)
           },
           { 
             id: "retirement", 
             title: "פרישה", 
             bgColor: "bg-orange-50",
             targets: [2.66, 2.8, 1.82, 3.08, 2.66, 3.08, 2.52, 2.52, 2.24, 2.52, 2.94, 3.08],
-            yearlyTotal: 31.9
+            yearlyTotal: 31.9,
+            performances: performances['retirement'] || Array(12).fill(0)
           },
           { 
             id: "organizational-recruitment", 
             title: "גיוס ארגונים", 
             bgColor: "bg-orange-50",
             targets: [5.7, 6.0, 3.9, 6.6, 5.7, 6.6, 5.4, 5.4, 4.8, 5.4, 6.3, 6.6],
-            yearlyTotal: 68.4
+            yearlyTotal: 68.4,
+            performances: performances['organizational-recruitment'] || Array(12).fill(0)
           },
           { 
             id: "loans", 
             title: "הלוואות", 
             bgColor: "bg-orange-50",
             targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
-            yearlyTotal: 91.2
+            yearlyTotal: 91.2,
+            performances: performances['loans'] || Array(12).fill(0)
           },
           { 
             id: "real-estate", 
             title: "נדל\"ן", 
             bgColor: "bg-orange-50",
             targets: [7.6, 8.0, 5.2, 8.8, 7.6, 8.8, 7.2, 7.2, 6.4, 7.2, 8.4, 8.8],
-            yearlyTotal: 91.2
+            yearlyTotal: 91.2,
+            performances: performances['real-estate'] || Array(12).fill(0)
           },
           { 
             id: "mortgage", 
             title: "משכנתא", 
             bgColor: "bg-orange-50",
             targets: [3.8, 4.0, 2.6, 4.4, 3.8, 4.4, 3.6, 3.6, 3.2, 3.6, 4.2, 4.4],
-            yearlyTotal: 45.6
+            yearlyTotal: 45.6,
+            performances: performances['mortgage'] || Array(12).fill(0)
           }
         ]
       }
     ];
 
+    console.log('Setting updated tables data with performances');
     setTablesData(updatedTabs);
-  }, [closingRate, monthlyMeetings]); // תלות בערכים שמשתנים
+  }, [closingRate, monthlyMeetings, performances]); // תלות בביצועים
 
   const months = ['ינואר 24׳', 'פברואר 24׳', 'מרץ 24׳', 'אפריל 24׳', 'מאי 24׳', 'יוני 24׳',
                  'יולי 24׳', 'אוגוסט 24׳', 'ספטמבר 24׳', 'אוקטובר 24׳', 'נובמבר 24׳', 'דצמבר 24׳'];
@@ -191,17 +271,29 @@ const SalesTargetsSystem: React.FC = () => {
         </tr>
         <tr className="border-b border-gray-200">
           <td className="text-right px-4 py-2">ביצוע</td>
-          {Array(12).fill(0).map((_, i) => (
-            <td key={i} className="text-center px-4 py-2 border-r border-gray-200">0.0</td>
+          {(table.performances || Array(12).fill(0)).map((performance, i) => (
+            <td key={i} className="text-center px-4 py-2 border-r border-gray-200">
+              {performance > 1000 ? `₪ ${performance.toLocaleString()}` : performance.toFixed(1)}
+            </td>
           ))}
-          <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">0.0</td>
+          <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">
+            {(table.performances || []).reduce((a, b) => a + b, 0).toLocaleString()}
+          </td>
         </tr>
         <tr>
           <td className="text-right px-4 py-2">אחוז ביצוע</td>
-          {Array(12).fill(0).map((_, i) => (
-            <td key={i} className="text-center px-4 py-2 border-r border-gray-200">0.0%</td>
-          ))}
-          <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">0.0%</td>
+          {table.targets.map((target, i) => {
+            const performance = (table.performances || [])[i] || 0;
+            const percentage = target > 0 ? (performance / target) * 100 : 0;
+            return (
+              <td key={i} className="text-center px-4 py-2 border-r border-gray-200">
+                {percentage.toFixed(1)}%
+              </td>
+            );
+          })}
+          <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">
+            {((table.performances || []).reduce((a, b) => a + b, 0) / table.yearlyTotal * 100).toFixed(1)}%
+          </td>
         </tr>
       </tbody>
     </table>
@@ -288,7 +380,7 @@ const SalesTargetsSystem: React.FC = () => {
     }
   };
 
-  // פונקציה לחישוב אחוז העמלה לפי קטגוריה
+  // פונקציה לחיש��ב אחוז העמלה לפי קטגוריה
   const calculateCommission = (categoryId: string, amount: number): number => {
     const commissionRates: { [key: string]: number } = {
       'risks': 30,
