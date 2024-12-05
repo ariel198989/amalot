@@ -137,20 +137,46 @@ const AgentAgreements: React.FC = () => {
   ) => {
     if (!agentRates) return null;
 
-    if (category === 'pension_companies') {
-      const newCompanies = ['מור', 'מיטב', 'אלטשולר שחם'];
-      newCompanies.forEach(company => {
-        if (!agentRates.pension_companies[company]) {
-          agentRates.pension_companies[company] = {
+    // Initialize the category if it doesn't exist
+    if (!agentRates[category]) {
+      agentRates[category] = {};
+    }
+
+    // Add new companies for pension and savings
+    if (category === 'pension_companies' || category === 'savings_and_study_companies') {
+      const newCompanies = ['מור', 'אלטשולר שחם', 'מיטב'];
+      const allCompanies = [...companies, ...newCompanies];
+      companies = [...new Set(allCompanies)];
+    }
+
+    // Add analyst only for savings
+    if (category === 'savings_and_study_companies') {
+      companies = [...companies, 'אנליסט'];
+    }
+
+    // Add Hachshara to policy companies
+    if (category === 'policy_companies') {
+      companies = [...companies, 'הכשרה'];
+    }
+
+    // Initialize each company if it doesn't exist
+    companies.forEach(company => {
+      if (!agentRates[category][company]) {
+        if (category === 'pension_companies') {
+          agentRates[category][company] = {
             active: false,
             scope_rate: 0,
             scope_rate_per_million: 0
           };
+        } else {
+          agentRates[category][company] = {
+            active: false,
+            scope_rate_per_million: 0,
+            monthly_rate_per_million: 0
+          };
         }
-      });
-      
-      companies = [...new Set([...companies, ...newCompanies])];
-    }
+      }
+    });
 
     const getFieldLabels = (category: string) => {
       if (category === 'pension_companies') {
@@ -170,7 +196,11 @@ const AgentAgreements: React.FC = () => {
     return (
       <div className="grid grid-cols-3 gap-6" dir="rtl">
         {companies.map((company, index) => {
-          const companyRates = agentRates[category][company] || DEFAULT_COMPANY_RATES;
+          const companyRates = agentRates[category][company] || {
+            active: false,
+            scope_rate_per_million: 0,
+            monthly_rate_per_million: 0
+          };
           
           return (
             <motion.div
@@ -416,7 +446,7 @@ const AgentAgreements: React.FC = () => {
               הסכמי סוכן
             </h1>
             <p className="text-gray-500 mt-2">
-              נהל את העמלות והתנאים שלך מול חברות הביטוח השונת
+              נהל את העמלות והנאים שלך מול חברות הביטוח השונת
             </p>
           </div>
           <div className="flex gap-2">
@@ -452,14 +482,14 @@ const AgentAgreements: React.FC = () => {
               className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.savings.bg} ${activeTab === 'savings' ? 'ring-2 ring-purple-400 shadow-lg' : ''}`}
             >
               <PiggyBank className={`w-6 h-6 mb-1 ${TabColors.savings.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.savings.text}`}>חיסכון וקרנות השתלמות</span>
+              <span className={`text-lg font-semibold ${TabColors.savings.text}`}>פיננסים</span>
             </button>
             <button
               onClick={() => setActiveTab('policy')}
               className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.policy.bg} ${activeTab === 'policy' ? 'ring-2 ring-emerald-400 shadow-lg' : ''}`}
             >
               <Building2 className={`w-6 h-6 mb-1 ${TabColors.policy.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.policy.text}`}>פוליסות</span>
+              <span className={`text-lg font-semibold ${TabColors.policy.text}`}>פוליסת חסכון</span>
             </button>
             <button
               onClick={() => setActiveTab('insurance')}
@@ -474,8 +504,8 @@ const AgentAgreements: React.FC = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="hidden">
             <TabsTrigger value="pension">פנסיה</TabsTrigger>
-            <TabsTrigger value="savings">חיסכון וקרנות השתלמות</TabsTrigger>
-            <TabsTrigger value="policy">פוליסות</TabsTrigger>
+            <TabsTrigger value="savings">פיננסים</TabsTrigger>
+            <TabsTrigger value="policy">פוליסת חסכון</TabsTrigger>
             <TabsTrigger value="insurance">סיכונים</TabsTrigger>
           </TabsList>
 
