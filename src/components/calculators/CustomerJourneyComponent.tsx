@@ -459,13 +459,13 @@ const CustomerJourneyComponent: React.FC = () => {
     { key: 'type', label: 'סוג מוצר', format: (value: string) => {
       switch (value) {
         case 'pension': return 'פנסיה';
-        case 'insurance': return 'ביטוח';
+        case 'insurance': return 'סיכונים';
         case 'savings_and_study': return 'גמל והשתלמות';
         case 'policy': return 'פוליסת חיסכון';
         default: return value;
       }
     }},
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `���${value.toLocaleString()}` },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'עמלת היקף על הצירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
@@ -621,7 +621,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
     if (type === 'pension') {
-      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
+      return commissionType === 'scope' ? 'ע��לת היקף על השכר' : 'עמלת היקף על צבירה';
     }
     return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
   };
@@ -678,7 +678,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
                     >
                       <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                      <p className="text-center font-medium text-lg">ביטוח</p>
+                      <p className="text-center font-medium text-lg">סיכונים</p>
                     </motion.div>
 
                     <motion.div
@@ -730,7 +730,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-600">המערכת מחשבת ��אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
                   </div>
                 </div>
 
@@ -740,7 +740,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסות</p>
                   </div>
                 </div>
 
@@ -813,7 +813,7 @@ const CustomerJourneyComponent: React.FC = () => {
                           onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
                         >
                           <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                          <p className="text-center font-medium text-lg">ביטוח</p>
+                          <p className="text-center font-medium text-lg">סיכונים</p>
                         </motion.div>
 
                         <motion.div
@@ -864,8 +864,8 @@ const CustomerJourneyComponent: React.FC = () => {
                     <div className="grid grid-cols-2 gap-6">
                       {[
                         { type: 'pension' as const, title: 'פנסיה' },
-                        { type: 'insurance' as const, title: 'ביטוח' },
-                        { type: 'savings_and_study' as const, title: 'גמל והשתל��ות' },
+                        { type: 'insurance' as const, title: 'סיכונים' },
+                        { type: 'savings_and_study' as const, title: 'גמל והשתלות' },
                         { type: 'policy' as const, title: 'פוליסת חיסכון' }
                       ].map(({ type, title }) => (
                         selectedProducts[type] && (
@@ -928,12 +928,12 @@ const CustomerJourneyComponent: React.FC = () => {
                               </div>
                             )}
 
-                            {/* ביטוח */}
+                            {/* ביכונים */}
                             {clients.some(client => client.type === 'insurance') && (
                               <div>
                                 <h4 className="font-medium mb-3 flex items-center gap-2">
                                   <Shield className="w-4 h-4 text-green-500" />
-                                  ביטוח
+                                  ביכונים
                                 </h4>
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -1102,7 +1102,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסות</p>
                   </div>
                 </div>
 

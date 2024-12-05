@@ -1,6 +1,6 @@
 export const COMPANIES = {
   pension: ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס'],
-  insurance: ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס'],
+  insurance: ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'],
   investment: ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס']
 };
 
@@ -12,7 +12,7 @@ export const PRODUCTS = {
   },
   insurance: {
     id: 'insurance',
-    name: 'ביטוח',
+    name: 'סיכונים',
     companies: COMPANIES.insurance
   },
   investment: {

@@ -32,6 +32,8 @@ import {
   getInsuranceProductTypes 
 } from './AgentAgreementsHelpers';
 
+const insuranceCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'];
+
 const TabColors = {
   pension: {
     text: 'text-blue-700',
@@ -135,6 +137,21 @@ const AgentAgreements: React.FC = () => {
   ) => {
     if (!agentRates) return null;
 
+    if (category === 'pension_companies') {
+      const newCompanies = ['מור', 'מיטב', 'אלטשולר שחם'];
+      newCompanies.forEach(company => {
+        if (!agentRates.pension_companies[company]) {
+          agentRates.pension_companies[company] = {
+            active: false,
+            scope_rate: 0,
+            scope_rate_per_million: 0
+          };
+        }
+      });
+      
+      companies = [...new Set([...companies, ...newCompanies])];
+    }
+
     const getFieldLabels = (category: string) => {
       if (category === 'pension_companies') {
         return {
@@ -236,13 +253,36 @@ const AgentAgreements: React.FC = () => {
   const renderInsuranceRatesSection = () => {
     if (!agentRates) return null;
 
-    const insuranceCompanies = Object.keys(agentRates.insurance_companies || {});
     const productTypes = getInsuranceProductTypes();
+    const defaultProductStructure = productTypes.reduce((acc, product) => {
+      acc[product.key] = {
+        one_time_rate: 0,
+        monthly_rate: 0
+      };
+      return acc;
+    }, {} as { [key: string]: { one_time_rate: number; monthly_rate: number } });
+
+    // Initialize insurance companies if they don't exist
+    if (!agentRates.insurance_companies) {
+      agentRates.insurance_companies = {};
+    }
+
+    insuranceCompanies.forEach((company: string) => {
+      if (!agentRates.insurance_companies[company]) {
+        agentRates.insurance_companies[company] = {
+          active: false,
+          products: defaultProductStructure
+        };
+      }
+    });
 
     return (
       <div className="grid grid-cols-3 gap-6" dir="rtl">
-        {insuranceCompanies.map((company, index) => {
-          const companyRates = agentRates.insurance_companies[company];
+        {insuranceCompanies.map((company: string, index: number) => {
+          const companyRates = agentRates.insurance_companies[company] || {
+            active: false,
+            products: defaultProductStructure
+          };
           
           return (
             <motion.div
@@ -293,7 +333,7 @@ const AgentAgreements: React.FC = () => {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          value={(companyRates.products[product.key].one_time_rate || 0) * 100} 
+                          value={(companyRates?.products?.[product.key]?.one_time_rate || 0) * 100} 
                           onChange={(e) => {
                             const updatedRates = {
                               ...agentRates,
@@ -302,9 +342,9 @@ const AgentAgreements: React.FC = () => {
                                 [company]: {
                                   ...companyRates,
                                   products: {
-                                    ...companyRates.products,
+                                    ...companyRates?.products,
                                     [product.key]: {
-                                      ...companyRates.products[product.key],
+                                      ...companyRates?.products?.[product.key],
                                       one_time_rate: Number(e.target.value) / 100
                                     }
                                   }
@@ -324,7 +364,7 @@ const AgentAgreements: React.FC = () => {
                         <Input 
                           type="number" 
                           step="0.01" 
-                          value={(companyRates.products[product.key].monthly_rate || 0) * 100} 
+                          value={(companyRates?.products?.[product.key]?.monthly_rate || 0) * 100} 
                           onChange={(e) => {
                             const updatedRates = {
                               ...agentRates,
@@ -333,9 +373,9 @@ const AgentAgreements: React.FC = () => {
                                 [company]: {
                                   ...companyRates,
                                   products: {
-                                    ...companyRates.products,
+                                    ...companyRates?.products,
                                     [product.key]: {
-                                      ...companyRates.products[product.key],
+                                      ...companyRates?.products?.[product.key],
                                       monthly_rate: Number(e.target.value) / 100
                                     }
                                   }
@@ -376,7 +416,7 @@ const AgentAgreements: React.FC = () => {
               הסכמי סוכן
             </h1>
             <p className="text-gray-500 mt-2">
-              נהל את העמלות והתנאים שלך מול חברות הביטוח השונות
+              נהל את העמלות והתנאים שלך מול חברות הביטוח השונת
             </p>
           </div>
           <div className="flex gap-2">
@@ -426,7 +466,7 @@ const AgentAgreements: React.FC = () => {
               className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.insurance.bg} ${activeTab === 'insurance' ? 'ring-2 ring-rose-400 shadow-lg' : ''}`}
             >
               <Shield className={`w-6 h-6 mb-1 ${TabColors.insurance.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.insurance.text}`}>ביטוח</span>
+              <span className={`text-lg font-semibold ${TabColors.insurance.text}`}>סיכונים</span>
             </button>
           </div>
         </div>
@@ -436,7 +476,7 @@ const AgentAgreements: React.FC = () => {
             <TabsTrigger value="pension">פנסיה</TabsTrigger>
             <TabsTrigger value="savings">חיסכון וקרנות השתלמות</TabsTrigger>
             <TabsTrigger value="policy">פוליסות</TabsTrigger>
-            <TabsTrigger value="insurance">ביטוח</TabsTrigger>
+            <TabsTrigger value="insurance">סיכונים</TabsTrigger>
           </TabsList>
 
           <motion.div
