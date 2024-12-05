@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { reportService } from '@/services/reportService';
 import { useNavigate } from 'react-router-dom';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
+import ClientInfoForm from '../client-info/ClientInfoForm';
 
 interface CustomerJourneyClient {
   id: string;
@@ -38,6 +39,31 @@ interface CustomerJourneyClient {
   scopeCommission: number;
   monthlyCommission: number;
   totalCommission: number;
+  clientInfo: {
+    fullName: string;
+    idNumber: string;
+    birthDate: string;
+    email: string;
+    address: {
+      street: string;
+      city: string;
+    };
+    employment: {
+      type: 'employed' | 'self-employed';
+      employer?: {
+        name: string;
+        position: string;
+        workplaceAddress: string;
+        employmentStartDate: string;
+      };
+      business?: {
+        name: string;
+        type: string;
+        address: string;
+        startDate: string;
+      };
+    };
+  };
 }
 
 interface CategorySummary {
@@ -89,6 +115,8 @@ const CustomerJourneyComponent: React.FC = () => {
     policy: false
   });
   const { updatePerformance } = useSalesTargets();
+  const [step, setStep] = useState<'info' | 'products' | 'journey'>('info');
+  const [clientInfo, setClientInfo] = useState<CustomerJourneyClient['clientInfo']>();
 
   useEffect(() => {
     loadCompanyRates();
@@ -297,7 +325,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('משתמש לא מחובר');
+        toast.error('משמש לא מחובר');
         return;
       }
 
@@ -437,7 +465,7 @@ const CustomerJourneyComponent: React.FC = () => {
         default: return value;
       }
     }},
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `���${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'עמלת היקף על הצירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
@@ -598,38 +626,36 @@ const CustomerJourneyComponent: React.FC = () => {
     return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
   };
 
+  const handleClientInfoSubmit = (info: NonNullable<CustomerJourneyClient['clientInfo']>) => {
+    setClientInfo(info);
+    setClientName(info.fullName);
+    setStep('products');
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center gap-3 mb-8">
-        <Brain className="w-16 h-16 text-[#4361ee]" />
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
-          <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
-        </div>
-      </div>
+      {step === 'info' && (
+        <ClientInfoForm onNext={handleClientInfoSubmit} />
+      )}
 
-      <div className="flex gap-12">
-        <Card className="flex-1 shadow-lg">
-          <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
-            <h2 className="text-2xl font-semibold text-center">פרטי לקוח</h2>
-            <p className="text-center text-sm opacity-90">הזן את שם הלקוח ובחר את המוצרים הרלוונטיים</p>
-          </CardHeader>
-          <CardContent className="p-8">
-            {isStarting ? (
-              <div className="space-y-8">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="שם הלקוח"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg"
-                  />
-                  <User className="absolute right-3 top-3.5 h-6 w-6 text-gray-400" />
-                </div>
+      {step === 'products' && (
+        <>
+          <div className="flex items-center gap-3 mb-8">
+            <Brain className="w-16 h-16 text-[#4361ee]" />
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
+              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
+            </div>
+          </div>
 
-                <div>
-                  <h3 className="text-xl font-semibold mb-4 text-gray-700">בחר מוצרים:</h3>
+          <div className="flex gap-12">
+            <Card className="flex-1 shadow-lg">
+              <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
+                <h2 className="text-2xl font-semibold text-center">בחירת מוצרים</h2>
+                <p className="text-center text-sm opacity-90">בחר את המוצרים הרלוונטיים</p>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="space-y-8">
                   <div className="grid grid-cols-2 gap-6">
                     <motion.div
                       whileHover={{ scale: 1.02 }}
@@ -679,284 +705,421 @@ const CustomerJourneyComponent: React.FC = () => {
                       <p className="text-center font-medium text-lg">פוליסות</p>
                     </motion.div>
                   </div>
-                </div>
 
-                <Button 
-                  className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
-                  onClick={() => {
-                    if (!clientName) {
-                      toast.error('נא להזין שם לקוח');
-                      return;
-                    }
-                    if (!Object.values(selectedProducts).some(Boolean)) {
-                      toast.error('נא בחור לפחות מוצר אחד');
-                      return;
-                    }
-                    setIsStarting(false);
-                  }}
-                >
-                  התחל מסע
-                </Button>
-              </div>
-            ) : (
+                  <Button 
+                    className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
+                    onClick={() => {
+                      if (!Object.values(selectedProducts).some(Boolean)) {
+                        toast.error('נא לבחור לפחות מוצר אחד');
+                        return;
+                      }
+                      setStep('journey');
+                    }}
+                  >
+                    התחל מסע
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="w-96 space-y-8">
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  {[
-                    { type: 'pension' as const, title: 'פנסיה' },
-                    { type: 'insurance' as const, title: 'ביטוח' },
-                    { type: 'savings_and_study' as const, title: 'גמל והשתלמות' },
-                    { type: 'policy' as const, title: 'פוליסת חיסכון' }
-                  ].map(({ type, title }) => (
-                    selectedProducts[type] && (
-                      <Card key={type} className="border rounded-lg shadow-sm">
-                        <CardHeader className="border-b bg-gray-50">
-                          <div className="flex items-center gap-2">
-                            <ProductIcon type={type} />
-                            <h3 className="font-medium">{title}</h3>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                          <CalculatorForm
-                            onSubmit={(data) => handleSubmit(type, data)}
-                            fields={getProductFields(type)}
-                            title=""
-                          />
-                        </CardContent>
-                      </Card>
-                    )
-                  ))}
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-green-100">
+                    <User className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
+                    <p className="text-gray-600">המערכת מחשבת ��אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                  </div>
                 </div>
 
-                {clients.length > 0 && (
-                  <div className="space-y-6">
-                    <Card className="border rounded-lg shadow-md">
-                      <CardHeader className="border-b bg-gray-50">
-                        <h3 className="font-medium">סיכום עמלות</h3>
-                      </CardHeader>
-                      <CardContent className="p-4 space-y-6">
-                        {/* פנסיה */}
-                        {clients.some(client => client.type === 'pension') && (
-                          <div>
-                            <h4 className="font-medium mb-3 flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-blue-500" />
-                              פנסיה
-                            </h4>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'pension')
-                                  .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'pension')
-                                  .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ</p>
-                                <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                  .filter(client => client.type === 'pension')
-                                  .reduce((sum, client) => sum + client.totalCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ביטוח */}
-                        {clients.some(client => client.type === 'insurance') && (
-                          <div>
-                            <h4 className="font-medium mb-3 flex items-center gap-2">
-                              <Shield className="w-4 h-4 text-green-500" />
-                              ביטוח
-                            </h4>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'insurance')
-                                  .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'insurance')
-                                  .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ</p>
-                                <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                  .filter(client => client.type === 'insurance')
-                                  .reduce((sum, client) => sum + client.totalCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* חסכון ולימודים */}
-                        {clients.some(client => client.type === 'savings_and_study') && (
-                          <div>
-                            <h4 className="font-medium mb-3 flex items-center gap-2">
-                              <PiggyBank className="w-4 h-4 text-purple-500" />
-                              חסכון ולימודים
-                            </h4>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'savings_and_study')
-                                  .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'savings_and_study')
-                                  .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ</p>
-                                <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                  .filter(client => client.type === 'savings_and_study')
-                                  .reduce((sum, client) => sum + client.totalCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* פוליסה */}
-                        {clients.some(client => client.type === 'policy') && (
-                          <div>
-                            <h4 className="font-medium mb-3 flex items-center gap-2">
-                              <Wallet className="w-4 h-4 text-orange-500" />
-                              פוליסה
-                            </h4>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'policy')
-                                  .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
-                                <p className="text-xl font-bold">₪{clients
-                                  .filter(client => client.type === 'policy')
-                                  .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ</p>
-                                <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                  .filter(client => client.type === 'policy')
-                                  .reduce((sum, client) => sum + client.totalCommission, 0)
-                                  .toLocaleString()}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* סיכום כללי */}
-                        <div className="mt-8 pt-6 border-t">
-                          <h4 className="font-medium mb-3">סה"כ כללי</h4>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                              <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
-                              <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
-                            </div>
-                            <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                              <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
-                              <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
-                            </div>
-                            <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                              <p className="text-sm text-gray-600">סה"כ</p>
-                              <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border rounded-lg shadow-md">
-                      <CardHeader className="border-b bg-gray-50">
-                        <h3 className="font-medium">פירוט מוצרים</h3>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <ResultsTable
-                          data={clients}
-                          columns={columns}
-                          onDownload={handleDownload}
-                          onClear={handleClear}
-                          onShare={() => {}}
-                        />
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end gap-4">
-                      <Button 
-                        onClick={handleDownload}
-                        className="bg-white text-gray-700 border hover:bg-gray-50"
-                      >
-                        הורד דוח
-                      </Button>
-                      <Button 
-                        onClick={handleSendToReports}
-                        className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
-                      >
-                        שלח לדוחות
-                      </Button>
-                    </div>
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-blue-100">
+                    <Shield className="w-6 h-6 text-blue-600" />
                   </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div>
+                    <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
+                  </div>
+                </div>
 
-        <div className="w-96 space-y-8">
-          <div className="space-y-6">
-            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-              <div className="mt-1 p-2 rounded-full bg-green-100">
-                <User className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                <p className="text-gray-600">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-              <div className="mt-1 p-2 rounded-full bg-blue-100">
-                <Shield className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-              <div className="mt-1 p-2 rounded-full bg-purple-100">
-                <PiggyBank className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="font-medium text-lg">דוחות מפורטים</h3>
-                <p className="text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-purple-100">
+                    <PiggyBank className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">דוחות מפורטים</h3>
+                    <p className="text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
+
+      {step === 'journey' && (
+        <>
+          <div className="flex items-center gap-3 mb-8">
+            <Brain className="w-16 h-16 text-[#4361ee]" />
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
+              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
+            </div>
+          </div>
+
+          <div className="flex gap-12">
+            <Card className="flex-1 shadow-lg">
+              <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
+                <h2 className="text-2xl font-semibold text-center">פרטי לקוח</h2>
+                <p className="text-center text-sm opacity-90">הזן את שם הלקוח ובחר את המוצרים הרלוונטיים</p>
+              </CardHeader>
+              <CardContent className="p-8">
+                {isStarting ? (
+                  <div className="space-y-8">
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        placeholder="שם הלקוח"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg"
+                      />
+                      <User className="absolute right-3 top-3.5 h-6 w-6 text-gray-400" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4 text-gray-700">בחר מוצרים:</h3>
+                      <div className="grid grid-cols-2 gap-6">
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className={cn(
+                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                            selectedProducts.pension ? "border-blue-500 bg-blue-50 shadow-md" : "hover:border-blue-200"
+                          )}
+                          onClick={() => setSelectedProducts(prev => ({ ...prev, pension: !prev.pension }))}
+                        >
+                          <Building2 className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                          <p className="text-center font-medium text-lg">פנסיה</p>
+                        </motion.div>
+
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className={cn(
+                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                            selectedProducts.insurance ? "border-green-500 bg-green-50 shadow-md" : "hover:border-green-200"
+                          )}
+                          onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
+                        >
+                          <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                          <p className="text-center font-medium text-lg">ביטוח</p>
+                        </motion.div>
+
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className={cn(
+                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                            selectedProducts.savings_and_study ? "border-purple-500 bg-purple-50 shadow-md" : "hover:border-purple-200"
+                          )}
+                          onClick={() => setSelectedProducts(prev => ({ ...prev, savings_and_study: !prev.savings_and_study }))}
+                        >
+                          <PiggyBank className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+                          <p className="text-center font-medium text-lg">השקעות</p>
+                        </motion.div>
+
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className={cn(
+                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
+                            selectedProducts.policy ? "border-orange-500 bg-orange-50 shadow-md" : "hover:border-orange-200"
+                          )}
+                          onClick={() => setSelectedProducts(prev => ({ ...prev, policy: !prev.policy }))}
+                        >
+                          <Wallet className="w-12 h-12 text-orange-500 mx-auto mb-3" />
+                          <p className="text-center font-medium text-lg">פוליסות</p>
+                        </motion.div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
+                      onClick={() => {
+                        if (!clientName) {
+                          toast.error('נא להזין שם לקוח');
+                          return;
+                        }
+                        if (!Object.values(selectedProducts).some(Boolean)) {
+                          toast.error('נא בחור לפחות מוצר אחד');
+                          return;
+                        }
+                        setIsStarting(false);
+                      }}
+                    >
+                      התחל מסע
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      {[
+                        { type: 'pension' as const, title: 'פנסיה' },
+                        { type: 'insurance' as const, title: 'ביטוח' },
+                        { type: 'savings_and_study' as const, title: 'גמל והשתל��ות' },
+                        { type: 'policy' as const, title: 'פוליסת חיסכון' }
+                      ].map(({ type, title }) => (
+                        selectedProducts[type] && (
+                          <Card key={type} className="border rounded-lg shadow-sm">
+                            <CardHeader className="border-b bg-gray-50">
+                              <div className="flex items-center gap-2">
+                                <ProductIcon type={type} />
+                                <h3 className="font-medium">{title}</h3>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                              <CalculatorForm
+                                onSubmit={(data) => handleSubmit(type, data)}
+                                fields={getProductFields(type)}
+                                title=""
+                              />
+                            </CardContent>
+                          </Card>
+                        )
+                      ))}
+                    </div>
+
+                    {clients.length > 0 && (
+                      <div className="space-y-6">
+                        <Card className="border rounded-lg shadow-md">
+                          <CardHeader className="border-b bg-gray-50">
+                            <h3 className="font-medium">סיכום עמלות</h3>
+                          </CardHeader>
+                          <CardContent className="p-4 space-y-6">
+                            {/* פנסיה */}
+                            {clients.some(client => client.type === 'pension') && (
+                              <div>
+                                <h4 className="font-medium mb-3 flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-blue-500" />
+                                  פנסיה
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'pension')
+                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'pension')
+                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">סה"כ</p>
+                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                      .filter(client => client.type === 'pension')
+                                      .reduce((sum, client) => sum + client.totalCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ביטוח */}
+                            {clients.some(client => client.type === 'insurance') && (
+                              <div>
+                                <h4 className="font-medium mb-3 flex items-center gap-2">
+                                  <Shield className="w-4 h-4 text-green-500" />
+                                  ביטוח
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'insurance')
+                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'insurance')
+                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">סה"כ</p>
+                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                      .filter(client => client.type === 'insurance')
+                                      .reduce((sum, client) => sum + client.totalCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* חסכון ולימודים */}
+                            {clients.some(client => client.type === 'savings_and_study') && (
+                              <div>
+                                <h4 className="font-medium mb-3 flex items-center gap-2">
+                                  <PiggyBank className="w-4 h-4 text-purple-500" />
+                                  חסכון ולימודים
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'savings_and_study')
+                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'savings_and_study')
+                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">סה"כ</p>
+                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                      .filter(client => client.type === 'savings_and_study')
+                                      .reduce((sum, client) => sum + client.totalCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* פוליסה */}
+                            {clients.some(client => client.type === 'policy') && (
+                              <div>
+                                <h4 className="font-medium mb-3 flex items-center gap-2">
+                                  <Wallet className="w-4 h-4 text-orange-500" />
+                                  פוליסה
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'policy')
+                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
+                                    <p className="text-xl font-bold">₪{clients
+                                      .filter(client => client.type === 'policy')
+                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                  <div className="p-4 bg-gray-50 rounded-lg">
+                                    <p className="text-sm text-gray-600">סה"כ</p>
+                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                      .filter(client => client.type === 'policy')
+                                      .reduce((sum, client) => sum + client.totalCommission, 0)
+                                      .toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* סיכום כללי */}
+                            <div className="mt-8 pt-6 border-t">
+                              <h4 className="font-medium mb-3">סה"כ כללי</h4>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
+                                  <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
+                                  <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ</p>
+                                  <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="border rounded-lg shadow-md">
+                          <CardHeader className="border-b bg-gray-50">
+                            <h3 className="font-medium">פירוט מוצרים</h3>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <ResultsTable
+                              data={clients}
+                              columns={columns}
+                              onDownload={handleDownload}
+                              onClear={handleClear}
+                              onShare={() => {}}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        <div className="flex justify-end gap-4">
+                          <Button 
+                            onClick={handleDownload}
+                            className="bg-white text-gray-700 border hover:bg-gray-50"
+                          >
+                            הורד דוח
+                          </Button>
+                          <Button 
+                            onClick={handleSendToReports}
+                            className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
+                          >
+                            שלח לדוחות
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="w-96 space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-green-100">
+                    <User className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
+                    <p className="text-gray-600">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-blue-100">
+                    <Shield className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביטוח, חסכון ופוליסות</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                  <div className="mt-1 p-2 rounded-full bg-purple-100">
+                    <PiggyBank className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">דוחות מפורטים</h3>
+                    <p className="text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

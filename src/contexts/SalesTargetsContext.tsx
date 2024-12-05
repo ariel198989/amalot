@@ -99,7 +99,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const currentPerformance = existingData?.performance || 0;
       const newPerformance = currentPerformance + amount;
 
-      console.log('חישוב ביצועים חדש:', { currentPerformance, newPerformance });
+      console.log('חישוב ביצ��עים חדש:', { currentPerformance, newPerformance });
 
       // משתמשים ב-upsert במקום insert
       const { data: upsertResult, error: upsertError } = await supabase
@@ -108,7 +108,8 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           category,
           month,
           year,
-          performance: newPerformance
+          performance: newPerformance,
+          user_id: (await supabase.auth.getUser()).data.user?.id
         }, {
           onConflict: 'category,month,year'
         });
