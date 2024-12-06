@@ -22,6 +22,77 @@ import { useNavigate } from 'react-router-dom';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import ClientInfoForm from '../client-info/ClientInfoForm';
 
+interface PensionProduct {
+  salary: number;
+  accumulation: number;
+  provision: number;
+  scope_commission: number;
+  monthly_commission: number;
+  total_commission: number;
+}
+
+interface InsuranceProduct {
+  premium: number;
+  insurance_type: string;
+  payment_method: string;
+  nifraim: number;
+  scope_commission: number;
+  monthly_commission: number;
+  total_commission: number;
+}
+
+interface InvestmentProduct {
+  investment_amount: number;
+  investment_period: number;
+  investment_type: string;
+  scope_commission: number;
+  total_commission: number;
+}
+
+interface PolicyProduct {
+  policy_amount: number;
+  policy_period: number;
+  policy_type: string;
+  scope_commission: number;
+  total_commission: number;
+}
+
+interface CustomerJourney {
+  id: string;
+  user_id: string;
+  journey_date: string;
+  date: string;
+  client_name: string;
+  selected_products: Array<{
+    type: 'pension' | 'insurance' | 'policy' | 'investment';
+    company: string;
+    details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+  }>;
+  selected_companies: {
+    pension: string[];
+    insurance: string[];
+    investment: string[];
+    policy: string[];
+  };
+  commission_details: {
+    [key: string]: {
+      companies: {
+        [company: string]: {
+          scopeCommission: number;
+          accumulationCommission: number;
+          oneTimeCommission: number;
+          totalCommission: number;
+          monthlyCommission?: number;
+        };
+      };
+      total: number;
+    };
+  };
+  total_commission: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface CustomerJourneyClient {
   id: string;
   date: string;
@@ -39,30 +110,11 @@ interface CustomerJourneyClient {
   scopeCommission: number;
   monthlyCommission: number;
   totalCommission: number;
-  clientInfo: {
+  clientInfo?: {
     fullName: string;
-    idNumber: string;
-    birthDate: string;
+    phone: string;
     email: string;
-    address: {
-      street: string;
-      city: string;
-    };
-    employment: {
-      type: 'employed' | 'self-employed';
-      employer?: {
-        name: string;
-        position: string;
-        workplaceAddress: string;
-        employmentStartDate: string;
-      };
-      business?: {
-        name: string;
-        type: string;
-        address: string;
-        startDate: string;
-      };
-    };
+    notes?: string;
   };
 }
 
@@ -71,6 +123,13 @@ interface CategorySummary {
   monthlyCommission: number;
   totalCommission: number;
   count: number;
+}
+
+interface ProductCardProps {
+  title: string;
+  icon: React.ElementType;
+  selected: boolean;
+  onClick: () => void;
 }
 
 const ProductIcon = ({ type, className }: { type: string; className?: string }) => {
@@ -87,6 +146,41 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
     default:
       return null;
   }
+};
+
+const ProductCard: React.FC<ProductCardProps> = ({ title, icon: Icon, selected, onClick }) => {
+  const getColorScheme = () => {
+    switch (title) {
+      case 'פנסיה':
+        return { border: 'blue', bg: 'blue' };
+      case 'סיכונים':
+        return { border: 'green', bg: 'green' };
+      case 'פיננסים':
+        return { border: 'purple', bg: 'purple' };
+      case 'פוליסת חסכון':
+        return { border: 'orange', bg: 'orange' };
+      default:
+        return { border: 'gray', bg: 'gray' };
+    }
+  };
+
+  const colors = getColorScheme();
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      className={cn(
+        "p-6 border-2 rounded-xl cursor-pointer transition-all",
+        selected 
+          ? `border-${colors.border}-500 bg-${colors.bg}-50 shadow-md` 
+          : `hover:border-${colors.border}-200`
+      )}
+      onClick={onClick}
+    >
+      <Icon className={`w-12 h-12 text-${colors.border}-500 mx-auto mb-3`} />
+      <p className="text-center font-medium text-lg">{title}</p>
+    </motion.div>
+  );
 };
 
 // Add type mapping
@@ -122,9 +216,16 @@ const CustomerJourneyComponent: React.FC = () => {
     loadCompanyRates();
   }, []);
 
+  const handleProductSelect = (productType: 'pension' | 'insurance' | 'savings_and_study' | 'policy') => {
+    setSelectedProducts(prev => ({
+      ...prev,
+      [productType]: !prev[productType]
+    }));
+  };
+
   const loadCompanyRates = async () => {
     const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
-    const productTypes = ['pension', 'insurance', 'savings_and_study', 'policy'];
+    const productTypes = ['pension', 'insurance', 'savings_and_study', 'policy'] as const;
     const rates: { [key: string]: any } = {};
     
     for (const type of productTypes) {
@@ -268,7 +369,7 @@ const CustomerJourneyComponent: React.FC = () => {
             monthly_commission: nifraim
           };
 
-          // עדכון הביצועים עבור סיכונים - מכניס רק את הפרמיה החודשית
+          // עדכון הביצועים עבו סיכונים - מכניס רק את הפרמיה החודשית
           await updatePerformance('risks', premium, currentMonth);
           break;
         }
@@ -302,7 +403,7 @@ const CustomerJourneyComponent: React.FC = () => {
             total: scope_commission + (nifraim * 12)
           });
 
-          // עדכון הביצועים עבור ניוד פיננסים
+          // עדכון הביצועים עבור ניוד יננסים
           await updatePerformance('finance-transfer', amount, currentMonth);
           break;
         }
@@ -461,7 +562,7 @@ const CustomerJourneyComponent: React.FC = () => {
         case 'pension': return 'פנסיה';
         case 'insurance': return 'סיכונים';
         case 'savings_and_study': return 'גמל והשתלמות';
-        case 'policy': return 'פוליסת חיסכון';
+        case 'policy': return 'פוליסת חסכון';
         default: return value;
       }
     }},
@@ -528,11 +629,6 @@ const CustomerJourneyComponent: React.FC = () => {
   };
 
   const handleSendToReports = async () => {
-    if (clients.length === 0) {
-      toast.error('אין נתונים לשליחה לדוחות');
-      return;
-    }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -540,29 +636,71 @@ const CustomerJourneyComponent: React.FC = () => {
         return;
       }
 
-      // Create commission details structure
-      const commissionDetails = {
-        pension: {
-          companies: {},
-          total: 0
-        },
-        insurance: {
-          companies: {},
-          total: 0
-        },
-        investment: {
-          companies: {},
-          total: 0
-        },
-        policy: {
-          companies: {},
-          total: 0
-        }
+      // Calculate commission details
+      const commissionDetails: CustomerJourney['commission_details'] = {
+        pension: { companies: {}, total: 0 },
+        insurance: { companies: {}, total: 0 },
+        savings_and_study: { companies: {}, total: 0 },
+        policy: { companies: {}, total: 0 }
       };
 
-      // Group clients by product type and company
-      clients.forEach(client => {
-        const type = typeToReportKey[client.type];
+      // Transform clients into selected_products format
+      const selectedProducts = clients.map(client => {
+        let details;
+        switch (client.type) {
+          case 'pension':
+            details = {
+              salary: client.details.pensionSalary || 0,
+              accumulation: client.details.pensionAccumulation || 0,
+              provision: client.details.pensionContribution || 0,
+              scope_commission: client.scopeCommission,
+              monthly_commission: client.monthlyCommission,
+              total_commission: client.totalCommission
+            } as PensionProduct;
+            break;
+          case 'insurance':
+            details = {
+              premium: client.details.insurancePremium || 0,
+              insurance_type: 'general',
+              payment_method: 'monthly',
+              nifraim: client.monthlyCommission,
+              scope_commission: client.scopeCommission,
+              monthly_commission: client.monthlyCommission,
+              total_commission: client.totalCommission
+            } as InsuranceProduct;
+            break;
+          case 'savings_and_study':
+            details = {
+              investment_amount: client.details.investmentAmount || 0,
+              investment_period: 12,
+              investment_type: 'savings',
+              scope_commission: client.scopeCommission,
+              total_commission: client.totalCommission
+            } as InvestmentProduct;
+            break;
+          case 'policy':
+            details = {
+              policy_amount: client.details.policyAmount || 0,
+              policy_period: 12,
+              policy_type: 'savings',
+              scope_commission: client.scopeCommission,
+              total_commission: client.totalCommission
+            } as PolicyProduct;
+            break;
+          default:
+            throw new Error('Invalid product type');
+        }
+
+        return {
+          type: client.type === 'savings_and_study' ? 'investment' : client.type,
+          company: client.company,
+          details
+        };
+      });
+
+      // Group clients by type and company
+      for (const client of clients) {
+        const type = client.type;
         const company = client.company;
         
         if (!commissionDetails[type].companies[company]) {
@@ -570,8 +708,8 @@ const CustomerJourneyComponent: React.FC = () => {
             scopeCommission: 0,
             accumulationCommission: 0,
             oneTimeCommission: 0,
-            monthlyCommission: 0,
-            totalCommission: 0
+            totalCommission: 0,
+            monthlyCommission: 0
           };
         }
 
@@ -582,22 +720,20 @@ const CustomerJourneyComponent: React.FC = () => {
           commissionDetails[type].companies[company].accumulationCommission += client.monthlyCommission;
         } else if (type === 'insurance') {
           commissionDetails[type].companies[company].oneTimeCommission += client.scopeCommission;
-          commissionDetails[type].companies[company].monthlyCommission += client.monthlyCommission;
+          commissionDetails[type].companies[company].monthlyCommission! += client.monthlyCommission;
         }
 
         commissionDetails[type].total += client.totalCommission;
-      });
+      }
 
       // Create journey object
       const journey: CustomerJourney = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: crypto.randomUUID(),
         user_id: user.id,
         journey_date: new Date().toISOString(),
         date: new Date().toLocaleDateString('he-IL'),
         client_name: clientName,
-        selected_products: Object.entries(selectedProducts)
-          .filter(([_, value]) => value)
-          .map(([key]) => key),
+        selected_products: selectedProducts,
         selected_companies: {
           pension: clients.filter(c => c.type === 'pension').map(c => c.company),
           insurance: clients.filter(c => c.type === 'insurance').map(c => c.company),
@@ -615,18 +751,18 @@ const CustomerJourneyComponent: React.FC = () => {
       navigate('/reports');
     } catch (error) {
       console.error('Error sending to reports:', error);
-      toast.error('שגיאה בשליחת התונים לדוחות');
+      toast.error('שגיאה בשליחת הנתונים לדוחות');
     }
   };
 
   const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
     if (type === 'pension') {
-      return commissionType === 'scope' ? 'ע��לת היקף על השכר' : 'עמלת היקף על צבירה';
+      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
     }
     return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
   };
 
-  const handleClientInfoSubmit = (info: NonNullable<CustomerJourneyClient['clientInfo']>) => {
+  const handleClientInfoSubmit = (info: { fullName: string; phone: string; email: string; notes?: string }) => {
     setClientInfo(info);
     setClientName(info.fullName);
     setStep('products');
@@ -657,53 +793,30 @@ const CustomerJourneyComponent: React.FC = () => {
               <CardContent className="p-8">
                 <div className="space-y-8">
                   <div className="grid grid-cols-2 gap-6">
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className={cn(
-                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                        selectedProducts.pension ? "border-blue-500 bg-blue-50 shadow-md" : "hover:border-blue-200"
-                      )}
-                      onClick={() => setSelectedProducts(prev => ({ ...prev, pension: !prev.pension }))}
-                    >
-                      <Building2 className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                      <p className="text-center font-medium text-lg">פנסיה</p>
-                    </motion.div>
-
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className={cn(
-                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                        selectedProducts.insurance ? "border-green-500 bg-green-50 shadow-md" : "hover:border-green-200"
-                      )}
-                      onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
-                    >
-                      <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                      <p className="text-center font-medium text-lg">סיכונים</p>
-                    </motion.div>
-
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className={cn(
-                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                        selectedProducts.savings_and_study ? "border-purple-500 bg-purple-50 shadow-md" : "hover:border-purple-200"
-                      )}
-                      onClick={() => setSelectedProducts(prev => ({ ...prev, savings_and_study: !prev.savings_and_study }))}
-                    >
-                      <PiggyBank className="w-12 h-12 text-purple-500 mx-auto mb-3" />
-                      <p className="text-center font-medium text-lg">השקעות</p>
-                    </motion.div>
-
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className={cn(
-                        "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                        selectedProducts.policy ? "border-orange-500 bg-orange-50 shadow-md" : "hover:border-orange-200"
-                      )}
-                      onClick={() => setSelectedProducts(prev => ({ ...prev, policy: !prev.policy }))}
-                    >
-                      <Wallet className="w-12 h-12 text-orange-500 mx-auto mb-3" />
-                      <p className="text-center font-medium text-lg">פוליסות</p>
-                    </motion.div>
+                    <ProductCard
+                      title="פנסיה"
+                      icon={Building2}
+                      selected={selectedProducts.pension}
+                      onClick={() => handleProductSelect('pension')}
+                    />
+                    <ProductCard
+                      title="סיכונים"
+                      icon={Shield}
+                      selected={selectedProducts.insurance}
+                      onClick={() => handleProductSelect('insurance')}
+                    />
+                    <ProductCard
+                      title="פיננסים"
+                      icon={PiggyBank}
+                      selected={selectedProducts.savings_and_study}
+                      onClick={() => handleProductSelect('savings_and_study')}
+                    />
+                    <ProductCard
+                      title="פוליסת חסכון"
+                      icon={Wallet}
+                      selected={selectedProducts.policy}
+                      onClick={() => handleProductSelect('policy')}
+                    />
                   </div>
 
                   <Button 
@@ -740,7 +853,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסות</p>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
                   </div>
                 </div>
 
@@ -764,7 +877,7 @@ const CustomerJourneyComponent: React.FC = () => {
           <div className="flex items-center gap-3 mb-8">
             <Brain className="w-16 h-16 text-[#4361ee]" />
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
+              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לק��ח חכם</h1>
               <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
             </div>
           </div>
@@ -792,53 +905,30 @@ const CustomerJourneyComponent: React.FC = () => {
                     <div>
                       <h3 className="text-xl font-semibold mb-4 text-gray-700">בחר מוצרים:</h3>
                       <div className="grid grid-cols-2 gap-6">
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          className={cn(
-                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                            selectedProducts.pension ? "border-blue-500 bg-blue-50 shadow-md" : "hover:border-blue-200"
-                          )}
-                          onClick={() => setSelectedProducts(prev => ({ ...prev, pension: !prev.pension }))}
-                        >
-                          <Building2 className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                          <p className="text-center font-medium text-lg">פנסיה</p>
-                        </motion.div>
-
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          className={cn(
-                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                            selectedProducts.insurance ? "border-green-500 bg-green-50 shadow-md" : "hover:border-green-200"
-                          )}
-                          onClick={() => setSelectedProducts(prev => ({ ...prev, insurance: !prev.insurance }))}
-                        >
-                          <Shield className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                          <p className="text-center font-medium text-lg">סיכונים</p>
-                        </motion.div>
-
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          className={cn(
-                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                            selectedProducts.savings_and_study ? "border-purple-500 bg-purple-50 shadow-md" : "hover:border-purple-200"
-                          )}
-                          onClick={() => setSelectedProducts(prev => ({ ...prev, savings_and_study: !prev.savings_and_study }))}
-                        >
-                          <PiggyBank className="w-12 h-12 text-purple-500 mx-auto mb-3" />
-                          <p className="text-center font-medium text-lg">השקעות</p>
-                        </motion.div>
-
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          className={cn(
-                            "p-6 border-2 rounded-xl cursor-pointer transition-all",
-                            selectedProducts.policy ? "border-orange-500 bg-orange-50 shadow-md" : "hover:border-orange-200"
-                          )}
-                          onClick={() => setSelectedProducts(prev => ({ ...prev, policy: !prev.policy }))}
-                        >
-                          <Wallet className="w-12 h-12 text-orange-500 mx-auto mb-3" />
-                          <p className="text-center font-medium text-lg">פוליסות</p>
-                        </motion.div>
+                        <ProductCard
+                          title="פנסיה"
+                          icon={Building2}
+                          selected={selectedProducts.pension}
+                          onClick={() => handleProductSelect('pension')}
+                        />
+                        <ProductCard
+                          title="סיכונים"
+                          icon={Shield}
+                          selected={selectedProducts.insurance}
+                          onClick={() => handleProductSelect('insurance')}
+                        />
+                        <ProductCard
+                          title="פיננסים"
+                          icon={PiggyBank}
+                          selected={selectedProducts.savings_and_study}
+                          onClick={() => handleProductSelect('savings_and_study')}
+                        />
+                        <ProductCard
+                          title="פוליסת חסכון"
+                          icon={Wallet}
+                          selected={selectedProducts.policy}
+                          onClick={() => handleProductSelect('policy')}
+                        />
                       </div>
                     </div>
 
@@ -865,8 +955,8 @@ const CustomerJourneyComponent: React.FC = () => {
                       {[
                         { type: 'pension' as const, title: 'פנסיה' },
                         { type: 'insurance' as const, title: 'סיכונים' },
-                        { type: 'savings_and_study' as const, title: 'גמל והשתלות' },
-                        { type: 'policy' as const, title: 'פוליסת חיסכון' }
+                        { type: 'savings_and_study' as const, title: 'גמל והשתלמות' },
+                        { type: 'policy' as const, title: 'פוליסת חסכון' }
                       ].map(({ type, title }) => (
                         selectedProducts[type] && (
                           <Card key={type} className="border rounded-lg shadow-sm">
@@ -900,7 +990,7 @@ const CustomerJourneyComponent: React.FC = () => {
                               <div>
                                 <h4 className="font-medium mb-3 flex items-center gap-2">
                                   <Building2 className="w-4 h-4 text-blue-500" />
-                                  פנסיה
+                                  פנסה
                                 </h4>
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -999,7 +1089,7 @@ const CustomerJourneyComponent: React.FC = () => {
                               <div>
                                 <h4 className="font-medium mb-3 flex items-center gap-2">
                                   <Wallet className="w-4 h-4 text-orange-500" />
-                                  פוליסה
+                                  פוליסת חסכון
                                 </h4>
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -1102,7 +1192,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסות</p>
+                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
                   </div>
                 </div>
 
