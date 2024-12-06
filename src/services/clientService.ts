@@ -36,6 +36,50 @@ interface Client {
   last_contact?: string;
 }
 
+interface PensionCommissionInput {
+  salary: number;
+  provision_rate: number;
+  commission_rate: number;
+  accumulation: number;
+}
+
+interface PensionCommissionResult {
+  scope_commission: number;
+  accumulation_commission: number;
+  total_commission: number;
+}
+
+export function calculatePensionCommission(input: PensionCommissionInput): PensionCommissionResult {
+  // Validate provision rate
+  if (input.provision_rate < 18.5 || input.provision_rate > 23) {
+    throw new Error('אחוז הפרשה חייב להיות בין 18.5 ל-23');
+  }
+
+  // Validate commission rate
+  if (input.commission_rate < 6 || input.commission_rate > 8) {
+    throw new Error('אחוז עמלה חייב להיות בין 6 ל-8');
+  }
+
+  // Calculate scope commission (from monthly salary)
+  const scope_commission = Math.round(
+    input.salary * 12 * (input.commission_rate / 100) * (input.provision_rate / 100)
+  );
+
+  // Calculate accumulation commission
+  const accumulation_commission = Math.round(
+    input.accumulation * 0.0003
+  );
+
+  // Calculate total commission
+  const total_commission = scope_commission + accumulation_commission;
+
+  return {
+    scope_commission,
+    accumulation_commission,
+    total_commission
+  };
+}
+
 export const clientService = {
   // יצירת לקוח חדש
   async createClient(data: Partial<Client>): Promise<Client> {
