@@ -305,7 +305,7 @@ const CustomerJourneyComponent: React.FC = () => {
           { value: 'הפניקס', label: 'הפניקס' },
           { value: 'מור', label: 'מור' },
           { value: 'מיטב', label: 'מיטב' },
-          { value: 'אלטשולר שחם', label: 'אלטשו��ר שחם' }
+          { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
         ]
       }
     ];
@@ -313,7 +313,38 @@ const CustomerJourneyComponent: React.FC = () => {
     switch (type) {
       case 'pension':
         return [
-          ...baseFields,
+          { 
+            name: 'transactionType',
+            label: 'סוג עסקה',
+            type: 'select',
+            required: true,
+            className: 'bg-white',
+            containerClassName: 'relative z-[60]',
+            popoverClassName: 'z-[60]',
+            options: [
+              { value: 'proposal', label: 'הצעה' },
+              { value: 'agent_appointment', label: 'מינוי סוכן' }
+            ]
+          },
+          { 
+            name: 'company',
+            label: 'יצרן',
+            type: 'select',
+            required: true,
+            className: 'bg-white',
+            containerClassName: 'relative z-[55]',
+            popoverClassName: 'z-[55]',
+            options: [
+              { value: 'מגדל', label: 'מגדל' },
+              { value: 'מנורה', label: 'מנורה' },
+              { value: 'כלל', label: 'כלל' },
+              { value: 'הראל', label: 'הראל' },
+              { value: 'הפניקס', label: 'הפניקס' },
+              { value: 'מור', label: 'מור' },
+              { value: 'מיטב', label: 'מיטב' },
+              { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
+            ]
+          },
           { 
             name: 'pensionSalary', 
             label: 'שכר', 
@@ -489,7 +520,8 @@ const CustomerJourneyComponent: React.FC = () => {
             provision: Number(data.pensionContribution) * 100,
             scope_commission: commissions.scope_commission,
             monthly_commission: commissions.monthly_commission,
-            total_commission: commissions.scope_commission + commissions.monthly_commission
+            total_commission: commissions.scope_commission + commissions.monthly_commission,
+            transaction_type: data.transactionType
           });
 
           if (error) throw error;
@@ -679,7 +711,7 @@ const CustomerJourneyComponent: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('משתמש ל�� מחובר');
+        toast.error('משתמש ל מחובר');
         return;
       }
 

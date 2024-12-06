@@ -44,14 +44,15 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
                 name={field.name}
                 control={control}
                 rules={{ required: field.required }}
+                defaultValue=""
                 render={({ field: { onChange, value } }) => (
-                  <Select onValueChange={onChange} value={value}>
+                  <Select onValueChange={onChange} value={value || ""}>
                     <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
-                      <SelectValue placeholder={`בחר ${field.label.replace('חברה', 'יצרן')}`} />
+                      <SelectValue placeholder={`בחר ${field.label}`} />
                     </SelectTrigger>
-                    <SelectContent className={cn("bg-white", field.popoverClassName)}>
+                    <SelectContent className={cn("text-right", field.popoverClassName)}>
                       {field.options?.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-right">
+                        <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
                       ))}
@@ -67,11 +68,9 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
                 render={({ field: { onChange, value } }) => (
                   <Input
                     type={field.type}
-                    placeholder={`הכנס ${field.label}`}
-                    dir="rtl"
-                    value={value || ''}
                     onChange={onChange}
-                    className={cn("bg-white", field.className)}
+                    value={value || ""}
+                    className={cn("text-right", field.className)}
                   />
                 )}
               />
@@ -79,9 +78,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
           </div>
         ))}
       </div>
-      <Button type="submit" className="w-full bg-primary">
-        חשב עמלה
-      </Button>
+      <Button type="submit" className="w-full">חשב</Button>
     </form>
   );
 };
