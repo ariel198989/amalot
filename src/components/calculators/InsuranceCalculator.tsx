@@ -10,7 +10,7 @@ const InsuranceCalculator: React.FC = () => {
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
-    { name: 'company', label: 'חברה', type: 'select', required: true,
+    { name: 'company', label: 'יצרן', type: 'select', required: true,
       options: [
         { value: 'מגדל', label: 'מגדל' },
         { value: 'מנורה', label: 'מנורה' },
@@ -47,7 +47,7 @@ const InsuranceCalculator: React.FC = () => {
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברה' },
+    { key: 'company', label: 'יצרן' },
     { key: 'premium', label: 'פרמיה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'monthlyCommission', label: 'נפרעים', format: (value: number) => `₪${value.toLocaleString()}` },

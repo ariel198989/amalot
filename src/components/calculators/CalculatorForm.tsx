@@ -47,7 +47,7 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
                 render={({ field: { onChange, value } }) => (
                   <Select onValueChange={onChange} value={value}>
                     <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
-                      <SelectValue placeholder={`בחר ${field.label}`} />
+                      <SelectValue placeholder={`בחר ${field.label.replace('חברה', 'יצרן')}`} />
                     </SelectTrigger>
                     <SelectContent className={cn("bg-white", field.popoverClassName)}>
                       {field.options?.map((option) => (

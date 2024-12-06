@@ -29,7 +29,7 @@ const PensionCalculator: React.FC = () => {
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
-    { name: 'company', label: 'חברה', type: 'select', required: true,
+    { name: 'company', label: 'יצרן', type: 'select', required: true,
       options: [
         { value: 'מגדל', label: 'מגדל' },
         { value: 'מנורה', label: 'מנורה' },
@@ -59,7 +59,7 @@ const PensionCalculator: React.FC = () => {
     
     const commissions = await calculateCommissions('pension', data.company, annualContribution, accumulation);
     if (!commissions) {
-      alert('אין הסכם פעיל עבור חברה זו');
+      alert('אין הסכם פעיל עבור ברה זו');
       return;
     }
 
@@ -91,7 +91,7 @@ const PensionCalculator: React.FC = () => {
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'חברה' },
+    { key: 'company', label: 'יצרן' },
     { key: 'salary', label: 'שכר', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'accumulation', label: 'צבירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'scopeCommission', label: 'עמלת היקף על הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },

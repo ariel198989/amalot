@@ -21,7 +21,7 @@ const PolicyCalculator: React.FC = () => {
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
-    { name: 'company', label: 'חברת ביטוח', type: 'select', required: true,
+    { name: 'company', label: 'יצרן', type: 'select', required: true,
       options: [
         { value: 'harel', label: 'הראל' },
         { value: 'migdal', label: 'מגדל' },
@@ -40,7 +40,7 @@ const PolicyCalculator: React.FC = () => {
     { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'policyType', label: 'סוג פוליסה' },
-    { key: 'company', label: 'חברת ביטוח' },
+    { key: 'company', label: 'יצרן' },
     { key: 'name', label: 'שם הלקוח' },
     { key: 'date', label: 'תאריך' }
   ];
@@ -87,7 +87,7 @@ const PolicyCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברת ביטוח,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת היקף על הצבירה\n";
+    csvContent += "תאריך,שם הלקוח,יצרן,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת היקף על הצבירה\n";
     
     clients.forEach((client) => {
       const row = [

@@ -240,8 +240,10 @@ export const SalesProgressChart: React.FC = () => {
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {categories.map((category, index) => {
-          const totalPerformance = category.performances.reduce((sum, p) => sum + p, 0);
-          const progress = (totalPerformance / category.yearlyTarget) * 100;
+          // מכפיל את הביצועים החודשיים ב-12 להצגה שנתית
+          const currentMonthPerformance = category.performances[currentMonth] || 0;
+          const annualizedPerformance = currentMonthPerformance * 12;
+          const progress = (annualizedPerformance / category.yearlyTarget) * 100;
           
           return (
             <motion.div
@@ -268,12 +270,12 @@ export const SalesProgressChart: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>ביצוע</span>
-                  <span>{formatNumber(totalPerformance)}</span>
+                  <span>{formatNumber(annualizedPerformance)}</span>
                 </div>
                 <div className="flex justify-between mt-1">
                   <span>פער</span>
-                  <span className={totalPerformance >= category.yearlyTarget ? 'text-green-600' : 'text-red-600'}>
-                    {formatNumber(Math.abs(category.yearlyTarget - totalPerformance))}
+                  <span className={annualizedPerformance >= category.yearlyTarget ? 'text-green-600' : 'text-red-600'}>
+                    {formatNumber(Math.abs(category.yearlyTarget - annualizedPerformance))}
                   </span>
                 </div>
               </div>

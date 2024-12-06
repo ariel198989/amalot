@@ -290,9 +290,9 @@ const CustomerJourneyComponent: React.FC = () => {
   const getProductFields = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy') => {
     const baseFields = [
       { 
-        name: 'company', 
-        label: 'חברה', 
-        type: 'select', 
+        name: 'company',
+        label: 'יצרן',
+        type: 'select',
         required: true,
         className: 'bg-white',
         containerClassName: 'relative z-[60]',
@@ -301,7 +301,7 @@ const CustomerJourneyComponent: React.FC = () => {
           { value: 'מגדל', label: 'מגדל' },
           { value: 'מנורה', label: 'מנורה' },
           { value: 'כלל', label: 'כלל' },
-          { value: 'הראל', label: 'הרל' },
+          { value: 'הראל', label: 'הראל' },
           { value: 'הפניקס', label: 'הפניקס' }
         ]
       }
@@ -594,7 +594,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const columns = [
     { key: 'date', label: 'תאריך' },
-    { key: 'company', label: 'חברה' },
+    { key: 'company', label: 'יצרן' },
     { key: 'type', label: 'סוג מוצר', format: (value: string) => {
       switch (value) {
         case 'pension': return 'פנסיה';
