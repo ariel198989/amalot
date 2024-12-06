@@ -270,7 +270,7 @@ const CustomerJourneyComponent: React.FC = () => {
   }, []);
 
   const loadCompanyRates = async () => {
-    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
+    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'מור', 'מיטב', 'אלטשולר שחם'];
     const productTypes = ['pension', 'insurance', 'savings_and_study', 'policy'] as const;
     const rates: { [key: string]: any } = {};
     
@@ -302,7 +302,10 @@ const CustomerJourneyComponent: React.FC = () => {
           { value: 'מנורה', label: 'מנורה' },
           { value: 'כלל', label: 'כלל' },
           { value: 'הראל', label: 'הראל' },
-          { value: 'הפניקס', label: 'הפניקס' }
+          { value: 'הפניקס', label: 'הפניקס' },
+          { value: 'מור', label: 'מור' },
+          { value: 'מיטב', label: 'מיטב' },
+          { value: 'אלטשולר שחם', label: 'אלטשו��ר שחם' }
         ]
       }
     ];
@@ -676,7 +679,7 @@ const CustomerJourneyComponent: React.FC = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('משתמש לא מחובר');
+        toast.error('משתמש ל�� מחובר');
         return;
       }
 
@@ -895,7 +898,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* הצגת סיכומים ונתונים נוספים */}
+                  {/* הצג סיכומים ונתונים נוספים */}
                   {clients.length > 0 && (
                     <div className="space-y-6">
                       <Card className="border rounded-lg shadow-md">
