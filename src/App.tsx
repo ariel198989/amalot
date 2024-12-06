@@ -11,6 +11,8 @@ import AgentAgreements from "./components/settings/AgentAgreements/AgentAgreemen
 import Settings from './components/settings/Settings';
 import ClientsTable from './components/clients/ClientsTable';
 import AnnualWorkPlan from './pages/AnnualWorkPlan';
+import BirthdaysPage from './pages/birthdays';
+import PromotionsPage from './pages/promotions';
 import { UserProvider } from './contexts/UserContext';
 import { SalesTargetsProvider } from '@/contexts/SalesTargetsContext';
 import { WorkPlanProvider } from '@/contexts/WorkPlanContext';
@@ -48,6 +50,8 @@ const App: React.FC = () => {
                     <Route path="/journey" element={<CustomerJourneyComponent />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/work-plan" element={<AnnualWorkPlan />} />
+                    <Route path="/birthdays" element={<BirthdaysPage />} />
+                    <Route path="/promotions" element={<PromotionsPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Header>
