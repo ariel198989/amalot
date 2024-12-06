@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
@@ -93,6 +93,32 @@ interface CustomerJourney {
   updated_at: string;
 }
 
+interface ClientInfo {
+  fullName: string;
+  idNumber: string;
+  birthDate: string;
+  email: string;
+  address: {
+    street: string;
+    city: string;
+  };
+  employment: {
+    type: 'employed' | 'self-employed';
+    employer?: {
+      name: string;
+      position: string;
+      workplaceAddress: string;
+      employmentStartDate: string;
+    };
+    business?: {
+      name: string;
+      type: string;
+      address: string;
+      startDate: string;
+    };
+  };
+}
+
 interface CustomerJourneyClient {
   id: string;
   date: string;
@@ -110,12 +136,7 @@ interface CustomerJourneyClient {
   scopeCommission: number;
   monthlyCommission: number;
   totalCommission: number;
-  clientInfo?: {
-    fullName: string;
-    phone: string;
-    email: string;
-    notes?: string;
-  };
+  clientInfo?: ClientInfo;
 }
 
 interface CategorySummary {
@@ -191,10 +212,18 @@ const typeToReportKey = {
   'policy': 'policy'
 } as const;
 
+interface CompanyRates {
+  scope_rate?: number;
+  scope_rate_per_million: number;
+  monthly_rate?: number;
+  nifraim_rate_per_million?: number;
+  active: boolean;
+}
+
 const CustomerJourneyComponent: React.FC = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
-  const [companyRates, setCompanyRates] = useState<{ [company: string]: any }>({});
+  const [companyRates, setCompanyRates] = useState<{ [key: string]: { [company: string]: CompanyRates } }>({});
   const [clientName, setClientName] = useState<string>('');
   const [isStarting, setIsStarting] = useState<boolean>(true);
   const [selectedProducts, setSelectedProducts] = useState<{
@@ -209,19 +238,36 @@ const CustomerJourneyComponent: React.FC = () => {
     policy: false
   });
   const { updatePerformance } = useSalesTargets();
-  const [step, setStep] = useState<'info' | 'products' | 'journey'>('info');
-  const [clientInfo, setClientInfo] = useState<CustomerJourneyClient['clientInfo']>();
+  const [step, setStep] = useState<'info' | 'journey'>('info');
+  const [clientInfo, setClientInfo] = useState<ClientInfo>();
 
   useEffect(() => {
     loadCompanyRates();
   }, []);
 
-  const handleProductSelect = (productType: 'pension' | 'insurance' | 'savings_and_study' | 'policy') => {
-    setSelectedProducts(prev => ({
-      ...prev,
-      [productType]: !prev[productType]
-    }));
-  };
+  // טיפול בהודעות שגיאה בנפרד מstate updates
+  useEffect(() => {
+    // בודק רק אם אנחנו בשלב של בחירת מוצרים
+    if (step === 'products' && !Object.values(selectedProducts).some(Boolean)) {
+      toast.error('חובה לבחור לפחות מוצר אחד');
+    }
+  }, [selectedProducts, step]);
+
+  const handleProductSelect = useCallback((productType: 'pension' | 'insurance' | 'savings_and_study' | 'policy') => {
+    setSelectedProducts(prev => {
+      const newState = {
+        ...prev,
+        [productType]: !prev[productType]
+      };
+      
+      if (!Object.values(newState).some(Boolean)) {
+        toast.error('חובה לבחור לפחות מוצר אחד');
+        return prev;
+      }
+      
+      return newState;
+    });
+  }, []);
 
   const loadCompanyRates = async () => {
     const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
@@ -255,7 +301,7 @@ const CustomerJourneyComponent: React.FC = () => {
           { value: 'מגדל', label: 'מגדל' },
           { value: 'מנורה', label: 'מנורה' },
           { value: 'כלל', label: 'כלל' },
-          { value: 'הראל', label: 'הראל' },
+          { value: 'הראל', label: 'הרל' },
           { value: 'הפניקס', label: 'הפניקס' }
         ]
       }
@@ -329,6 +375,12 @@ const CustomerJourneyComponent: React.FC = () => {
       let scope_commission = 0;
       const currentMonth = new Date().getMonth() + 1;
       
+      const rates = companyRates[type]?.[data.company];
+      if (!rates) {
+        toast.error('לא נמצאו נתוני עמלות לחברה זו');
+        return;
+      }
+
       switch (type) {
         case 'pension':
           const salary = Number(data.pensionSalary);
@@ -351,13 +403,6 @@ const CustomerJourneyComponent: React.FC = () => {
           const premium = Number(data.insurancePremium);
           const annualPremium = premium * 12;
           
-          // Get rates from agent agreements
-          const rates = await getCompanyRates(type, data.company);
-          if (!rates) {
-            toast.error('לא נמצאו נתוני עמלות לחברה זו');
-            return;
-          }
-
           // Calculate scope commission (65% of annual premium)
           scope_commission = annualPremium * 0.65;
           
@@ -377,13 +422,6 @@ const CustomerJourneyComponent: React.FC = () => {
         case 'savings_and_study': {
           const amount = Number(data.investmentAmount);
           
-          // Get rates from agent agreements
-          const rates = await getCompanyRates(type, data.company);
-          if (!rates) {
-            toast.error('לא נמצאו נתוני עמלות לחברה זו');
-            return;
-          }
-
           // Calculate scope commission (e.g., 6000 per million)
           scope_commission = amount / 1000000 * (rates.scope_rate_per_million || 0);
           
@@ -567,7 +605,7 @@ const CustomerJourneyComponent: React.FC = () => {
       }
     }},
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'עמלת היקף על הצירה', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'monthlyCommission', label: 'עמלת הקף על הצירה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => `₪${value.toLocaleString()}` }
   ];
 
@@ -614,13 +652,19 @@ const CustomerJourneyComponent: React.FC = () => {
     });
   };
 
-  const startNewJourney = () => {
-    if (clientName.trim()) {
-      setIsStarting(false);
-    } else {
+  const startNewJourney = useCallback(() => {
+    if (!clientName.trim()) {
       toast.error('נא להזין שם לקוח');
+      return;
     }
-  };
+
+    if (!Object.values(selectedProducts).some(Boolean)) {
+      toast.error('נא לבחור לפחות מוצר אחד');
+      return;
+    }
+
+    setIsStarting(false);
+  }, [clientName, selectedProducts]);
 
   const totalSummary = {
     scopeCommission: clients.reduce((sum, client) => sum + client.scopeCommission, 0),
@@ -647,6 +691,8 @@ const CustomerJourneyComponent: React.FC = () => {
       // Transform clients into selected_products format
       const selectedProducts = clients.map(client => {
         let details;
+        const reportType = typeToReportKey[client.type];
+        
         switch (client.type) {
           case 'pension':
             details = {
@@ -692,7 +738,7 @@ const CustomerJourneyComponent: React.FC = () => {
         }
 
         return {
-          type: client.type === 'savings_and_study' ? 'investment' : client.type,
+          type: reportType,
           company: client.company,
           details
         };
@@ -762,10 +808,10 @@ const CustomerJourneyComponent: React.FC = () => {
     return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
   };
 
-  const handleClientInfoSubmit = (info: { fullName: string; phone: string; email: string; notes?: string }) => {
-    setClientInfo(info);
-    setClientName(info.fullName);
-    setStep('products');
+  const handleClientInfoSubmit = (clientInfo: ClientInfo) => {
+    setClientInfo(clientInfo);
+    setClientName(clientInfo.fullName);
+    setStep('journey');
   };
 
   return (
@@ -774,7 +820,7 @@ const CustomerJourneyComponent: React.FC = () => {
         <ClientInfoForm onNext={handleClientInfoSubmit} />
       )}
 
-      {step === 'products' && (
+      {step === 'journey' && (
         <>
           <div className="flex items-center gap-3 mb-8">
             <Brain className="w-16 h-16 text-[#4361ee]" />
@@ -787,8 +833,8 @@ const CustomerJourneyComponent: React.FC = () => {
           <div className="flex gap-12">
             <Card className="flex-1 shadow-lg">
               <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
-                <h2 className="text-2xl font-semibold text-center">בחירת מוצרים</h2>
-                <p className="text-center text-sm opacity-90">בחר את המוצרים הרלוונטיים</p>
+                <h2 className="text-2xl font-semibold text-center">בחירת מוצרים והזנת נתונים</h2>
+                <p className="text-center text-sm opacity-90">בחר את המוצרים הרלוונטיים והזן את הנתונים</p>
               </CardHeader>
               <CardContent className="p-8">
                 <div className="space-y-8">
@@ -806,7 +852,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       onClick={() => handleProductSelect('insurance')}
                     />
                     <ProductCard
-                      title="פיננסים"
+                      title="פמל והשתלמות"
                       icon={PiggyBank}
                       selected={selectedProducts.savings_and_study}
                       onClick={() => handleProductSelect('savings_and_study')}
@@ -819,137 +865,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     />
                   </div>
 
-                  <Button 
-                    className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
-                    onClick={() => {
-                      if (!Object.values(selectedProducts).some(Boolean)) {
-                        toast.error('נא לבחור לפחות מוצר אחד');
-                        return;
-                      }
-                      setStep('journey');
-                    }}
-                  >
-                    התחל מסע
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="w-96 space-y-8">
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-                  <div className="mt-1 p-2 rounded-full bg-green-100">
-                    <User className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-                  <div className="mt-1 p-2 rounded-full bg-blue-100">
-                    <Shield className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
-                  <div className="mt-1 p-2 rounded-full bg-purple-100">
-                    <PiggyBank className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg">דוחות מפורטים</h3>
-                    <p className="text-gray-600">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {step === 'journey' && (
-        <>
-          <div className="flex items-center gap-3 mb-8">
-            <Brain className="w-16 h-16 text-[#4361ee]" />
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לק��ח חכם</h1>
-              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
-            </div>
-          </div>
-
-          <div className="flex gap-12">
-            <Card className="flex-1 shadow-lg">
-              <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
-                <h2 className="text-2xl font-semibold text-center">פרטי לקוח</h2>
-                <p className="text-center text-sm opacity-90">הזן את שם הלקוח ובחר את המוצרים הרלוונטיים</p>
-              </CardHeader>
-              <CardContent className="p-8">
-                {isStarting ? (
-                  <div className="space-y-8">
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        placeholder="שם הלקוח"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border rounded-lg text-lg"
-                      />
-                      <User className="absolute right-3 top-3.5 h-6 w-6 text-gray-400" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4 text-gray-700">בחר מוצרים:</h3>
-                      <div className="grid grid-cols-2 gap-6">
-                        <ProductCard
-                          title="פנסיה"
-                          icon={Building2}
-                          selected={selectedProducts.pension}
-                          onClick={() => handleProductSelect('pension')}
-                        />
-                        <ProductCard
-                          title="סיכונים"
-                          icon={Shield}
-                          selected={selectedProducts.insurance}
-                          onClick={() => handleProductSelect('insurance')}
-                        />
-                        <ProductCard
-                          title="פיננסים"
-                          icon={PiggyBank}
-                          selected={selectedProducts.savings_and_study}
-                          onClick={() => handleProductSelect('savings_and_study')}
-                        />
-                        <ProductCard
-                          title="פוליסת חסכון"
-                          icon={Wallet}
-                          selected={selectedProducts.policy}
-                          onClick={() => handleProductSelect('policy')}
-                        />
-                      </div>
-                    </div>
-
-                    <Button 
-                      className="w-full bg-[#4361ee] hover:bg-[#3651d4] text-white py-3 rounded-lg transition-colors text-lg"
-                      onClick={() => {
-                        if (!clientName) {
-                          toast.error('נא להזין שם לקוח');
-                          return;
-                        }
-                        if (!Object.values(selectedProducts).some(Boolean)) {
-                          toast.error('נא בחור לפחות מוצר אחד');
-                          return;
-                        }
-                        setIsStarting(false);
-                      }}
-                    >
-                      התחל מסע
-                    </Button>
-                  </div>
-                ) : (
+                  {/* הצגת טפסי הזנת נתונים למוצרים שנבחרו */}
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                       {[
@@ -977,200 +893,201 @@ const CustomerJourneyComponent: React.FC = () => {
                         )
                       ))}
                     </div>
+                  </div>
 
-                    {clients.length > 0 && (
-                      <div className="space-y-6">
-                        <Card className="border rounded-lg shadow-md">
-                          <CardHeader className="border-b bg-gray-50">
-                            <h3 className="font-medium">סיכום עמלות</h3>
-                          </CardHeader>
-                          <CardContent className="p-4 space-y-6">
-                            {/* פנסיה */}
-                            {clients.some(client => client.type === 'pension') && (
-                              <div>
-                                <h4 className="font-medium mb-3 flex items-center gap-2">
-                                  <Building2 className="w-4 h-4 text-blue-500" />
-                                  פנסה
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'pension')
-                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'pension')
-                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">סה"כ</p>
-                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                      .filter(client => client.type === 'pension')
-                                      .reduce((sum, client) => sum + client.totalCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* ביכונים */}
-                            {clients.some(client => client.type === 'insurance') && (
-                              <div>
-                                <h4 className="font-medium mb-3 flex items-center gap-2">
-                                  <Shield className="w-4 h-4 text-green-500" />
-                                  ביכונים
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'insurance')
-                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'insurance')
-                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">סה"כ</p>
-                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                      .filter(client => client.type === 'insurance')
-                                      .reduce((sum, client) => sum + client.totalCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* חסכון ולימודים */}
-                            {clients.some(client => client.type === 'savings_and_study') && (
-                              <div>
-                                <h4 className="font-medium mb-3 flex items-center gap-2">
-                                  <PiggyBank className="w-4 h-4 text-purple-500" />
-                                  חסכון ולימודים
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'savings_and_study')
-                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'savings_and_study')
-                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">סה"כ</p>
-                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                      .filter(client => client.type === 'savings_and_study')
-                                      .reduce((sum, client) => sum + client.totalCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* פוליסה */}
-                            {clients.some(client => client.type === 'policy') && (
-                              <div>
-                                <h4 className="font-medium mb-3 flex items-center gap-2">
-                                  <Wallet className="w-4 h-4 text-orange-500" />
-                                  פוליסת חסכון
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'policy')
-                                      .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
-                                    <p className="text-xl font-bold">₪{clients
-                                      .filter(client => client.type === 'policy')
-                                      .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                  <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-600">סה"כ</p>
-                                    <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                      .filter(client => client.type === 'policy')
-                                      .reduce((sum, client) => sum + client.totalCommission, 0)
-                                      .toLocaleString()}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* סיכום כללי */}
-                            <div className="mt-8 pt-6 border-t">
-                              <h4 className="font-medium mb-3">סה"כ כללי</h4>
+                  {/* הצגת סיכומים ונתונים נוספים */}
+                  {clients.length > 0 && (
+                    <div className="space-y-6">
+                      <Card className="border rounded-lg shadow-md">
+                        <CardHeader className="border-b bg-gray-50">
+                          <h3 className="font-medium">סיכום עמלות</h3>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-6">
+                          {/* פנסיה */}
+                          {clients.some(client => client.type === 'pension') && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-blue-500" />
+                                פנסה
+                              </h4>
                               <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
-                                  <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'pension')
+                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                    .toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
-                                  <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'pension')
+                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                    .toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                <div className="p-4 bg-gray-50 rounded-lg">
                                   <p className="text-sm text-gray-600">סה"כ</p>
-                                  <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
+                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                    .filter(client => client.type === 'pension')
+                                    .reduce((sum, client) => sum + client.totalCommission, 0)
+                                    .toLocaleString()}</p>
                                 </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          )}
 
-                        <Card className="border rounded-lg shadow-md">
-                          <CardHeader className="border-b bg-gray-50">
-                            <h3 className="font-medium">פירוט מוצרים</h3>
-                          </CardHeader>
-                          <CardContent className="p-4">
-                            <ResultsTable
-                              data={clients}
-                              columns={columns}
-                              onDownload={handleDownload}
-                              onClear={handleClear}
-                              onShare={() => {}}
-                            />
-                          </CardContent>
-                        </Card>
+                          {/* ביכונים */}
+                          {clients.some(client => client.type === 'insurance') && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-green-500" />
+                                ביכונים
+                              </h4>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'insurance')
+                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'insurance')
+                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ</p>
+                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                    .filter(client => client.type === 'insurance')
+                                    .reduce((sum, client) => sum + client.totalCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-                        <div className="flex justify-end gap-4">
-                          <Button 
-                            onClick={handleDownload}
-                            className="bg-white text-gray-700 border hover:bg-gray-50"
-                          >
-                            הורד דוח
-                          </Button>
-                          <Button 
-                            onClick={handleSendToReports}
-                            className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
-                          >
-                            שלח לדוחות
-                          </Button>
-                        </div>
+                          {/* חסכון ולימודים */}
+                          {clients.some(client => client.type === 'savings_and_study') && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <PiggyBank className="w-4 h-4 text-purple-500" />
+                                חסכון ולימודים
+                              </h4>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'savings_and_study')
+                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'savings_and_study')
+                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ</p>
+                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                    .filter(client => client.type === 'savings_and_study')
+                                    .reduce((sum, client) => sum + client.totalCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* פוליסה */}
+                          {clients.some(client => client.type === 'policy') && (
+                            <div>
+                              <h4 className="font-medium mb-3 flex items-center gap-2">
+                                <Wallet className="w-4 h-4 text-orange-500" />
+                                פוליסת חסכון
+                              </h4>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'policy')
+                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
+                                  <p className="text-xl font-bold">₪{clients
+                                    .filter(client => client.type === 'policy')
+                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm text-gray-600">סה"כ</p>
+                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                    .filter(client => client.type === 'policy')
+                                    .reduce((sum, client) => sum + client.totalCommission, 0)
+                                    .toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* סיכום כללי */}
+                          <div className="mt-8 pt-6 border-t">
+                            <h4 className="font-medium mb-3">סה"כ כללי</h4>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
+                                <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
+                              </div>
+                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
+                                <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
+                              </div>
+                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
+                                <p className="text-sm text-gray-600">סה"כ</p>
+                                <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border rounded-lg shadow-md">
+                        <CardHeader className="border-b bg-gray-50">
+                          <h3 className="font-medium">פירוט מוצרים</h3>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <ResultsTable
+                            data={clients}
+                            columns={columns}
+                            onDownload={handleDownload}
+                            onClear={handleClear}
+                            onShare={() => {}}
+                          />
+                        </CardContent>
+                      </Card>
+
+                      <div className="flex justify-end gap-4">
+                        <Button 
+                          onClick={handleDownload}
+                          className="bg-white text-gray-700 border hover:bg-gray-50"
+                        >
+                          הורד דוח
+                        </Button>
+                        <Button 
+                          onClick={handleSendToReports}
+                          className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
+                        >
+                          שלח לדוחות
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -1182,7 +1099,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-600">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
                   </div>
                 </div>
 

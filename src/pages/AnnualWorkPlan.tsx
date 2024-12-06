@@ -6,6 +6,7 @@ import SalesTargetsSystem from '../table/sales-targets-system';
 import { useUser } from '../contexts/UserContext';
 import { SalesTargetsProvider } from '@/contexts/SalesTargetsContext';
 import SalesTargetsTab from '../components/dashboard/sales-targets-tab';
+import { SalesProgressChart } from '../components/dashboard/sales-progress-charts';
 
 const AnnualWorkPlan = () => {
   const { user } = useUser();
@@ -60,15 +61,18 @@ const AnnualWorkPlan = () => {
 
         <TabsContent value="sales-targets" className="mt-6">
           <SalesTargetsProvider>
-            <Card className="bg-white shadow-lg">
-              <CardHeader className="border-b border-slate-200">
-                <CardTitle className="text-xl text-slate-800">יעדי מכירות שנתיים</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <SalesTargetsTab />
-                <SalesTargetsSystem />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <SalesProgressChart />
+              <Card className="bg-white shadow-lg">
+                <CardHeader className="border-b border-slate-200">
+                  <CardTitle className="text-xl text-slate-800">יעדי מכירות שנתיים</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                  <SalesTargetsTab />
+                  <SalesTargetsSystem />
+                </CardContent>
+              </Card>
+            </div>
           </SalesTargetsProvider>
         </TabsContent>
       </Tabs>
