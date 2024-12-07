@@ -1,153 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 
 interface SalesTargetsContextType {
+  updatePerformance: (category: string, amount: number, company?: string) => Promise<void>;
   closingRate: number;
   monthlyMeetings: number;
   isDirty: boolean;
-  updateClosingRate: (rate: number) => void;
-  updateMonthlyMeetings: (meetings: number) => void;
+  updateClosingRate: (value: number) => void;
+  updateMonthlyMeetings: (value: number) => void;
   saveChanges: () => Promise<void>;
-  discardChanges: () => void;
-  updatePerformance: (category: string, amount: number, month: number) => Promise<void>;
 }
 
 const SalesTargetsContext = createContext<SalesTargetsContextType | undefined>(undefined);
-
-export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [closingRate, setClosingRate] = useState(() => {
-    const saved = localStorage.getItem('salesTargets.closingRate');
-    console.log('Initial closingRate from localStorage:', saved);
-    return saved ? Number(saved) : 43;
-  });
-  
-  const [monthlyMeetings, setMonthlyMeetings] = useState(() => {
-    const saved = localStorage.getItem('salesTargets.monthlyMeetings');
-    console.log('Initial monthlyMeetings from localStorage:', saved);
-    return saved ? Number(saved) : 44;
-  });
-
-  const [isDirty, setIsDirty] = useState(false);
-  const [tempValues, setTempValues] = useState({ closingRate, monthlyMeetings });
-
-  const updateClosingRate = (rate: number) => {
-    console.log('Updating closing rate to:', rate);
-    setTempValues(prev => ({ ...prev, closingRate: rate }));
-    setIsDirty(true);
-  };
-
-  const updateMonthlyMeetings = (meetings: number) => {
-    console.log('Updating monthly meetings to:', meetings);
-    setTempValues(prev => ({ ...prev, monthlyMeetings: meetings }));
-    setIsDirty(true);
-  };
-
-  const saveChanges = async () => {
-    try {
-      console.log('Saving changes:', tempValues);
-      
-      setClosingRate(tempValues.closingRate);
-      setMonthlyMeetings(tempValues.monthlyMeetings);
-      
-      localStorage.setItem('salesTargets.closingRate', String(tempValues.closingRate));
-      localStorage.setItem('salesTargets.monthlyMeetings', String(tempValues.monthlyMeetings));
-      
-      setIsDirty(false);
-      toast.success('הנתונים נשמרו בהצלחה');
-
-      console.log('Verifying saved values:', {
-        localStorage: {
-          closingRate: localStorage.getItem('salesTargets.closingRate'),
-          monthlyMeetings: localStorage.getItem('salesTargets.monthlyMeetings')
-        },
-        state: {
-          closingRate: tempValues.closingRate,
-          monthlyMeetings: tempValues.monthlyMeetings
-        }
-      });
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      toast.error('שגיאה בשמירת הנתונים');
-      throw error;
-    }
-  };
-
-  const discardChanges = () => {
-    console.log('Discarding changes, reverting to:', { closingRate, monthlyMeetings });
-    setTempValues({ closingRate, monthlyMeetings });
-    setIsDirty(false);
-    toast.success('השינויים בוטלו');
-  };
-
-  const updatePerformance = async (category: string, amount: number, month: number) => {
-    try {
-      const year = new Date().getFullYear();
-      console.log('מעדכן ביצועים:', { category, amount, month, year });
-      
-      // קודם כל מנסים לקבל את הנתונים הקיימים
-      const { data: existingData, error: fetchError } = await supabase
-        .from('sales_targets')
-        .select('performance')
-        .eq('month', month)
-        .eq('year', year)
-        .eq('category', category)
-        .maybeSingle();
-
-      console.log('נתונים קיימים:', existingData, 'שגיאה:', fetchError);
-
-      const currentPerformance = existingData?.performance || 0;
-      const newPerformance = currentPerformance + amount;
-
-      console.log('חישוב ביצ��עים חדש:', { currentPerformance, newPerformance });
-
-      // משתמשים ב-upsert במקום insert
-      const { data: upsertResult, error: upsertError } = await supabase
-        .from('sales_targets')
-        .upsert({
-          category,
-          month,
-          year,
-          performance: newPerformance,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        }, {
-          onConflict: 'category,month,year'
-        });
-
-      console.log('תוצאת העדכון:', { data: upsertResult, error: upsertError });
-
-      if (upsertError) throw upsertError;
-
-      toast.success('הביצועים עודכנו בהצלחה');
-    } catch (error) {
-      console.error('שגיאה בעדכון הביצועים:', error);
-      toast.error('שגיאה בעדכון הביצועים');
-    }
-  };
-
-  useEffect(() => {
-    console.log('Context values updated:', {
-      closingRate: tempValues.closingRate,
-      monthlyMeetings: tempValues.monthlyMeetings,
-      isDirty
-    });
-  }, [tempValues, isDirty]);
-
-  return (
-    <SalesTargetsContext.Provider value={{
-      closingRate: tempValues.closingRate,
-      monthlyMeetings: tempValues.monthlyMeetings,
-      isDirty,
-      updateClosingRate,
-      updateMonthlyMeetings,
-      saveChanges,
-      discardChanges,
-      updatePerformance
-    }}>
-      {children}
-    </SalesTargetsContext.Provider>
-  );
-};
 
 export const useSalesTargets = () => {
   const context = useContext(SalesTargetsContext);
@@ -155,4 +20,176 @@ export const useSalesTargets = () => {
     throw new Error('useSalesTargets must be used within a SalesTargetsProvider');
   }
   return context;
+};
+
+export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [closingRate, setClosingRate] = useState<number>(30);
+  const [monthlyMeetings, setMonthlyMeetings] = useState<number>(44);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('sales_settings')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('שגיאה בטעינת הגדרות:', error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        const { error: insertError } = await supabase
+          .from('sales_settings')
+          .insert({
+            user_id: user.id,
+            closing_rate: 30,
+            monthly_meetings: 44
+          });
+
+        if (insertError) {
+          console.error('שגיאה ביצירת הגדרות:', insertError);
+          return;
+        }
+      } else {
+        setClosingRate(data[0].closing_rate);
+        setMonthlyMeetings(data[0].monthly_meetings);
+      }
+    } catch (error) {
+      console.error('שגיאה בטעינת נתונים:', error);
+    }
+  };
+
+  const updateClosingRate = (value: number) => {
+    setClosingRate(value);
+    setIsDirty(true);
+  };
+
+  const updateMonthlyMeetings = (value: number) => {
+    setMonthlyMeetings(value);
+    setIsDirty(true);
+  };
+
+  const saveChanges = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('לא נמצא משתמש מחובר');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('sales_settings')
+        .upsert({
+          user_id: user.id,
+          closing_rate: closingRate,
+          monthly_meetings: monthlyMeetings
+        });
+
+      if (error) {
+        console.error('שגיאה בשמירת הגדרות:', error);
+        toast.error('שגיאה בשמירת ההגדרות');
+        return;
+      }
+
+      setIsDirty(false);
+      toast.success('ההגדרות נשמרו בהצלחה');
+    } catch (error) {
+      console.error('שגיאה בשמירת נתונים:', error);
+      toast.error('שגיאה בשמירת ההגדרות');
+    }
+  };
+
+  const updatePerformance = useCallback(async (
+    category: string,
+    amount: number,
+    company?: string
+  ): Promise<void> => {
+    console.log('מעדכן ביצועים:', { category, amount, company });
+
+    try {
+      const month = new Date().getMonth() + 1;
+      const year = new Date().getFullYear();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error('לא נמצא משתמש מחובר');
+        return;
+      }
+
+      // עדכון היעדים
+      const { data: existingData, error: fetchError } = await supabase
+        .from('sales_targets')
+        .select('*')
+        .eq('category', category)
+        .eq('month', month)
+        .eq('year', year)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      console.log('נתונים קיימים:', existingData, 'שגיאה:', fetchError);
+
+      if (existingData) {
+        const { error: updateError } = await supabase
+          .from('sales_targets')
+          .update({
+            performance: existingData.performance + amount
+          })
+          .eq('id', existingData.id);
+
+        if (updateError) {
+          console.error('שגיאה בעדכון היעדים:', updateError);
+          return;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('sales_targets')
+          .insert({
+            category,
+            month,
+            year,
+            performance: amount,
+            user_id: user.id
+          });
+
+        if (insertError) {
+          console.error('שגיאה ביצירת יעד חדש:', insertError);
+          return;
+        }
+      }
+
+      console.log('היעדים עודכנו בהצלחה');
+
+      // עולח אירוע מכירה חדשה
+      const event = new CustomEvent('newSale', { 
+        detail: { category, amount, company }
+      });
+      window.dispatchEvent(event);
+
+    } catch (error) {
+      console.error('שגיאה בעדכון ביצועים:', error);
+    }
+  }, []);
+
+  return (
+    <SalesTargetsContext.Provider value={{ 
+      updatePerformance,
+      closingRate,
+      monthlyMeetings,
+      isDirty,
+      updateClosingRate,
+      updateMonthlyMeetings,
+      saveChanges
+    }}>
+      {children}
+    </SalesTargetsContext.Provider>
+  );
 }; 

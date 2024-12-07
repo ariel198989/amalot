@@ -8,6 +8,13 @@ const DEFAULT_COMPANY_RATES = {
   active: false
 };
 
+interface CompanyRates {
+  scope_rate?: number;
+  scope_rate_per_million: number;
+  monthly_rate?: number;
+  active: boolean;
+}
+
 export const getAgentRates = async (): Promise<AgentRates | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
