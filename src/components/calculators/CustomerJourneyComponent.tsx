@@ -126,6 +126,7 @@ interface CustomerJourneyClient {
   company: string;
   type: 'pension' | 'insurance' | 'savings_and_study' | 'policy';
   pensionType?: string;
+  insuranceType?: string;
   details: {
     pensionSalary?: number;
     pensionAccumulation?: number;
@@ -278,9 +279,11 @@ const CustomerJourneyComponent: React.FC = () => {
     for (const type of productTypes) {
       rates[type] = {};
       for (const company of companies) {
-        const companyRate = await getCompanyRates(type, company);
-        if (companyRate) {
-          rates[type][company] = companyRate;
+        const companyRates = await getCompanyRates(type, company, 
+          type === 'insurance' ? { insuranceType: 'risk' } : undefined
+        );
+        if (companyRates?.active) {
+          rates[type][company] = companyRates;
         }
       }
     }
@@ -404,6 +407,27 @@ const CustomerJourneyComponent: React.FC = () => {
         return [
           ...baseFields,
           { 
+            name: 'transactionType',
+            label: 'סוג עסקה',
+            type: 'select',
+            required: true,
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[60] bg-white',
+            popoverClassName: 'z-[60] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
+            options: [
+              { value: 'personal_accident', label: 'תאונות אישיות' },
+              { value: 'mortgage', label: 'משכנתה' },
+              { value: 'health', label: 'בריאות' },
+              { value: 'critical_illness', label: 'מחלות קשות' },
+              { value: 'insurance_umbrella', label: 'מטריה ביטוחית' },
+              { value: 'risk', label: 'ריסק' },
+              { value: 'service', label: 'כתבי שירות' },
+              { value: 'disability', label: 'אכע' }
+            ]
+          },
+          { 
             name: 'insurancePremium', 
             label: 'פרמיה חודשית', 
             type: 'number', 
@@ -459,10 +483,33 @@ const CustomerJourneyComponent: React.FC = () => {
 
         case 'insurance': {
           const premium = Number(data.insurancePremium);
-          const annualPremium = premium * 12;
+          console.log('Calculating insurance commissions:', {
+            company: data.company,
+            premium,
+            insuranceType: data.transactionType
+          });
+          
+          commissions = await calculateCommissions(
+            'insurance',
+            data.company,
+            premium,
+            undefined,
+            undefined,
+            undefined,
+            data.transactionType as any
+          );
+          
+          if (!commissions) {
+            console.error('No commission agreement found for:', {
+              company: data.company,
+              insuranceType: data.transactionType
+            });
+            toast.error('אין הסכם פעיל עבור חברה זו');
+            return;
+          }
           
           // Calculate scope commission (65% of annual premium)
-          scope_commission = annualPremium * 0.65;
+          scope_commission = premium * 0.65;
           
           // Calculate nifraim (25% of monthly premium)
           nifraim = premium * 0.25;
@@ -562,8 +609,8 @@ const CustomerJourneyComponent: React.FC = () => {
             company: data.company,
             date,
             premium: Number(data.insurancePremium),
-            insurance_type: data.insuranceType || 'general',
-            payment_method: data.paymentMethod || 'monthly',
+            insurance_type: data.transactionType,
+            payment_method: 'monthly',
             nifraim,
             scope_commission: commissions.scope_commission,
             total_commission: commissions.scope_commission + (nifraim * 12)
@@ -621,6 +668,7 @@ const CustomerJourneyComponent: React.FC = () => {
         company: data.company,
         type: type,
         pensionType: type === 'pension' ? data.pensionType : undefined,
+        insuranceType: type === 'insurance' ? data.transactionType : undefined,
         details: {
           pensionSalary: data.pensionSalary,
           pensionAccumulation: data.pensionAccumulation,
@@ -630,12 +678,12 @@ const CustomerJourneyComponent: React.FC = () => {
           policyAmount: data.investmentAmount
         },
         scopeCommission: commissions.scope_commission,
-        monthlyCommission: commissions.monthly_commission,
-        totalCommission: commissions.scope_commission + commissions.monthly_commission
+        monthlyCommission: commissions.monthly_commission || nifraim,
+        totalCommission: commissions.scope_commission + (commissions.monthly_commission || nifraim * 12)
       };
 
       setClients([...clients, newClient]);
-      toast.success('הנתונים נשמרו בהצלחה');
+      toast.success('הנתונים שמרו בהצלחה');
 
     } catch (error) {
       console.error('Error in handleSubmit:', error);
@@ -703,7 +751,7 @@ const CustomerJourneyComponent: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "מסע_לקוח.csv");
+    link.setAttribute("download", "דוח_לקוח.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -723,7 +771,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const startNewJourney = useCallback(() => {
     if (!clientName.trim()) {
-      toast.error('נא להזין שם לקוח');
+      toast.error('נא לה��ין שם לקוח');
       return;
     }
 
@@ -903,7 +951,7 @@ const CustomerJourneyComponent: React.FC = () => {
     if (type === 'pension') {
       return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
     }
-    return commissionType === 'scope' ? 'עמלת היקף' : 'נפרעים';
+    return commissionType === 'scope' ? 'עמלת היקף' : 'עמלת נפרעים';
   };
 
   const handleClientInfoSubmit = (clientInfo: ClientInfo) => {
@@ -963,7 +1011,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     />
                   </div>
 
-                  {/* הצגת טפסי הזנת נתונים למוצרים שנבחרו */}
+                  {/* הצגת טפסי הזנ�� נתונים למוצרים שנבחרו */}
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                       {[
@@ -1006,7 +1054,7 @@ const CustomerJourneyComponent: React.FC = () => {
                             <div>
                               <h4 className="font-medium mb-3 flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-blue-500" />
-                                פנסה
+                                פנסיה
                               </h4>
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="p-4 bg-gray-50 rounded-lg">
@@ -1133,7 +1181,7 @@ const CustomerJourneyComponent: React.FC = () => {
                             </div>
                           )}
 
-                          {/* סיכום כללי */}
+                          {/* סיכום ללי */}
                           <div className="mt-8 pt-6 border-t">
                             <h4 className="font-medium mb-3">סה"כ כללי</h4>
                             <div className="grid grid-cols-3 gap-4">
@@ -1206,7 +1254,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     <Shield className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">ניהול מוצרים מ��קדם</h3>
+                    <h3 className="font-medium text-lg">ניהול מוצרים מקדם</h3>
                     <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
                   </div>
                 </div>

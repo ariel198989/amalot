@@ -28,7 +28,35 @@ export interface AgentRates {
     [company: string]: {
       active: boolean;
       products: {
-        [key: string]: {
+        personal_accident?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        mortgage?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        health?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        critical_illness?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        insurance_umbrella?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        risk?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        service?: {
+          one_time_rate: number;
+          monthly_rate: number;
+        };
+        disability?: {
           one_time_rate: number;
           monthly_rate: number;
         };

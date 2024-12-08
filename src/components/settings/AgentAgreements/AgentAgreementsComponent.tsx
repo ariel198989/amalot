@@ -61,6 +61,19 @@ const TabColors = {
   }
 };
 
+const INSURANCE_PRODUCTS = [
+  { value: 'personal_accident', label: 'תאונות אישיות' },
+  { value: 'mortgage', label: 'משכנתה' },
+  { value: 'health', label: 'בריאות' },
+  { value: 'critical_illness', label: 'מחלות קשות' },
+  { value: 'insurance_umbrella', label: 'מטריה ביטוחית' },
+  { value: 'risk', label: 'ריסק' },
+  { value: 'service', label: 'כתבי שירות' },
+  { value: 'disability', label: 'אכע' }
+] as const;
+
+type InsuranceProductType = typeof INSURANCE_PRODUCTS[number]['value'];
+
 const AgentAgreements: React.FC = () => {
   const [agentRates, setAgentRates] = useState<AgentRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -353,73 +366,78 @@ const AgentAgreements: React.FC = () => {
                     />
                     <span className="font-medium">חברה פעילה</span>
                   </div>
-                  {productTypes.map(product => (
-                    <div key={product.key} className="space-y-2 mt-4">
-                      <h4 className="text-right font-medium">{product.hebrewName}</h4>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                          עמלת היקף על הפקדה (%)
-                        </label>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          value={(companyRates?.products?.[product.key]?.one_time_rate || 0) * 100} 
-                          onChange={(e) => {
-                            const updatedRates = {
-                              ...agentRates,
-                              insurance_companies: {
-                                ...agentRates.insurance_companies,
-                                [company]: {
-                                  ...companyRates,
-                                  products: {
-                                    ...companyRates?.products,
-                                    [product.key]: {
-                                      ...companyRates?.products?.[product.key],
-                                      one_time_rate: Number(e.target.value) / 100
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">מוצרי ביטוח</h3>
+                    {INSURANCE_PRODUCTS.map(({ value, label }) => (
+                      <div key={value} className="space-y-4 p-4 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">{label}</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              עמלת היקף (%)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={companyRates?.products?.[value]?.one_time_rate || 0}
+                              onChange={(e) => {
+                                const updatedRates = {
+                                  ...agentRates,
+                                  insurance_companies: {
+                                    ...agentRates.insurance_companies,
+                                    [company]: {
+                                      ...companyRates,
+                                      products: {
+                                        ...companyRates?.products,
+                                        [value]: {
+                                          ...companyRates?.products?.[value],
+                                          one_time_rate: Number(e.target.value) / 100
+                                        }
+                                      }
                                     }
                                   }
-                                }
-                              }
-                            };
-                            setAgentRates(updatedRates);
-                          }}
-                          className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                          dir="rtl"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                          נפרעים (%)
-                        </label>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          value={(companyRates?.products?.[product.key]?.monthly_rate || 0) * 100} 
-                          onChange={(e) => {
-                            const updatedRates = {
-                              ...agentRates,
-                              insurance_companies: {
-                                ...agentRates.insurance_companies,
-                                [company]: {
-                                  ...companyRates,
-                                  products: {
-                                    ...companyRates?.products,
-                                    [product.key]: {
-                                      ...companyRates?.products?.[product.key],
-                                      monthly_rate: Number(e.target.value) / 100
+                                };
+                                setAgentRates(updatedRates);
+                              }}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              נפרעים (%)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={companyRates?.products?.[value]?.monthly_rate || 0}
+                              onChange={(e) => {
+                                const updatedRates = {
+                                  ...agentRates,
+                                  insurance_companies: {
+                                    ...agentRates.insurance_companies,
+                                    [company]: {
+                                      ...companyRates,
+                                      products: {
+                                        ...companyRates?.products,
+                                        [value]: {
+                                          ...companyRates?.products?.[value],
+                                          monthly_rate: Number(e.target.value) / 100
+                                        }
+                                      }
                                     }
                                   }
-                                }
-                              }
-                            };
-                            setAgentRates(updatedRates);
-                          }}
-                          className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                          dir="rtl"
-                        />
+                                };
+                                setAgentRates(updatedRates);
+                              }}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -427,6 +445,30 @@ const AgentAgreements: React.FC = () => {
         })}
       </div>
     );
+  };
+
+  const handleInsuranceRateChange = (
+    company: string,
+    productType: InsuranceProductType,
+    field: 'one_time_rate' | 'monthly_rate',
+    value: string
+  ) => {
+    setRates(prev => ({
+      ...prev,
+      insurance_companies: {
+        ...prev.insurance_companies,
+        [company]: {
+          ...prev.insurance_companies[company],
+          products: {
+            ...prev.insurance_companies[company]?.products,
+            [productType]: {
+              ...prev.insurance_companies[company]?.products[productType],
+              [field]: Number(value)
+            }
+          }
+        }
+      }
+    }));
   };
 
   if (isLoading) {

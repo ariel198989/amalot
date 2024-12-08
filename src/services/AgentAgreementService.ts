@@ -39,7 +39,11 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
   }
 };
 
-export const getCompanyRates = async (category: 'pension' | 'savings_and_study' | 'policy' | 'insurance', company: string): Promise<{
+export const getCompanyRates = async (
+  category: 'pension' | 'savings_and_study' | 'policy' | 'insurance',
+  company: string,
+  options?: { insuranceType?: 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability' }
+): Promise<{
   scope_rate?: number;
   scope_rate_per_million: number;
   monthly_rate?: number;
@@ -71,11 +75,37 @@ export const getCompanyRates = async (category: 'pension' | 'savings_and_study' 
         break;
 
       case 'insurance':
-        if (!rates.insurance_companies?.[company]?.active) return null;
-        return {
-          scope_rate_per_million: rates.insurance_companies[company].products.risk.one_time_rate * 1000000,
-          monthly_rate: rates.insurance_companies[company].products.risk.monthly_rate,
+        if (!rates.insurance_companies?.[company]?.active) {
+          console.log('Insurance company not active:', {
+            company,
+            active: rates.insurance_companies?.[company]?.active
+          });
+          return null;
+        }
+        const insuranceType = options?.insuranceType || 'risk';
+        const productRates = rates.insurance_companies[company].products[insuranceType];
+        
+        console.log('Insurance rates check:', {
+          company,
+          insuranceType,
+          availableProducts: Object.keys(rates.insurance_companies[company].products),
+          productRates,
           active: rates.insurance_companies[company].active
+        });
+        
+        if (!productRates) {
+          console.log('Product rates not found for:', {
+            company,
+            insuranceType
+          });
+          return null;
+        }
+        
+        return {
+          scope_rate: productRates.one_time_rate,
+          monthly_rate: productRates.monthly_rate,
+          active: rates.insurance_companies[company].active,
+          scope_rate_per_million: 0 // Not used for insurance
         };
 
       default:
@@ -101,15 +131,32 @@ export const calculateCommissions = async (
   amount: number,
   accumulation?: number,
   contributionRate?: number,
-  pensionType?: 'comprehensive' | 'supplementary'
+  pensionType?: 'comprehensive' | 'supplementary',
+  insuranceType?: 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability'
 ): Promise<{
   scope_commission: number;
   monthly_commission: number;
   total_commission: number;
 } | null> => {
   try {
-    const rates = await getCompanyRates(category, company);
-    if (!rates || !rates.active) return null;
+    console.log('Calculating commissions:', {
+      category,
+      company,
+      amount,
+      insuranceType
+    });
+    
+    const rates = await getCompanyRates(category, company, { insuranceType });
+    console.log('Got company rates:', rates);
+    
+    if (!rates || !rates.active) {
+      console.log('No active rates found for:', {
+        category,
+        company,
+        insuranceType
+      });
+      return null;
+    }
 
     let scope_commission = 0;
     let monthly_commission = 0;
@@ -147,10 +194,22 @@ export const calculateCommissions = async (
         break;
 
       case 'insurance':
-        // עמלת היקף על פרמיה שנתית
-        scope_commission = amount * 12 * (rates.scope_rate || 0);
-        // עמלת נפרעים על פרמיה חודשית
+        // עמלת היקף - אחוז מהפרמיה השנתית
+        const annualPremium = amount * 12;
+        scope_commission = annualPremium * (rates.scope_rate || 0);
+        console.log('Insurance scope commission:', {
+          annualPremium,
+          scope_rate: rates.scope_rate,
+          scope_commission
+        });
+
+        // עמלת נפרעים - אחוז מהפרמיה החודשית
         monthly_commission = amount * (rates.monthly_rate || 0);
+        console.log('Insurance monthly commission:', {
+          monthly_premium: amount,
+          monthly_rate: rates.monthly_rate,
+          monthly_commission
+        });
         break;
 
       case 'savings_and_study':
