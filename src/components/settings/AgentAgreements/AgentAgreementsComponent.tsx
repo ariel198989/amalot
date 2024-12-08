@@ -393,7 +393,7 @@ const AgentAgreements: React.FC = () => {
                                         ...companyRates?.products,
                                         [value]: {
                                           ...companyRates?.products?.[value],
-                                          one_time_rate: Number(e.target.value) / 100
+                                          one_time_rate: Number(e.target.value)
                                         }
                                       }
                                     }
@@ -423,7 +423,7 @@ const AgentAgreements: React.FC = () => {
                                         ...companyRates?.products,
                                         [value]: {
                                           ...companyRates?.products?.[value],
-                                          monthly_rate: Number(e.target.value) / 100
+                                          monthly_rate: Number(e.target.value)
                                         }
                                       }
                                     }

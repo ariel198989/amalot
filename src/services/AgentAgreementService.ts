@@ -196,7 +196,7 @@ export const calculateCommissions = async (
       case 'insurance':
         // עמלת היקף - אחוז מהפרמיה השנתית
         const annualPremium = amount * 12;
-        scope_commission = annualPremium * (rates.scope_rate || 0);
+        scope_commission = annualPremium * (rates.scope_rate || 0) / 100;
         console.log('Insurance scope commission:', {
           annualPremium,
           scope_rate: rates.scope_rate,
@@ -204,7 +204,7 @@ export const calculateCommissions = async (
         });
 
         // עמלת נפרעים - אחוז מהפרמיה החודשית
-        monthly_commission = amount * (rates.monthly_rate || 0);
+        monthly_commission = amount * (rates.monthly_rate || 0) / 100;
         console.log('Insurance monthly commission:', {
           monthly_premium: amount,
           monthly_rate: rates.monthly_rate,
