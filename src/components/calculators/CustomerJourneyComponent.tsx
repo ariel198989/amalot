@@ -294,9 +294,11 @@ const CustomerJourneyComponent: React.FC = () => {
         label: 'יצרן',
         type: 'select',
         required: true,
-        className: 'bg-white',
-        containerClassName: 'relative z-[60]',
-        popoverClassName: 'z-[60]',
+        className: 'bg-white !important',
+        containerClassName: 'relative z-[60] bg-white',
+        popoverClassName: 'z-[60] bg-white',
+        listboxClassName: 'bg-white',
+        optionClassName: 'bg-white hover:bg-gray-100',
         options: [
           { value: 'מגדל', label: 'מגדל' },
           { value: 'מנורה', label: 'מנורה' },
@@ -318,12 +320,29 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'סוג עסקה',
             type: 'select',
             required: true,
-            className: 'bg-white',
-            containerClassName: 'relative z-[60]',
-            popoverClassName: 'z-[60]',
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[60] bg-white',
+            popoverClassName: 'z-[60] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
             options: [
               { value: 'proposal', label: 'הצעה' },
               { value: 'agent_appointment', label: 'מינוי סוכן' }
+            ]
+          },
+          { 
+            name: 'pensionType',
+            label: 'סוג פנסיה',
+            type: 'select',
+            required: true,
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[58] bg-white',
+            popoverClassName: 'z-[58] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
+            options: [
+              { value: 'comprehensive', label: 'מקיפה' },
+              { value: 'supplementary', label: 'משלימה' }
             ]
           },
           { 
@@ -331,9 +350,11 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'יצרן',
             type: 'select',
             required: true,
-            className: 'bg-white',
-            containerClassName: 'relative z-[55]',
-            popoverClassName: 'z-[55]',
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[55] bg-white',
+            popoverClassName: 'z-[55] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
             options: [
               { value: 'מגדל', label: 'מגדל' },
               { value: 'מנורה', label: 'מנורה' },
@@ -364,9 +385,11 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'אחוז הפרשה', 
             type: 'select', 
             required: true,
-            className: 'bg-white',
-            containerClassName: 'relative z-[50]',
-            popoverClassName: 'z-[50]',
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[50] bg-white',
+            popoverClassName: 'z-[50] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
             options: [
               { value: '0.2283', label: '22.83%' },
               { value: '0.2183', label: '21.83%' },
@@ -429,7 +452,7 @@ const CustomerJourneyComponent: React.FC = () => {
             commissions
           });
 
-          // עדכון הביצועים עבור ניוד פנסיה
+          // עדכון הביצועים ��בור ניוד פנסיה
           await updatePerformance('pension-transfer', accumulation, currentMonth);
           break;
 
@@ -448,7 +471,7 @@ const CustomerJourneyComponent: React.FC = () => {
             monthly_commission: nifraim
           };
 
-          // עדכון הביצועים עבו סיכונים - מכניס רק את הפרמיה החודשית
+          // עדכון הביצועים עבו יכונים - מכניס רק את הפרמיה החודשית
           await updatePerformance('risks', premium, currentMonth);
           break;
         }
@@ -485,7 +508,7 @@ const CustomerJourneyComponent: React.FC = () => {
           
           commissions = await calculateCommissions(type, data.company, amount);
 
-          // עדכון הביצועים עבור הפקדה שוטפת
+          // עדכון הביצועים עבור הפקדה שו
           await updatePerformance('regular-deposit', amount, currentMonth);
           break;
         }
@@ -521,7 +544,8 @@ const CustomerJourneyComponent: React.FC = () => {
             scope_commission: commissions.scope_commission,
             monthly_commission: commissions.monthly_commission,
             total_commission: commissions.scope_commission + commissions.monthly_commission,
-            transaction_type: data.transactionType
+            transaction_type: data.transactionType,
+            pension_type: data.pensionType
           });
 
           if (error) throw error;
@@ -774,7 +798,8 @@ const CustomerJourneyComponent: React.FC = () => {
                 ...details,
                 salary: client.details.pensionSalary,
                 accumulation: client.details.pensionAccumulation,
-                provision: client.details.pensionContribution
+                provision: client.details.pensionContribution,
+                pension_type: client.details.pensionType
               };
               break;
             case 'insurance':
@@ -921,7 +946,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       onClick={() => handleProductSelect('insurance')}
                     />
                     <ProductCard
-                      title="פמל וה��תלמות"
+                      title="פמל והשתלמות"
                       icon={PiggyBank}
                       selected={selectedProducts.savings_and_study}
                       onClick={() => handleProductSelect('savings_and_study')}
@@ -1168,7 +1193,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
+                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות ל�� לפי סוגי המוצרים השונים</p>
                   </div>
                 </div>
 
