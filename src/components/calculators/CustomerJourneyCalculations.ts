@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 import { FormData } from './CustomerJourneyTypes';
 import { calculateCommissions } from '../../services/AgentAgreementService';
 

@@ -4,7 +4,7 @@ import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 import { 
   Building2, 
   Shield,
@@ -707,132 +707,166 @@ const CustomerJourneyComponent: React.FC = () => {
     totalCommission: clients.reduce((sum, client) => sum + client.totalCommission, 0)
   };
 
-  const handleSendToReports = async () => {
+  const calculateCommissionDetails = () => {
+    const details: Record<string, { companies: Record<string, any>, total: number }> = {
+      pension: { companies: {}, total: 0 },
+      insurance: { companies: {}, total: 0 },
+      investment: { companies: {}, total: 0 },
+      policy: { companies: {}, total: 0 }
+    };
+
+    for (const client of clients) {
+      const type = client.type === 'savings_and_study' ? 'investment' : client.type;
+      const company = client.company;
+      
+      if (!details[type].companies[company]) {
+        details[type].companies[company] = {
+          scopeCommission: 0,
+          accumulationCommission: 0,
+          oneTimeCommission: 0,
+          totalCommission: 0,
+          monthlyCommission: 0
+        };
+      }
+
+      details[type].companies[company].scopeCommission += client.scopeCommission;
+      details[type].companies[company].totalCommission += client.totalCommission;
+      
+      if (type === 'pension') {
+        details[type].companies[company].accumulationCommission += client.monthlyCommission;
+      } else if (type === 'insurance') {
+        details[type].companies[company].oneTimeCommission += client.scopeCommission;
+        details[type].companies[company].monthlyCommission += client.monthlyCommission;
+      }
+
+      details[type].total += client.totalCommission;
+    }
+
+    return details;
+  };
+
+  const calculateTotalCommission = () => {
+    return clients.reduce((total, client) => total + client.totalCommission, 0);
+  };
+
+  const handleSave = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('משתמש ל מחובר');
-        return;
-      }
+      if (!user) throw new Error('לא נמצא משתמש מחובר');
 
-      // Calculate commission details
-      const commissionDetails: CustomerJourney['commission_details'] = {
-        pension: { companies: {}, total: 0 },
-        insurance: { companies: {}, total: 0 },
-        savings_and_study: { companies: {}, total: 0 },
-        policy: { companies: {}, total: 0 }
-      };
-
-      // Transform clients into selected_products format
-      const selectedProducts = clients.map(client => {
-        let details;
-        const reportType = typeToReportKey[client.type];
-        
-        switch (client.type) {
-          case 'pension':
-            details = {
-              salary: client.details.pensionSalary || 0,
-              accumulation: client.details.pensionAccumulation || 0,
-              provision: client.details.pensionContribution || 0,
-              scope_commission: client.scopeCommission,
-              monthly_commission: client.monthlyCommission,
-              total_commission: client.totalCommission
-            } as PensionProduct;
-            break;
-          case 'insurance':
-            details = {
-              premium: client.details.insurancePremium || 0,
-              insurance_type: 'general',
-              payment_method: 'monthly',
-              nifraim: client.monthlyCommission,
-              scope_commission: client.scopeCommission,
-              monthly_commission: client.monthlyCommission,
-              total_commission: client.totalCommission
-            } as InsuranceProduct;
-            break;
-          case 'savings_and_study':
-            details = {
-              investment_amount: client.details.investmentAmount || 0,
-              investment_period: 12,
-              investment_type: 'savings',
-              scope_commission: client.scopeCommission,
-              total_commission: client.totalCommission
-            } as InvestmentProduct;
-            break;
-          case 'policy':
-            details = {
-              policy_amount: client.details.policyAmount || 0,
-              policy_period: 12,
-              policy_type: 'savings',
-              scope_commission: client.scopeCommission,
-              total_commission: client.totalCommission
-            } as PolicyProduct;
-            break;
-          default:
-            throw new Error('Invalid product type');
-        }
-
-        return {
-          type: reportType,
-          company: client.company,
-          details
-        };
-      });
-
-      // Group clients by type and company
-      for (const client of clients) {
-        const type = client.type;
-        const company = client.company;
-        
-        if (!commissionDetails[type].companies[company]) {
-          commissionDetails[type].companies[company] = {
-            scopeCommission: 0,
-            accumulationCommission: 0,
-            oneTimeCommission: 0,
-            totalCommission: 0,
-            monthlyCommission: 0
-          };
-        }
-
-        commissionDetails[type].companies[company].scopeCommission += client.scopeCommission;
-        commissionDetails[type].companies[company].totalCommission += client.totalCommission;
-        
-        if (type === 'pension') {
-          commissionDetails[type].companies[company].accumulationCommission += client.monthlyCommission;
-        } else if (type === 'insurance') {
-          commissionDetails[type].companies[company].oneTimeCommission += client.scopeCommission;
-          commissionDetails[type].companies[company].monthlyCommission! += client.monthlyCommission;
-        }
-
-        commissionDetails[type].total += client.totalCommission;
-      }
-
-      // Create journey object
       const journey: CustomerJourney = {
         id: crypto.randomUUID(),
         user_id: user.id,
         journey_date: new Date().toISOString(),
-        date: new Date().toLocaleDateString('he-IL'),
+        date: new Date().toISOString(),
         client_name: clientName,
-        selected_products: selectedProducts,
+        selected_products: clients.map(client => {
+          const type = client.type === 'savings_and_study' ? 'investment' : client.type;
+          let details: any = {
+            scope_commission: client.scopeCommission,
+            monthly_commission: client.monthlyCommission,
+            total_commission: client.totalCommission
+          };
+
+          switch (type) {
+            case 'pension':
+              details = {
+                ...details,
+                salary: client.details.pensionSalary,
+                accumulation: client.details.pensionAccumulation,
+                provision: client.details.pensionContribution
+              };
+              break;
+            case 'insurance':
+              details = {
+                ...details,
+                premium: client.details.insurancePremium,
+                insurance_type: 'general',
+                payment_method: 'monthly',
+                nifraim: client.monthlyCommission
+              };
+              break;
+            case 'investment':
+              details = {
+                ...details,
+                investment_amount: client.details.investmentAmount,
+                investment_period: 12,
+                investment_type: 'savings'
+              };
+              break;
+            case 'policy':
+              details = {
+                ...details,
+                policy_amount: client.details.policyAmount,
+                policy_period: 12,
+                policy_type: 'savings'
+              };
+              break;
+          }
+
+          return {
+            type,
+            company: client.company,
+            details
+          };
+        }),
         selected_companies: {
           pension: clients.filter(c => c.type === 'pension').map(c => c.company),
           insurance: clients.filter(c => c.type === 'insurance').map(c => c.company),
           investment: clients.filter(c => c.type === 'savings_and_study').map(c => c.company),
           policy: clients.filter(c => c.type === 'policy').map(c => c.company)
         },
-        commission_details: commissionDetails,
-        total_commission: totalSummary.totalCommission,
+        commission_details: calculateCommissionDetails(),
+        total_commission: calculateTotalCommission(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
       await reportService.saveCustomerJourney(journey);
+      
+      // עדכון ביצועים לפי סוג המוצר
+      for (const client of clients) {
+        let amount = 0;
+        let category = '';
+        
+        switch (client.type) {
+          case 'pension':
+            amount = client.details.pensionAccumulation || 0;
+            category = 'pension-transfer';
+            break;
+          case 'insurance':
+            amount = client.details.insurancePremium || 0;
+            category = 'insurance-premium';
+            break;
+          case 'savings_and_study':
+            amount = client.details.investmentAmount || 0;
+            category = 'investment';
+            break;
+          case 'policy':
+            amount = client.details.policyAmount || 0;
+            category = 'policy';
+            break;
+        }
+        
+        if (amount > 0) {
+          const currentDate = new Date();
+          await updatePerformance(category, amount, {
+            month: currentDate.getMonth() + 1,
+            year: currentDate.getFullYear()
+          });
+        }
+      }
+
+      // רענון המבצעים
+      const promotionsModule = await import('@/lib/api/promotions');
+      const updatedPromotions = await promotionsModule.getPromotions(user.id);
+      console.log('מבצעים מעודכנים אחרי שמירת מסע:', updatedPromotions);
+
       toast.success('הנתונים נשלחו בהצלחה לדוחות');
       navigate('/reports');
     } catch (error) {
-      console.error('Error sending to reports:', error);
-      toast.error('שגיאה בשליחת הנתונים לדוחות');
+      console.error('שגיאה בשמירת מסע לקוח:', error);
+      toast.error('שגיאה בשמירת הנתונים');
     }
   };
 
@@ -887,7 +921,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       onClick={() => handleProductSelect('insurance')}
                     />
                     <ProductCard
-                      title="פמל והשתלמות"
+                      title="פמל וה��תלמות"
                       icon={PiggyBank}
                       selected={selectedProducts.savings_and_study}
                       onClick={() => handleProductSelect('savings_and_study')}
@@ -1114,7 +1148,7 @@ const CustomerJourneyComponent: React.FC = () => {
                           הורד דוח
                         </Button>
                         <Button 
-                          onClick={handleSendToReports}
+                          onClick={handleSave}
                           className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
                         >
                           שלח לדוחות

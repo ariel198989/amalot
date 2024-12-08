@@ -35,7 +35,6 @@ interface Promotion {
   company: string;
   start_date: string;
   end_date: string;
-  is_active: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
@@ -91,9 +90,8 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
       const today = new Date().toISOString();
       
       const { data: promotions, error } = await supabase
-        .from('promotions')
+        .from('active_promotions')
         .select('*')
-        .eq('is_active', true)
         .gte('end_date', today);
 
       if (error) throw error;
@@ -119,7 +117,7 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
 
         if (error) throw error;
 
-        // אם יש תוצאה אחת, ננווט ישירות לפרטי הלקוח
+        // אם יש תוצאה אחת, נ��ווט ישירות לפרטי הלקוח
         if (clients.length === 1) {
           navigate(`/clients/${clients[0].id}`);
         } else {

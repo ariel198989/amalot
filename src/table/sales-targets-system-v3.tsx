@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { Sparkles } from 'lucide-react';
+import { useRouter } from 'next/router';
 
 interface MonthlyData {
   target: string;
@@ -22,6 +24,7 @@ export interface SalesTrackingTableProps {
 }
 
 const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year }) => {
+  const router = useRouter();
   const monthNames = [
     'ינואר 24׳', 'פברואר 24׳', 'מרץ 24׳', 'אפריל 24׳', 'מאי 24׳', 'יוני 24׳',
     'יולי 24׳', 'אוגוסט 24׳', 'ספטמבר 24׳', 'אוקטובר 24׳', 'נובמבר 24׳', 'דצמבר 24׳'
@@ -62,7 +65,7 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
     }
   });
 
-  const handleInputChange = (productKey: string, monthIndex: number, field: string, value: string) => {
+  const handleInputChange = (productKey: string, monthIndex: number, field: keyof MonthlyData, value: string) => {
     setYearlyData(prev => ({
       ...prev,
       [productKey]: {
@@ -81,7 +84,7 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
     return { target, actual, performance };
   };
 
-  const TableComponent = ({ data, name }: { data: ProductData; name: string }) => {
+  const TableComponent = ({ data, name, productKey }: { data: ProductData; name: string; productKey: string }) => {
     const totals = calculateTotals(data.monthly);
 
     return (
@@ -115,7 +118,7 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
                     <Input
                       type="number"
                       value={data.monthly[idx].target}
-                      onChange={(e) => handleInputChange('insurance', idx, 'target', e.target.value)}
+                      onChange={(e) => handleInputChange(productKey, idx, 'target', e.target.value)}
                       className="w-full text-right"
                       min="0"
                     />
@@ -124,7 +127,7 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
                     <Input
                       type="number"
                       value={data.monthly[idx].actual}
-                      onChange={(e) => handleInputChange('insurance', idx, 'actual', e.target.value)}
+                      onChange={(e) => handleInputChange(productKey, idx, 'actual', e.target.value)}
                       className="w-full text-right"
                       min="0"
                     />
@@ -133,7 +136,7 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
                     <Input
                       type="number"
                       value={data.monthly[idx].performance}
-                      onChange={(e) => handleInputChange('insurance', idx, 'performance', e.target.value)}
+                      onChange={(e) => handleInputChange(productKey, idx, 'performance', e.target.value)}
                       className="w-full text-right"
                       min="0"
                       max="100"
@@ -151,8 +154,18 @@ const SalesTrackingTable: React.FC<SalesTrackingTableProps> = ({ agent_id, year 
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">מעקב יעדים</h1>
+        <button
+          onClick={() => router.push('/promotions')}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Sparkles className="h-4 w-4" />
+          מבצעים פעילים
+        </button>
+      </div>
       {Object.entries(yearlyData).map(([key, data]) => (
-        <TableComponent key={key} data={data} name={data.name} />
+        <TableComponent key={key} data={data} name={data.name} productKey={key} />
       ))}
     </div>
   );

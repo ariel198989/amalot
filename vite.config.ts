@@ -2,10 +2,11 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig(({ command, mode }) => {
-  // טעינת משתני הסביבה בהתאם למוד (development/production)
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   return {
     plugins: [react()],
     resolve: {
@@ -13,17 +14,8 @@ export default defineConfig(({ command, mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    optimizeDeps: {
-      include: ['jspdf', 'jspdf-autotable']
-    },
-    // הגדרת משתני הסביבה שיהיו זמינים לשרת
-    define: {
-      'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
-      'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY)
-    },
     server: {
-      port: 5173,
-      strictPort: true
-    }
+      port: parseInt(env.VITE_PORT || '5173'),
+    },
   };
 });
