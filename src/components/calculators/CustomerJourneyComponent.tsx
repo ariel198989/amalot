@@ -125,6 +125,7 @@ interface CustomerJourneyClient {
   name: string;
   company: string;
   type: 'pension' | 'insurance' | 'savings_and_study' | 'policy';
+  pensionType?: string;
   details: {
     pensionSalary?: number;
     pensionAccumulation?: number;
@@ -331,6 +332,21 @@ const CustomerJourneyComponent: React.FC = () => {
             ]
           },
           { 
+            name: 'pensionType',
+            label: 'סוג פנסיה',
+            type: 'select',
+            required: true,
+            className: 'bg-white !important',
+            containerClassName: 'relative z-[58] bg-white',
+            popoverClassName: 'z-[58] bg-white',
+            listboxClassName: 'bg-white',
+            optionClassName: 'bg-white hover:bg-gray-100',
+            options: [
+              { value: 'comprehensive', label: 'מקיפה' },
+              { value: 'supplementary', label: 'משלימה' }
+            ]
+          },
+          { 
             name: 'company',
             label: 'יצרן',
             type: 'select',
@@ -529,7 +545,8 @@ const CustomerJourneyComponent: React.FC = () => {
             scope_commission: commissions.scope_commission,
             monthly_commission: commissions.monthly_commission,
             total_commission: commissions.scope_commission + commissions.monthly_commission,
-            transaction_type: data.transactionType
+            transaction_type: data.transactionType,
+            pension_type: data.pensionType
           });
 
           if (error) throw error;
@@ -603,6 +620,7 @@ const CustomerJourneyComponent: React.FC = () => {
         name: clientName,
         company: data.company,
         type: type,
+        pensionType: type === 'pension' ? data.pensionType : undefined,
         details: {
           pensionSalary: data.pensionSalary,
           pensionAccumulation: data.pensionAccumulation,
@@ -644,6 +662,14 @@ const CustomerJourneyComponent: React.FC = () => {
         case 'insurance': return 'סיכונים';
         case 'savings_and_study': return 'גמל והשתלמות';
         case 'policy': return 'פוליסת חסכון';
+        default: return value;
+      }
+    }},
+    { key: 'pensionType', label: 'סוג פנסיה', format: (value: string) => {
+      if (!value) return '-';
+      switch (value) {
+        case 'comprehensive': return 'מקיפה';
+        case 'supplementary': return 'משלימה';
         default: return value;
       }
     }},
@@ -967,7 +993,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* הצג סיכומים ונתונים נוספים */}
+                  {/* הצג סיכומים נתונים נוספים */}
                   {clients.length > 0 && (
                     <div className="space-y-6">
                       <Card className="border rounded-lg shadow-md">
@@ -1180,7 +1206,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     <Shield className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">ניהול מוצרים מתקדם</h3>
+                    <h3 className="font-medium text-lg">ניהול מוצרים מ��קדם</h3>
                     <p className="text-gray-600">ניהול קל ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
                   </div>
                 </div>

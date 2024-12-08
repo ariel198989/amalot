@@ -100,7 +100,8 @@ export const calculateCommissions = async (
   company: string,
   amount: number,
   accumulation?: number,
-  contributionRate?: number
+  contributionRate?: number,
+  pensionType?: 'comprehensive' | 'supplementary'
 ): Promise<{
   scope_commission: number;
   monthly_commission: number;
@@ -123,6 +124,7 @@ export const calculateCommissions = async (
             salary: amount,
             scope_rate: rates.scope_rate,
             contributionRate,
+            pensionType,
             formula: `${amount} * ${rates.scope_rate} * 12 * ${contributionRate} = ${scope_commission}`
           });
         }
@@ -135,6 +137,7 @@ export const calculateCommissions = async (
             accumulation,
             millionsInAccumulation,
             rate_per_million: rates.scope_rate_per_million,
+            pensionType,
             formula: `${millionsInAccumulation} * ${rates.scope_rate_per_million} = ${monthly_commission}`
           });
         }
