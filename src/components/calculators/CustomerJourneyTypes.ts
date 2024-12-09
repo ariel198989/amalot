@@ -14,11 +14,10 @@ export interface BaseProduct {
 
 // Pension specific interfaces
 export interface PensionProduct extends BaseProduct {
-  salary: number;
-  accumulation: number;
-  provision: number;
-  scope_commission: number;
-  monthly_commission: number;
+  pensionSalary: number;
+  pensionAccumulation: number;
+  pensionContribution: number;
+  activityType: 'transfer' | 'new_policy' | 'agent_appointment';
 }
 
 export interface PensionCommission {

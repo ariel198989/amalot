@@ -42,109 +42,80 @@ export const getAgentRates = async (): Promise<AgentRates | null> => {
 export const getCompanyRates = async (
   category: 'pension' | 'savings_and_study' | 'policy' | 'insurance',
   company: string,
-  options?: { insuranceType?: 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability' }
+  options?: {
+    insuranceType?: 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability';
+    amount?: number;
+    contributionRate?: number;
+    accumulation?: number;
+    pensionType?: 'comprehensive' | 'supplementary';
+    investmentAmount?: number;
+    productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
+  }
 ): Promise<{
-  scope_rate?: number;
-  scope_rate_per_million: number;
-  monthly_rate?: number;
-  active: boolean;
-} | null> => {
+  scope_commission: number;
+  monthly_commission: number;
+}> => {
   try {
     const rates = await getAgentRates();
-    if (!rates) return null;
+    if (!rates) return { scope_commission: 0, monthly_commission: 0 };
 
-    let companyRates;
+    let scope_commission = 0;
+    let monthly_commission = 0;
+
     switch (category) {
       case 'pension':
-        companyRates = rates.pension_companies?.[company];
-        if (!companyRates?.active) return { scope_commission: 0, monthly_commission: 0 };
-        
-        let scope_commission = 0;
-        let monthly_commission = 0;
-        
-        // עמלת היקף על השכר = שכר * אחוז עמלה * 12 * אחוז הפרשה
-        if (options?.amount && options?.contributionRate && companyRates.scope_rate) {
-          scope_commission = options.amount * companyRates.scope_rate * 12 * options.contributionRate;
-          console.log('Pension scope commission calculation:', {
-            salary: options.amount,
-            scope_rate: companyRates.scope_rate,
-            contributionRate: options.contributionRate,
-            formula: `${options.amount} * ${companyRates.scope_rate} * 12 * ${options.contributionRate} = ${scope_commission}`
-          });
+        const pensionRates = rates.pension_companies?.[company];
+        if (!pensionRates?.active) return { scope_commission: 0, monthly_commission: 0 };
+
+        if (options?.amount && options?.contributionRate && pensionRates.scope_rate) {
+          scope_commission = options.amount * pensionRates.scope_rate * 12 * options.contributionRate;
         }
-        
-        // עמלת היקף על צבירה - סכום קבוע למיליון
+
         if (options?.accumulation && options.accumulation > 0) {
           const millionsInAccumulation = options.accumulation / 1000000;
-          monthly_commission = millionsInAccumulation * (companyRates.scope_rate_per_million || 0);
-          console.log('Pension accumulation commission calculation:', {
-            accumulation: options.accumulation,
-            millionsInAccumulation,
-            rate_per_million: companyRates.scope_rate_per_million,
-            formula: `${millionsInAccumulation} * ${companyRates.scope_rate_per_million} = ${monthly_commission}`
-          });
+          monthly_commission = millionsInAccumulation * (pensionRates.scope_rate_per_million || 0);
         }
-        
-        return { scope_commission, monthly_commission };
-
-      case 'savings_and_study':
-        companyRates = rates.savings_and_study_companies?.[company];
-        if (!companyRates?.active) return null;
         break;
 
-      case 'policy':
-        companyRates = rates.policy_companies?.[company];
-        if (!companyRates?.active) return null;
+      case 'savings_and_study':
+        const savingsRates = rates.savings_and_study_companies?.[company];
+        if (!savingsRates?.active) return { scope_commission: 0, monthly_commission: 0 };
+
+        if (options?.investmentAmount && options?.productType) {
+          const amount = options.investmentAmount;
+          scope_commission = amount * (savingsRates.scope_rate || 0);
+          monthly_commission = amount * (savingsRates.monthly_rate || 0) / 12;
+        }
         break;
 
       case 'insurance':
-        if (!rates.insurance_companies?.[company]?.active) {
-          console.log('Insurance company not active:', {
-            company,
-            active: rates.insurance_companies?.[company]?.active
-          });
-          return null;
-        }
-        const insuranceType = options?.insuranceType || 'risk';
-        const productRates = rates.insurance_companies[company].products[insuranceType];
-        
-        console.log('Insurance rates check:', {
-          company,
-          insuranceType,
-          availableProducts: Object.keys(rates.insurance_companies[company].products),
-          productRates,
-          active: rates.insurance_companies[company].active
-        });
-        
-        if (!productRates) {
-          console.log('Product rates not found for:', {
-            company,
-            insuranceType
-          });
-          return null;
-        }
-        
-        return {
-          scope_rate: productRates.one_time_rate,
-          monthly_rate: productRates.monthly_rate,
-          active: rates.insurance_companies[company].active,
-          scope_rate_per_million: 0 // Not used for insurance
-        };
+        const insuranceRates = rates.insurance_companies?.[company];
+        if (!insuranceRates?.active) return { scope_commission: 0, monthly_commission: 0 };
 
-      default:
-        return null;
+        const insuranceType = options?.insuranceType || 'risk';
+        const productRates = insuranceRates.products?.[insuranceType];
+        
+        if (productRates) {
+          scope_commission = productRates.one_time_rate || 0;
+          monthly_commission = productRates.monthly_rate || 0;
+        }
+        break;
+
+      case 'policy':
+        const policyRates = rates.policy_companies?.[company];
+        if (!policyRates?.active) return { scope_commission: 0, monthly_commission: 0 };
+
+        if (options?.investmentAmount) {
+          scope_commission = options.investmentAmount * (policyRates.scope_rate || 0);
+          monthly_commission = options.investmentAmount * (policyRates.monthly_rate || 0) / 12;
+        }
+        break;
     }
 
-    if (!companyRates) return null;
-
-    return {
-      scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
-      monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
-      active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
-    };
+    return { scope_commission, monthly_commission };
   } catch (error) {
-    console.error('Error getting company rates:', error);
-    return null;
+    console.error('Error calculating company rates:', error);
+    return { scope_commission: 0, monthly_commission: 0 };
   }
 };
 
