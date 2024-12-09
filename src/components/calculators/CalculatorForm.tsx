@@ -14,6 +14,8 @@ interface Field {
   className?: string;
   containerClassName?: string;
   popoverClassName?: string;
+  listboxClassName?: string;
+  optionClassName?: string;
 }
 
 interface CalculatorFormProps {
@@ -50,9 +52,12 @@ const CalculatorForm: React.FC<CalculatorFormProps> = ({ onSubmit, fields, title
                     <SelectTrigger className={cn("w-full text-right h-10 px-3 py-2", field.className)}>
                       <SelectValue placeholder={`בחר ${field.label}`} />
                     </SelectTrigger>
-                    <SelectContent className={cn("text-right", field.popoverClassName)}>
+                    <SelectContent>
                       {field.options?.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value}
+                        >
                           {option.label}
                         </SelectItem>
                       ))}

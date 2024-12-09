@@ -298,11 +298,11 @@ const CustomerJourneyComponent: React.FC = () => {
         label: 'יצרן',
         type: 'select',
         required: true,
-        className: 'bg-white !important',
-        containerClassName: 'relative z-[60] bg-white',
-        popoverClassName: 'z-[60] bg-white',
-        listboxClassName: 'bg-white',
-        optionClassName: 'bg-white hover:bg-gray-100',
+        className: 'bg-white !important text-right pr-4',
+        containerClassName: 'relative z-[999] bg-white select-container',
+        popoverClassName: 'z-[999] bg-white text-right',
+        listboxClassName: 'bg-white text-right',
+        optionClassName: 'bg-white hover:bg-gray-100 text-right',
         options: [
           { value: 'מגדל', label: 'מגדל' },
           { value: 'מנורה', label: 'מנורה' },
@@ -324,11 +324,11 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'סוג עסקה',
             type: 'select',
             required: true,
-            className: 'bg-white !important',
-            containerClassName: 'relative z-[60] bg-white',
-            popoverClassName: 'z-[60] bg-white',
-            listboxClassName: 'bg-white',
-            optionClassName: 'bg-white hover:bg-gray-100',
+            className: 'bg-white !important text-right pr-4',
+            containerClassName: 'relative z-[997] bg-white select-container',
+            popoverClassName: 'z-[997] bg-white text-right',
+            listboxClassName: 'bg-white text-right',
+            optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
               { value: 'proposal', label: 'הצעה' },
               { value: 'agent_appointment', label: 'מינוי סוכן' }
@@ -339,11 +339,11 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'סוג פנסיה',
             type: 'select',
             required: true,
-            className: 'bg-white !important',
-            containerClassName: 'relative z-[58] bg-white',
-            popoverClassName: 'z-[58] bg-white',
-            listboxClassName: 'bg-white',
-            optionClassName: 'bg-white hover:bg-gray-100',
+            className: 'bg-white !important text-right pr-4',
+            containerClassName: 'relative z-[998] bg-white select-container',
+            popoverClassName: 'z-[998] bg-white text-right',
+            listboxClassName: 'bg-white text-right',
+            optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
               { value: 'comprehensive', label: 'מקיפה' },
               { value: 'supplementary', label: 'משלימה' }
@@ -354,11 +354,11 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'יצרן',
             type: 'select',
             required: true,
-            className: 'bg-white !important',
-            containerClassName: 'relative z-[55] bg-white',
-            popoverClassName: 'z-[55] bg-white',
-            listboxClassName: 'bg-white',
-            optionClassName: 'bg-white hover:bg-gray-100',
+            className: 'bg-white !important text-right pr-4',
+            containerClassName: 'relative z-[999] bg-white select-container',
+            popoverClassName: 'z-[999] bg-white text-right',
+            listboxClassName: 'bg-white text-right',
+            optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
               { value: 'מגדל', label: 'מגדל' },
               { value: 'מנורה', label: 'מנורה' },
@@ -375,25 +375,25 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'שכר', 
             type: 'number', 
             required: true,
-            className: 'bg-white'
+            className: 'bg-white text-right'
           },
           { 
             name: 'pensionAccumulation', 
             label: 'צבירה', 
             type: 'number', 
             required: true,
-            className: 'bg-white'
+            className: 'bg-white text-right'
           },
           { 
             name: 'pensionContribution', 
             label: 'אחוז הפרשה', 
             type: 'select', 
             required: true,
-            className: 'bg-white !important',
-            containerClassName: 'relative z-[50] bg-white',
-            popoverClassName: 'z-[50] bg-white',
-            listboxClassName: 'bg-white',
-            optionClassName: 'bg-white hover:bg-gray-100',
+            className: 'bg-white !important text-right pr-4',
+            containerClassName: 'relative z-[996] bg-white select-container',
+            popoverClassName: 'z-[996] bg-white text-right',
+            listboxClassName: 'bg-white text-right',
+            optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
               { value: '0.2283', label: '22.83%' },
               { value: '0.2183', label: '21.83%' },
@@ -411,17 +411,17 @@ const CustomerJourneyComponent: React.FC = () => {
             label: 'סוג עסקה',
             type: 'select',
             required: true,
-            className: 'bg-white !important',
+            className: 'bg-white !important text-right pr-4',
             containerClassName: 'relative z-[60] bg-white',
-            popoverClassName: 'z-[60] bg-white',
-            listboxClassName: 'bg-white',
-            optionClassName: 'bg-white hover:bg-gray-100',
+            popoverClassName: 'z-[60] bg-white text-right',
+            listboxClassName: 'bg-white text-right',
+            optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
               { value: 'personal_accident', label: 'תאונות אישיות' },
-              { value: 'mortgage', label: 'משכנתה' },
+              { value: 'mortgage', label: 'משכנתא' },
               { value: 'health', label: 'בריאות' },
               { value: 'critical_illness', label: 'מחלות קשות' },
-              { value: 'insurance_umbrella', label: 'מטריה ביטוחית' },
+              { value: 'insurance_umbrella', label: 'מטריה ב��טוחית' },
               { value: 'risk', label: 'ריסק' },
               { value: 'service', label: 'כתבי שירות' },
               { value: 'disability', label: 'אכע' }
@@ -546,7 +546,7 @@ const CustomerJourneyComponent: React.FC = () => {
             total: scope_commission + (nifraim * 12)
           });
 
-          // עדכון הביצועים עבור ניוד ייננסים
+          // עדכון ה��יצועים עבור ניוד ייננסים
           await updatePerformance('finance-transfer', amount, currentMonth);
           break;
         }
@@ -771,7 +771,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const startNewJourney = useCallback(() => {
     if (!clientName.trim()) {
-      toast.error('נא לה��ין שם לקוח');
+      toast.error('נא להזין שם לקוח');
       return;
     }
 
@@ -949,7 +949,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
     if (type === 'pension') {
-      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
+      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת הקף על צבירה';
     }
     return commissionType === 'scope' ? 'עמלת היקף' : 'עמלת נפרעים';
   };
@@ -1011,7 +1011,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     />
                   </div>
 
-                  {/* הצגת טפסי הזנ�� נתונים למוצרים שנבחרו */}
+                  {/* הצגת טפסי הזנ נתונים למוצרים שנבחרו */}
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
                       {[
