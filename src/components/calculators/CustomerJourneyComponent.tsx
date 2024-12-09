@@ -539,7 +539,27 @@ const CustomerJourneyComponent: React.FC = () => {
           monthly_commission: 0
         };
       } else {
-        commissions = await getCompanyRates(type, data.company);
+        const contributionRate = type === 'pension' ? parseFloat(data.pensionContribution) : undefined;
+        const amount = type === 'pension' ? Number(data.pensionSalary) : undefined;
+        const accumulation = type === 'pension' ? Number(data.pensionAccumulation) : undefined;
+        
+        console.log('Sending pension data:', {
+          contributionRate,
+          amount,
+          accumulation,
+          pensionType: data.pensionType
+        });
+        
+        commissions = await getCompanyRates(type, data.company, {
+          amount,
+          contributionRate,
+          accumulation,
+          pensionType: type === 'pension' ? data.pensionType : undefined,
+          insuranceType: type === 'insurance' ? data.transactionType : undefined
+        });
+        
+        console.log('Received commissions:', commissions);
+        
         if (!commissions) {
           toast.error('אין הסכם פעיל עבור חברה זו');
           return;
@@ -856,7 +876,7 @@ const CustomerJourneyComponent: React.FC = () => {
         }
       }
 
-      toast.success('��נתונים נשלחו בהצלחה לדוחות');
+      toast.success('הנתונים נשלחו בהצלחה לדוחות');
       navigate('/reports');
     } catch (error) {
       console.error('שגיאה בשמירת מסע לקוח:', error);
@@ -889,7 +909,7 @@ const CustomerJourneyComponent: React.FC = () => {
             <Brain className="w-16 h-16 text-[#4361ee]" />
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
-              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שלך בצו��ה חכמה ויעילה</p>
+              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שך בצוה חכמה ויעילה</p>
             </div>
           </div>
 
@@ -915,7 +935,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       onClick={() => handleProductSelect('insurance')}
                     />
                     <ProductCard
-                      title="פמל והשתלמות"
+                      title="גמל והשתלמות"
                       icon={PiggyBank}
                       selected={selectedProducts.savings_and_study}
                       onClick={() => handleProductSelect('savings_and_study')}
@@ -1186,7 +1206,7 @@ const CustomerJourneyComponent: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">ניהול מוצרים מקדם</h3>
-                    <p className="text-gray-600">ניהול ק ונוח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
+                    <p className="text-gray-600">ניהול ק ווח של מגוון מוצרים: פנסיה, ביכונים, חסכון ופוליסת חסכון</p>
                   </div>
                 </div>
 

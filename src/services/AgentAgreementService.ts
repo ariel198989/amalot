@@ -57,12 +57,35 @@ export const getCompanyRates = async (
     switch (category) {
       case 'pension':
         companyRates = rates.pension_companies?.[company];
-        if (!companyRates?.active) return null;
-        return {
-          scope_rate: companyRates.scope_rate,
-          scope_rate_per_million: companyRates.scope_rate_per_million,
-          active: companyRates.active
-        };
+        if (!companyRates?.active) return { scope_commission: 0, monthly_commission: 0 };
+        
+        let scope_commission = 0;
+        let monthly_commission = 0;
+        
+        // עמלת היקף על השכר = שכר * אחוז עמלה * 12 * אחוז הפרשה
+        if (options?.amount && options?.contributionRate && companyRates.scope_rate) {
+          scope_commission = options.amount * companyRates.scope_rate * 12 * options.contributionRate;
+          console.log('Pension scope commission calculation:', {
+            salary: options.amount,
+            scope_rate: companyRates.scope_rate,
+            contributionRate: options.contributionRate,
+            formula: `${options.amount} * ${companyRates.scope_rate} * 12 * ${options.contributionRate} = ${scope_commission}`
+          });
+        }
+        
+        // עמלת היקף על צבירה - סכום קבוע למיליון
+        if (options?.accumulation && options.accumulation > 0) {
+          const millionsInAccumulation = options.accumulation / 1000000;
+          monthly_commission = millionsInAccumulation * (companyRates.scope_rate_per_million || 0);
+          console.log('Pension accumulation commission calculation:', {
+            accumulation: options.accumulation,
+            millionsInAccumulation,
+            rate_per_million: companyRates.scope_rate_per_million,
+            formula: `${millionsInAccumulation} * ${companyRates.scope_rate_per_million} = ${monthly_commission}`
+          });
+        }
+        
+        return { scope_commission, monthly_commission };
 
       case 'savings_and_study':
         companyRates = rates.savings_and_study_companies?.[company];
