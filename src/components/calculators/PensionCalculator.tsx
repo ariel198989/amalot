@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PensionClient } from '../../types/calculators';
-import { calculateCommissions, getCompanyRates } from '../../services/AgentAgreementService';
+import { calculateCommissions } from '@/services/AgentAgreementService';
+import { supabase } from '@/lib/supabase';
 
 const PensionCalculator: React.FC = () => {
   const [clients, setClients] = useState<PensionClient[]>([]);
@@ -53,15 +54,38 @@ const PensionCalculator: React.FC = () => {
 
   const handleSubmit = async (data: any) => {
     const salary = Number(data.salary);
-    const accumulation = Number(data.accumulation);
-    const contributionRate = Number(data.contribution);
-    const annualContribution = salary * 12 * contributionRate;
+    const accumulation = Number(data.accumulation || 0);
+    const contributionRate = Number(data.contribution || 0.2083);
     
-    const commissions = await calculateCommissions('pension', data.company, annualContribution, accumulation);
-    if (!commissions) {
-      alert('אין הסכם פעיל עבור ברה זו');
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('משתמש לא מחובר');
       return;
     }
+
+    console.log('Submitting pension calculation:', {
+      salary,
+      accumulation,
+      contributionRate,
+      company: data.company
+    });
+
+    const commissions = await calculateCommissions(
+      user.id,
+      'pension', 
+      data.company, 
+      salary,
+      String(contributionRate),  // Convert to string as expected by the function
+      accumulation  // Pass the accumulation amount
+    );
+    
+    if (!commissions) {
+      alert('אין הסכם פעיל עבור חברה זו');
+      return;
+    }
+
+    console.log('Received commission calculation:', commissions);
 
     const newClient: PensionClient = {
       date: new Date().toLocaleDateString('he-IL'),

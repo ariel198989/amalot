@@ -1,7 +1,22 @@
+export interface PensionCompanyRates {
+  active: boolean;
+  scope_rate: number;
+  scope_rate_per_million: number;
+}
+
+export interface FinancialProductRates {
+  scope_commission: number;
+  monthly_rate: number;
+}
+
 export interface CompanyRates {
   active: boolean;
-  scope_rate_per_million: number;
-  monthly_rate_per_million: number;
+  products: {
+    gemel?: FinancialProductRates;
+    investment_gemel?: FinancialProductRates;
+    hishtalmut?: FinancialProductRates;
+    savings_policy?: FinancialProductRates;
+  };
 }
 
 export interface AgentRates {
@@ -9,11 +24,7 @@ export interface AgentRates {
   user_id: string;
   
   pension_companies: {
-    [company: string]: {
-      active: boolean;
-      scope_rate: number;
-      scope_rate_per_million: number;
-    };
+    [company: string]: PensionCompanyRates;
   };
 
   savings_and_study_companies: {
@@ -67,6 +78,28 @@ export interface AgentRates {
 
 export const DEFAULT_COMPANY_RATES: CompanyRates = {
   active: false,
-  scope_rate_per_million: 0,
-  monthly_rate_per_million: 0
+  products: {
+    gemel: {
+      scope_commission: 6000,
+      monthly_rate: 25
+    },
+    investment_gemel: {
+      scope_commission: 6000,
+      monthly_rate: 25
+    },
+    hishtalmut: {
+      scope_commission: 6000,
+      monthly_rate: 25
+    },
+    savings_policy: {
+      scope_commission: 6000,
+      monthly_rate: 25
+    }
+  }
+};
+
+export const DEFAULT_PENSION_RATES: PensionCompanyRates = {
+  active: true,
+  scope_rate: 0.0025,  // 0.25%
+  scope_rate_per_million: 4000
 };

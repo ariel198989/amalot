@@ -34,6 +34,7 @@ export interface InsuranceClient {
   date: string;
   name: string;
   company: string;
+  insuranceType: 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability';
   premium: number;
   scopeCommission: number;
   monthlyCommission: number;

@@ -33,12 +33,12 @@ export const reportService = {
               client_phone: journey.client_phone || '',
               company: product.company,
               date: journey.date,
-              salary: product.details.salary,
-              accumulation: product.details.accumulation,
-              provision: product.details.provision,
-              scope_commission: product.details.scope_commission,
-              monthly_commission: product.details.monthly_commission,
-              total_commission: product.details.total_commission,
+              salary: (product.details as PensionProduct).pensionSalary || 0,
+              accumulation: (product.details as PensionProduct).pensionAccumulation || 0,
+              provision: (product.details as PensionProduct).pensionContribution || 0,
+              scope_commission: product.details.scope_commission || 0,
+              monthly_commission: product.details.monthly_commission || 0,
+              total_commission: product.details.total_commission || 0,
               journey_id: journey.id
             };
 

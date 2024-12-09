@@ -141,3 +141,31 @@ export interface Product {
   description: string;
   companies: string[];
 }
+
+export interface CustomerJourneyClient {
+  id: string;
+  date: string;
+  name: string;
+  company: string;
+  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';  // savings_and_study is kept for backward compatibility
+  pensionType?: 'comprehensive' | 'supplementary';
+  insuranceType?: string;
+  productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
+  transactionType?: 'proposal' | 'agent_appointment';
+  details: {
+    pensionSalary?: number;
+    pensionAccumulation?: number;
+    pensionContribution?: number;
+    insurancePremium?: number;
+    investmentAmount?: number;
+    policyAmount?: number;
+    productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
+    transactionType?: 'proposal' | 'agent_appointment';
+    serviceFee?: number;
+    financeAmount?: number;
+  };
+  scopeCommission: number;
+  monthlyCommission: number;
+  totalCommission: number;
+  clientInfo?: ClientInfo;
+}

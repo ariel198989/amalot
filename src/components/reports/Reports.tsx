@@ -82,10 +82,15 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th>חברה</th>
-                  <th>מספר מכירות</th>
-                  <th>עמלות</th>
-                  <th>עמלה ממוצעת</th>
+                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium">היקף על הפבירה</th>
+                  <th className="p-3 text-right font-medium">הפרשה</th>
+                  <th className="p-3 text-right font-medium">סכום ניוד</th>
+                  <th className="p-3 text-right font-medium">שכר</th>
+                  <th className="p-3 text-right font-medium">חברה</th>
+                  <th className="p-3 text-right font-medium">שם לקוח</th>
+                  <th className="p-3 text-right font-medium">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -107,10 +112,15 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th>חברה</th>
-                  <th>מספר מכירות</th>
-                  <th>עמלות</th>
-                  <th>נפרעים</th>
+                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium">נפרעים</th>
+                  <th className="p-3 text-right font-medium">פרמיה</th>
+                  <th className="p-3 text-right font-medium">סוג ביטוח</th>
+                  <th className="p-3 text-right font-medium">אופן תשלום</th>
+                  <th className="p-3 text-right font-medium">חברה</th>
+                  <th className="p-3 text-right font-medium">שם לקוח</th>
+                  <th className="p-3 text-right font-medium">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,10 +142,15 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th>חברה</th>
-                  <th>מספר מכירות</th>
-                  <th>סכום השקעה</th>
-                  <th>עמלות</th>
+                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium">נפרעים</th>
+                  <th className="p-3 text-right font-medium">סכום השקעה</th>
+                  <th className="p-3 text-right font-medium">תקופת השקעה</th>
+                  <th className="p-3 text-right font-medium">סוג השקעה</th>
+                  <th className="p-3 text-right font-medium">חברה</th>
+                  <th className="p-3 text-right font-medium">שם לקוח</th>
+                  <th className="p-3 text-right font-medium">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,10 +335,10 @@ const Reports: React.FC = () => {
           <thead className="bg-muted/50">
             <tr>
               <th className="p-3 text-right font-medium">סה"כ עמלה</th>
-              <th className="p-3 text-right font-medium">עמלת היקף</th>
-              <th className="p-3 text-right font-medium">עמלה חודשית</th>
+              <th className="p-3 text-right font-medium">היקף על השכר</th>
+              <th className="p-3 text-right font-medium">היקף על הצבירה</th>
               <th className="p-3 text-right font-medium">הפרשה</th>
-              <th className="p-3 text-right font-medium">צבירה</th>
+              <th className="p-3 text-right font-medium">סכום ניוד</th>
               <th className="p-3 text-right font-medium">שכר</th>
               <th className="p-3 text-right font-medium">חברה</th>
               <th className="p-3 text-right font-medium">שם לקוח</th>
@@ -340,12 +355,12 @@ const Reports: React.FC = () => {
             ) : (
               filteredSales.map((sale) => (
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium">{formatCurrency(sale.total_commission)}</td>
-                  <td className="p-3">{formatCurrency(sale.scope_commission)}</td>
-                  <td className="p-3">{formatCurrency(sale.monthly_commission)}</td>
+                  <td className="p-3 font-medium">{formatCurrency(sale.total_commission)} ₪</td>
+                  <td className="p-3">{formatCurrency(sale.scope_commission)} ₪</td>
+                  <td className="p-3">{formatCurrency(sale.monthly_commission)} ₪</td>
                   <td className="p-3">{formatPercentage(sale.provision)}</td>
-                  <td className="p-3">{formatCurrency(sale.accumulation)}</td>
-                  <td className="p-3">{formatCurrency(sale.salary)}</td>
+                  <td className="p-3">{formatCurrency(sale.accumulation)} ₪</td>
+                  <td className="p-3">{formatCurrency(sale.salary)} ₪</td>
                   <td className="p-3">{sale.company}</td>
                   <td className="p-3">{sale.client_name}</td>
                   <td className="p-3">{formatDate(sale.date)}</td>
@@ -372,7 +387,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium">סה"כ עמלה</th>
               <th className="p-3 text-right font-medium">עמלת היקף</th>
               <th className="p-3 text-right font-medium">נפרעים</th>
-              <th className="p-3 text-right font-medium">פרמיה</th>
+              <th className="p-3 text-right font-medium">סרמיה</th>
               <th className="p-3 text-right font-medium">סוג ביטוח</th>
               <th className="p-3 text-right font-medium">אופן תשלום</th>
               <th className="p-3 text-right font-medium">חברה</th>

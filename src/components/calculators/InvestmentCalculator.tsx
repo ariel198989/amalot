@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { InvestmentClient } from '../../types/calculators';
-import { calculateCommissions, getCompanyRates } from '../../services/AgentAgreementService';
+import { calculateCommissions } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
 
 const InvestmentCalculator: React.FC = () => {
@@ -40,7 +40,7 @@ const InvestmentCalculator: React.FC = () => {
         { value: 'yelin', label: 'ילין לפידות' }
       ]
     },
-    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true }
+    { name: 'amount', label: 'סכו�� הניוד', type: 'number', required: true }
   ];
 
   const columns = [
@@ -117,7 +117,7 @@ const InvestmentCalculator: React.FC = () => {
 
   const handleShare = () => {
     if (clients.length === 0) {
-      toast.error('אין נתונים לשליחה');
+      toast.error('אין נתונים לשל��חה');
       return;
     }
     

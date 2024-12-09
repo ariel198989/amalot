@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PolicyClient } from '../../types/calculators';
-import { getCompanyRates } from '../../services/AgentAgreementService';
+import { calculateCommissions } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
 
 const PolicyCalculator: React.FC = () => {
@@ -15,7 +15,7 @@ const PolicyCalculator: React.FC = () => {
   }, []);
 
   const loadCompanyRates = async () => {
-    const rates = await getCompanyRates('policy');
+    const rates = await calculateCommissions('policy');
     setCompanyRates(rates);
   };
 
@@ -41,7 +41,7 @@ const PolicyCalculator: React.FC = () => {
     { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'policyType', label: 'סוג פוליסה' },
     { key: 'company', label: 'יצרן' },
-    { key: 'name', label: 'שם הלקוח' },
+    { key: 'name', label: '��ם הלקוח' },
     { key: 'date', label: 'תאריך' }
   ];
 

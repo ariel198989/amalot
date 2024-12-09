@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 
 interface SalesTargetsContextType {
-  updatePerformance: (category: string, amount: number, company?: string) => Promise<void>;
+  updatePerformance: (category: string, amount: number, date: { month: number; year: number }) => Promise<void>;
   closingRate: number;
   monthlyMeetings: number;
   isDirty: boolean;
@@ -111,13 +111,11 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const updatePerformance = useCallback(async (
     category: string,
     amount: number,
-    company?: string
+    date: { month: number; year: number }
   ): Promise<void> => {
-    console.log('מעדכן ביצועים:', { category, amount, company });
+    console.log('מעדכן ביצועים:', { category, amount, date });
 
     try {
-      const month = new Date().getMonth() + 1;
-      const year = new Date().getFullYear();
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
@@ -130,8 +128,8 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from('sales_targets')
         .select('*')
         .eq('category', category)
-        .eq('month', month)
-        .eq('year', year)
+        .eq('month', date.month)
+        .eq('year', date.year)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -154,8 +152,8 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .from('sales_targets')
           .insert({
             category,
-            month,
-            year,
+            month: date.month,
+            year: date.year,
             performance: amount,
             user_id: user.id
           });
@@ -170,7 +168,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // עולח אירוע מכירה חדשה
       const event = new CustomEvent('newSale', { 
-        detail: { category, amount, company }
+        detail: { category, amount }
       });
       window.dispatchEvent(event);
 
