@@ -143,8 +143,8 @@ export const calculateCommissions = async (
     const rates = await getCompanyRates(category, company, { insuranceType });
     console.log('Got company rates:', rates);
     
-    if (!rates || !rates.active) {
-      console.log('No active rates found for:', {
+    if (!rates) {
+      console.log('No rates found for:', {
         category,
         company,
         insuranceType
@@ -158,7 +158,7 @@ export const calculateCommissions = async (
 
     switch (category) {
       case 'pension':
-        // עמלת היקף על השכר = שכר * אחוז עמלה * 12 * אחוז הפרשה
+        // עמלת היקף על השכר = שכר * אחוז עמל * 12 * אחוז הפרשה
         if (amount && contributionRate && rates.scope_rate) {
           scope_commission = amount * rates.scope_rate * 12 * contributionRate;
           console.log('Pension scope commission calculation:', {
@@ -190,20 +190,24 @@ export const calculateCommissions = async (
       case 'insurance':
         // עמלת היקף - אחוז מהפרמיה השנתית
         const annualPremium = amount * 12;
-        scope_commission = annualPremium * (rates.scope_rate || 0) / 100;
+        scope_commission = annualPremium * ((rates.scope_commission || 0) / 100);
         console.log('Insurance scope commission:', {
           annualPremium,
-          scope_rate: rates.scope_rate,
-          scope_commission
+          scope_rate: rates.scope_commission,
+          scope_commission,
+          calculation: `${annualPremium} * (${rates.scope_commission}/100) = ${scope_commission}`
         });
 
         // עמלת נפרעים - אחוז מהפרמיה החודשית
-        monthly_commission = amount * (rates.monthly_rate || 0) / 100;
+        monthly_commission = amount * (rates.monthly_commission || 0);
         console.log('Insurance monthly commission:', {
           monthly_premium: amount,
-          monthly_rate: rates.monthly_rate,
-          monthly_commission
+          monthly_rate: rates.monthly_commission,
+          monthly_commission,
+          calculation: `${amount} * ${rates.monthly_commission} = ${monthly_commission}`
         });
+
+        total_commission = scope_commission + (monthly_commission * 12);
         break;
 
       case 'savings_and_study':

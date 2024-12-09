@@ -13,7 +13,10 @@ import {
   User,
   Brain,
   HeartHandshake,
-  Coins
+  Coins,
+  Check,
+  Download,
+  Save
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -184,37 +187,28 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
 };
 
 const ProductCard: React.FC<ProductCardProps> = ({ title, icon: Icon, selected, onClick }) => {
-  const getColorScheme = () => {
-    switch (title) {
-      case 'פנסיה':
-        return { border: 'blue', bg: 'blue' };
-      case 'סיכונים':
-        return { border: 'green', bg: 'green' };
-      case 'פיננסים':
-        return { border: 'purple', bg: 'purple' };
-      case 'פוליסת חסכון':
-        return { border: 'orange', bg: 'orange' };
-      default:
-        return { border: 'gray', bg: 'gray' };
-    }
-  };
-
-  const colors = getColorScheme();
-
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      className={cn(
-        "p-6 border-2 rounded-xl cursor-pointer transition-all",
-        selected 
-          ? `border-${colors.border}-500 bg-${colors.bg}-50 shadow-md` 
-          : `hover:border-${colors.border}-200`
-      )}
+    <div
       onClick={onClick}
+      className={cn(
+        "relative p-6 rounded-xl border-2 transition-all cursor-pointer hover:shadow-lg",
+        "flex flex-col items-center gap-3",
+        selected ? "border-[#4361ee] bg-blue-50" : "border-gray-200 hover:border-[#4361ee]/50"
+      )}
     >
-      <Icon className={`w-12 h-12 text-${colors.border}-500 mx-auto mb-3`} />
-      <p className="text-center font-medium text-lg">{title}</p>
-    </motion.div>
+      <div className={cn(
+        "p-3 rounded-full",
+        selected ? "bg-[#4361ee] text-white" : "bg-gray-100 text-gray-600"
+      )}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <span className="font-medium text-lg">{title}</span>
+      {selected && (
+        <div className="absolute top-2 right-2">
+          <Check className="w-5 h-5 text-[#4361ee]" />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -281,7 +275,7 @@ const CustomerJourneyComponent: React.FC = () => {
       };
       
       if (!Object.values(newState).some(Boolean)) {
-        toast.error('חובה לבחור לפחות מוצר אחד');
+        toast.error('��ובה לבחור לפחות מוצר אחד');
         return prev;
       }
       
@@ -354,7 +348,7 @@ const CustomerJourneyComponent: React.FC = () => {
           },
           { 
             name: 'pensionType',
-            label: 'סוג פנסיה',
+            label: 'סוג פנסי��',
             type: 'select',
             required: true,
             className: 'bg-white !important text-right pr-4',
@@ -623,15 +617,26 @@ const CustomerJourneyComponent: React.FC = () => {
           monthly_commission: 0
         };
       } else {
-        commissions = await getCompanyRates(type, data.company, {
-          amount: type === 'pension' ? Number(data.pensionSalary) : undefined,
-          contributionRate: type === 'pension' ? parseFloat(data.pensionContribution) : undefined,
-          accumulation: type === 'pension' ? Number(data.pensionAccumulation) : undefined,
-          pensionType: type === 'pension' ? data.pensionType : undefined,
-          insuranceType: type === 'insurance' ? data.transactionType : undefined,
-          investmentAmount: ['savings_and_study', 'policy'].includes(type) ? Number(data.investmentAmount) : undefined,
-          productType: type === 'savings_and_study' ? data.productType : undefined
-        });
+        const amount = type === 'pension' ? Number(data.pensionSalary) :
+                      type === 'insurance' ? Number(data.insurancePremium) :
+                      Number(data.investmentAmount);
+
+        const result = await calculateCommissions(
+          type,
+          data.company,
+          amount,
+          type === 'pension' ? Number(data.pensionAccumulation) : undefined,
+          type === 'pension' ? parseFloat(data.pensionContribution) / 100 : undefined,
+          type === 'pension' ? data.pensionType : undefined,
+          type === 'insurance' ? data.transactionType : undefined
+        );
+
+        if (result) {
+          commissions = {
+            scope_commission: result.scope_commission,
+            monthly_commission: result.monthly_commission
+          };
+        }
       }
 
       const newClient: CustomerJourneyClient = {
@@ -955,7 +960,7 @@ const CustomerJourneyComponent: React.FC = () => {
 
   const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
     if (type === 'pension') {
-      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על צבירה';
+      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על בירה';
     }
     return commissionType === 'scope' ? 'עמלת היקף' : 'עמלת נפרעים';
   };
@@ -1006,18 +1011,20 @@ const CustomerJourneyComponent: React.FC = () => {
       {step === 'journey' && (
         <>
           <div className="flex items-center gap-3 mb-8">
-            <Brain className="w-16 h-16 text-[#4361ee]" />
+            <div className="p-4 rounded-full bg-blue-100">
+              <Brain className="w-12 h-12 text-[#4361ee]" />
+            </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">מסע לקוח חכם</h1>
-              <p className="text-gray-500 mt-2">נהל את המוצרים והעמלות שך בצורה חכמה ויעילה</p>
+              <h1 className="text-3xl font-bold text-gray-900">מסע לקוח חכם</h1>
+              <p className="text-gray-500 mt-1">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
             </div>
           </div>
 
-          <div className="flex gap-12">
-            <Card className="flex-1 shadow-lg">
-              <CardHeader className="bg-[#4361ee] text-white rounded-t-lg">
-                <h2 className="text-2xl font-semibold text-center">בחירת מוצרים והזנת נתונים</h2>
-                <p className="text-center text-sm opacity-90">בחר את המוצרים הרלוונטיים והזן את הנתונים</p>
+          <div className="flex gap-8">
+            <Card className="flex-1 border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
+                <h2 className="text-xl font-semibold">בחירת מוצרים והזנת נתונים</h2>
+                <p className="text-sm opacity-90">בחר את המוצרים הרלוונטיים והזן את הנתונים</p>
               </CardHeader>
               <CardContent className="p-8">
                 <div className="space-y-8">
@@ -1088,36 +1095,36 @@ const CustomerJourneyComponent: React.FC = () => {
                   {/* הצג סיכומים נתונים נוספים */}
                   {clients.length > 0 && (
                     <div className="space-y-6">
-                      <Card className="border rounded-lg shadow-md">
-                        <CardHeader className="border-b bg-gray-50">
-                          <h3 className="font-medium">סיכום עמלות</h3>
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
+                          <h3 className="text-xl font-semibold">סיכום עמלות</h3>
                         </CardHeader>
-                        <CardContent className="p-4 space-y-6">
+                        <CardContent className="p-6 space-y-8">
                           {/* פנסיה */}
                           {clients.some(client => client.type === 'pension') && (
                             <div>
-                              <h4 className="font-medium mb-3 flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-blue-500" />
+                              <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
+                                <Building2 className="w-5 h-5 text-blue-500" />
                                 פנסיה
                               </h4>
                               <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'scope')}</p>
-                                  <p className="text-xl font-bold">₪{clients
+                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                  <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'scope')}</p>
+                                  <p className="text-xl font-bold text-gray-900">₪{clients
                                     .filter(client => client.type === 'pension')
                                     .reduce((sum, client) => sum + client.scopeCommission, 0)
                                     .toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('pension', 'monthly')}</p>
-                                  <p className="text-xl font-bold">₪{clients
+                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                  <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'monthly')}</p>
+                                  <p className="text-xl font-bold text-gray-900">₪{clients
                                     .filter(client => client.type === 'pension')
                                     .reduce((sum, client) => sum + client.monthlyCommission, 0)
                                     .toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ</p>
-                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
+                                <div className="p-4 bg-[#4361ee] rounded-xl text-white">
+                                  <p className="text-sm opacity-90 mb-1">סה"כ</p>
+                                  <p className="text-xl font-bold">₪{clients
                                     .filter(client => client.type === 'pension')
                                     .reduce((sum, client) => sum + client.totalCommission, 0)
                                     .toLocaleString()}</p>
@@ -1131,7 +1138,7 @@ const CustomerJourneyComponent: React.FC = () => {
                             <div>
                               <h4 className="font-medium mb-3 flex items-center gap-2">
                                 <Shield className="w-4 h-4 text-green-500" />
-                                ביכונים
+                                סיכונים
                               </h4>
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="p-4 bg-gray-50 rounded-lg">
@@ -1246,11 +1253,11 @@ const CustomerJourneyComponent: React.FC = () => {
                         </CardContent>
                       </Card>
 
-                      <Card className="border rounded-lg shadow-md">
-                        <CardHeader className="border-b bg-gray-50">
-                          <h3 className="font-medium">פירוט מוצרים</h3>
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
+                          <h3 className="text-xl font-semibold">פירוט מוצרים</h3>
                         </CardHeader>
-                        <CardContent className="p-4">
+                        <CardContent className="p-6">
                           <ResultsTable
                             data={clients}
                             columns={columns}
@@ -1264,15 +1271,18 @@ const CustomerJourneyComponent: React.FC = () => {
                       <div className="flex justify-end gap-4">
                         <Button 
                           onClick={handleDownload}
-                          className="bg-white text-gray-700 border hover:bg-gray-50"
+                          variant="outline"
+                          className="bg-white hover:bg-gray-50 border-2 border-gray-200"
                         >
+                          <Download className="w-4 h-4 ml-2" />
                           הורד דוח
                         </Button>
                         <Button 
                           onClick={handleSave}
-                          className="bg-[#4361ee] hover:bg-[#3651d4] text-white"
+                          className="bg-gradient-to-l from-[#4361ee] to-[#3651d4] hover:opacity-90 text-white"
                         >
-                          לח לדוחות
+                          <Save className="w-4 h-4 ml-2" />
+                          שלח לדוחות
                         </Button>
                       </div>
                     </div>
@@ -1281,35 +1291,35 @@ const CustomerJourneyComponent: React.FC = () => {
               </CardContent>
             </Card>
 
-            <div className="w-96 space-y-8">
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+            <div className="w-96 space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
                   <div className="mt-1 p-2 rounded-full bg-green-100">
-                    <User className="w-6 h-6 text-green-600" />
+                    <User className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-600">המערכת מחשבת אופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרי השונים</p>
+                    <h3 className="font-medium text-gray-900">חישוב עמלות אוטומטי</h3>
+                    <p className="text-gray-500 text-sm">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
                   <div className="mt-1 p-2 rounded-full bg-blue-100">
-                    <Shield className="w-6 h-6 text-blue-600" />
+                    <Shield className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">ניהול מוצרים מקדם</h3>
-                    <p className="text-gray-600">ניהול ק ווח של מגוון מוצרים: פנסיה, ביכונים, חסון ופוליסת חסכון</p>
+                    <h3 className="font-medium text-gray-900">ניהול מוצרים מתקדם</h3>
+                    <p className="text-gray-500 text-sm">ניהול וטיפול במגוון מוצרים: פנסיה, ביטוחים, חיסכון ופוליסות</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md">
+                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
                   <div className="mt-1 p-2 rounded-full bg-purple-100">
-                    <PiggyBank className="w-6 h-6 text-purple-600" />
+                    <PiggyBank className="w-5 h-5 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">דוחות מפורטים</h3>
-                    <p className="text-gray-600">פקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
+                    <h3 className="font-medium text-gray-900">דוחות מפורטים</h3>
+                    <p className="text-gray-500 text-sm">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
                   </div>
                 </div>
               </div>
