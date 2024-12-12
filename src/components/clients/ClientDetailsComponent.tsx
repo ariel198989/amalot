@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Phone, Mail, Calendar, FileText, Activity, DollarSign, User } from 'lucide-react';
+import { Upload, Phone, Mail, Calendar, FileText, Activity, DollarSign, User, Building2, ArrowRight } from 'lucide-react';
 import { 
   Card,
   CardContent,
@@ -10,15 +10,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 import { 
   ClientDetailsProps, 
   ClientFile, 
   ClientActivity,
-  ClientFinancialDetails 
+  ClientFinancialDetails,
+  CustomerJourney
 } from './ClientDetailsTypes';
 
 import { 
@@ -35,10 +38,12 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [existingFiles, setExistingFiles] = useState<ClientFile[]>([]);
   const [financialDetails, setFinancialDetails] = useState<ClientFinancialDetails | null>(null);
+  const [journeys, setJourneys] = useState<CustomerJourney[]>([]);
 
   useEffect(() => {
     if (isOpen && client) {
       loadClientData();
+      loadJourneyData();
     }
   }, [isOpen, client]);
 
@@ -63,10 +68,12 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
         .from('client_financial_details')
         .select('*')
         .eq('client_id', client.id)
-        .single();
+        .maybeSingle();
 
-      if (financialError) throw financialError;
-      setFinancialDetails(financialData);
+      if (financialError && financialError.code !== 'PGRST116') {
+        throw financialError;
+      }
+      setFinancialDetails(financialData || null);
 
     } catch (error) {
       console.error('Error loading client data:', error);
@@ -74,6 +81,34 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
     } finally {
       setIsLoadingDetails(false);
     }
+  };
+
+  const loadJourneyData = async () => {
+    try {
+      const { data: journeyData, error } = await supabase
+        .from('customer_journeys')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setJourneys(journeyData || []);
+    } catch (error) {
+      console.error('Error loading journey data:', error);
+      toast.error('שגיאה בטעינת נתוני מסע לקוח');
+    }
+  };
+
+  const getProductTypeDisplay = (type: string) => {
+    const types = {
+      pension: 'פנסיה',
+      insurance: 'ביטוח',
+      investment: 'השקעות',
+      policy: 'פוליסה',
+      service: 'שירות',
+      finance: 'פיננסים'
+    };
+    return types[type] || type;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,30 +258,133 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>פרטי לקוח: {client.name}</DialogTitle>
+      <DialogContent className="bg-white dark:bg-gray-800 w-[600px] max-h-[600px] overflow-hidden flex flex-col p-4 rounded-lg shadow-lg">
+        <DialogHeader className="pb-3 border-b dark:border-gray-700">
+          <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+            {client?.first_name} {client?.last_name}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
+            צפייה ועריכה של פרטי הלקוח, מסמכים ופעילויות
+          </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">סקירה כללית</TabsTrigger>
-            <TabsTrigger value="documents">מסמכים</TabsTrigger>
-            <TabsTrigger value="activities">פעילויות</TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-y-auto py-3">
+          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-3 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+              <TabsTrigger 
+                value="overview"
+                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
+              >
+                מידע כללי
+              </TabsTrigger>
+              <TabsTrigger 
+                value="files"
+                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
+              >
+                מסמכים
+              </TabsTrigger>
+              <TabsTrigger 
+                value="activities"
+                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
+              >
+                פעילויות
+              </TabsTrigger>
+              <TabsTrigger 
+                value="financial"
+                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
+              >
+                פרטים פיננסיים
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="overview">
-            {renderOverviewTab()}
-          </TabsContent>
+            <TabsContent value="overview" className="space-y-3">
+              <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-gray-900 dark:text-white">פרטים אישיים</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3 pt-0">
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">שם מלא</p>
+                    <p className="text-sm text-gray-900 dark:text-white">{client?.first_name} {client?.last_name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">תעודת זהות</p>
+                    <p className="text-sm text-gray-900 dark:text-white">{client?.id_number}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">טלפון</p>
+                    <p className="text-sm text-gray-900 dark:text-white">{client?.phone}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">אימייל</p>
+                    <p className="text-sm text-gray-900 dark:text-white">{client?.email}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="documents">
-            {renderDocumentsTab()}
-          </TabsContent>
+            <TabsContent value="files" className="space-y-3">
+              {/* תוכן הקבצים */}
+            </TabsContent>
 
-          <TabsContent value="activities">
-            {renderActivitiesTab()}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="activities" className="space-y-3">
+              <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-gray-900 dark:text-white">מסעות לקוח</CardTitle>
+                  <CardDescription>היסטוריית מסעות הלקוח ופעילויות</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {journeys.length > 0 ? (
+                    journeys.map((journey) => (
+                      <div 
+                        key={journey.id} 
+                        className="border dark:border-gray-700 rounded-lg p-3 space-y-2"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {format(new Date(journey.created_at), 'dd/MM/yyyy', { locale: he })}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              סה"כ: ₪{journey.amount?.toLocaleString() || '0'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid gap-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <ArrowRight className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-900 dark:text-white">
+                              {getProductTypeDisplay(journey.product_type)}
+                            </span>
+                            {journey.notes && (
+                              <>
+                                <span className="text-gray-500">|</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {journey.notes}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        לא נמצאו מסעות לקוח
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="financial" className="space-y-3">
+              {/* תוכן פיננסי */}
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

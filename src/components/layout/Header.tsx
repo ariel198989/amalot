@@ -88,13 +88,13 @@ const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const today = new Date().toISOString();
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0];
       
       const { data: promotions, error } = await supabase
         .from('promotions')
         .select('*')
-        .eq('is_active', true)
-        .gte('end_date', today);
+        .gte('end_date', formattedDate);
 
       if (error) throw error;
 
