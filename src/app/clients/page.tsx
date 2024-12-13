@@ -1,7 +1,11 @@
 'use client';
 
-import { ClientsPage } from '@/components/clients/ClientsPage';
+import ClientsTable from "@/components/clients/ClientsTable";
 
-export default function Page() {
-  return <ClientsPage />;
+export default function ClientsPage() {
+  return (
+    <main>
+      <ClientsTable />
+    </main>
+  );
 } 

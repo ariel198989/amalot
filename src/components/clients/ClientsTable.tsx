@@ -1,12 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from '@/contexts/UserContext';
 import { cn } from "@/lib/utils";
 import { 
-  Users, 
   Plus, 
   Search, 
   Phone, 
@@ -30,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
+import { XmlFileUploader } from './XmlFileUploader';
 
 interface Client {
   id: string;
@@ -54,42 +53,10 @@ interface Client {
   business_start_date: string;
 }
 
-interface ClientDetails extends Client {
-  total_revenue: number;
-  total_policies: number;
-  pension_sales: any[];
-  insurance_sales: any[];
-  investment_sales: any[];
-  policy_sales: any[];
-}
-
-interface Sale {
-  id: string;
-  sale_type: 'pension' | 'insurance' | 'investment' | 'policy';
-  total_commission: number;
-  created_at: string;
-  company: string;
-}
-
-interface NewClientData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  id_number: string;
-  status: 'active' | 'inactive' | 'lead';
-}
-
 const ClientsTable = () => {
   const { user } = useUser();
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isAddingClient, setIsAddingClient] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     first_name: '',
@@ -124,7 +91,6 @@ const ClientsTable = () => {
   // טעינת נתוני לקוחות
   const loadClients = async () => {
     try {
-      setIsLoading(true);
       const currentUser = await checkCurrentUser();
       
       if (!currentUser) {
@@ -150,56 +116,12 @@ const ClientsTable = () => {
     } catch (error) {
       console.error('Error in loadClients:', error);
       toast.error('שגיאה בטעינת רשימת הלקוחות');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   React.useEffect(() => {
     loadClients();
   }, []);
-
-  // טעינת פרטי לקוח מלאים
-  const loadClientDetails = async (clientId: string) => {
-    try {
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select(`
-          *,
-          sales:sales!client_id(
-            id, created_at, company, total_commission,
-            sale_type
-          )
-        `)
-        .eq('id', clientId)
-        .single();
-
-      if (clientError) throw clientError;
-
-      const sales = (clientData?.sales || []) as Sale[];
-      const pension_sales = sales.filter(sale => sale.sale_type === 'pension');
-      const insurance_sales = sales.filter(sale => sale.sale_type === 'insurance');
-      const investment_sales = sales.filter(sale => sale.sale_type === 'investment');
-      const policy_sales = sales.filter(sale => sale.sale_type === 'policy');
-
-      const totalRevenue = sales.reduce((sum: number, sale) => sum + (sale.total_commission || 0), 0);
-      const totalPolicies = sales.length;
-
-      setSelectedClient({
-        ...clientData,
-        pension_sales,
-        insurance_sales,
-        investment_sales,
-        policy_sales,
-        total_revenue: totalRevenue,
-        total_policies: totalPolicies
-      });
-
-    } catch (error) {
-      console.error('Error loading client details:', error);
-      toast.error('שגיאה בטעינת פרטי הלקוח');
-    }
-  };
 
   // סינון לקוחות
   const filteredClients = useMemo(() => {
@@ -215,17 +137,19 @@ const ClientsTable = () => {
     });
   }, [clients, searchQuery]);
 
-  const handleRowClick = async (client: Client) => {
-    try {
-      setIsLoadingDetails(true);
-      await loadClientDetails(client.id);
-      setIsDetailsOpen(true);
-    } catch (error) {
-      console.error('Error in handleRowClick:', error);
-      toast.error('שגיאה בטעינת פר��י הלקוח');
-    } finally {
-      setIsLoadingDetails(false);
-    }
+  const handleEdit = (client: Client) => {
+    // Implement edit functionality
+    console.log('Edit client:', client);
+  };
+
+  const handleViewDetails = (client: Client) => {
+    // Implement view details functionality
+    console.log('View details:', client);
+  };
+
+  const handleDelete = (client: Client) => {
+    // Implement delete functionality
+    console.log('Delete client:', client);
   };
 
   const handleCreateClient = async () => {
@@ -235,42 +159,22 @@ const ClientsTable = () => {
         return;
       }
 
-      // Validate required fields
-      if (!newClient.first_name || !newClient.last_name || !newClient.phone || !newClient.id_number) {
-        toast.error('נא למלא את כל שדות החובה');
-        return;
-      }
-
-      // Format dates or set to null if empty
-      const formatDate = (dateStr: string) => dateStr ? dateStr : null;
+      const clientData = {
+        ...Object.fromEntries(
+          Object.entries(newClient).map(([key, value]) => [
+            key,
+            typeof value === 'string' ? value.trim() || null : value
+          ])
+        ),
+        user_id: user.id,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
       const { data: client, error } = await supabase
         .from('clients')
-        .insert([
-          {
-            user_id: user.id,
-            first_name: newClient.first_name.trim(),
-            last_name: newClient.last_name.trim(),
-            phone: newClient.phone.trim(),
-            email: newClient.email.trim(),
-            id_number: newClient.id_number.trim(),
-            birth_date: formatDate(newClient.birth_date),
-            address_street: newClient.address_street.trim(),
-            address_city: newClient.address_city.trim(),
-            employment_type: newClient.employment_type,
-            employer_name: newClient.employment_type === 'employed' ? newClient.employer_name.trim() : null,
-            employer_position: newClient.employment_type === 'employed' ? newClient.employer_position.trim() : null,
-            employer_address: newClient.employment_type === 'employed' ? newClient.employer_address.trim() : null,
-            employer_start_date: newClient.employment_type === 'employed' ? formatDate(newClient.employer_start_date) : null,
-            business_name: newClient.employment_type === 'self-employed' ? newClient.business_name.trim() : null,
-            business_type: newClient.employment_type === 'self-employed' ? newClient.business_type.trim() : null,
-            business_address: newClient.employment_type === 'self-employed' ? newClient.business_address.trim() : null,
-            business_start_date: newClient.employment_type === 'self-employed' ? formatDate(newClient.business_start_date) : null,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ])
+        .insert([clientData])
         .select()
         .single();
 
@@ -284,7 +188,7 @@ const ClientsTable = () => {
         return;
       }
 
-      setClients(prevClients => [...prevClients, client]);
+      setClients(prevClients => [client, ...prevClients]);
       setIsCreateDialogOpen(false);
       setNewClient({
         first_name: '',
@@ -312,163 +216,187 @@ const ClientsTable = () => {
     }
   };
 
+  const handleXmlFilesExtracted = (xmlFiles: { name: string; content: string }[]) => {
+    console.log('Extracted XML files:', xmlFiles);
+    // Here you can process the XML files
+    // For example, parse them and add to clients list
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6" dir="rtl">
-      {/* Header with Add Client Button */}
-      <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ניהול לקוחות</h1>
-          <p className="text-gray-500 dark:text-gray-400">ניהול וצפייה בכל הלקוחות שלך</p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <Button
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            הוספת לקוח חדש
-          </Button>
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="חיפוש לקוחות..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 pl-4 pr-10 text-right"
-            />
-            <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+      <div className="flex gap-6">
+        {/* Main content */}
+        <div className="flex-1 space-y-6">
+          {/* Header with Add Client Button */}
+          <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ניהול לקוחות</h1>
+              <p className="text-gray-500 dark:text-gray-400">ניהול וצפייה בכל הלקוחות שלך</p>
+            </div>
+            <div className="flex gap-4 items-center">
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                הוספת לקוח חדש
+              </Button>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="חיפוש לקוחות..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-64 pl-4 pr-10 text-right"
+                />
+                <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
+          {/* Clients Table */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-700">
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">שם מלא</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">טלפון</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">אימייל</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעודת זהות</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">כתובת</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעסוקה</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">סטטוס</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תאריך הצטרפות</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredClients.map((client) => (
+                    <tr 
+                      key={client.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {client.first_name} {client.last_name}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.phone}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.id_number}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                            {client.address_city && client.address_street ? 
+                              `${client.address_city}, ${client.address_street}` : 
+                              'לא צוין'
+                            }
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                            {client.employment_type === 'employed' ? 
+                              `שכיר - ${client.employer_name || ''}` : 
+                              client.employment_type === 'self-employed' ? 
+                              `עצמאי - ${client.business_name || ''}` : 
+                              'לא צוין'
+                            }
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={cn(
+                          "px-2 py-1 text-xs rounded-full",
+                          client.status === 'active' ? "bg-green-100 text-green-800" :
+                          client.status === 'inactive' ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        )}>
+                          {client.status === 'active' ? 'פעיל' :
+                           client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                            {new Date(client.created_at).toLocaleDateString('he-IL')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(client)}
+                            className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <Edit className="h-4 w-4 text-gray-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewDetails(client)}
+                            className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            <FileText className="h-4 w-4 text-gray-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(client)}
+                            className="hover:bg-red-100 dark:hover:bg-red-900"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Clients Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">שם מלא</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">טלפון</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">אימייל</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעודת זהות</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">כתובת</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעסוקה</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">סטטוס</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תאריך הצטרפות</th>
-                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">פעולות</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredClients.map((client) => (
-                <tr 
-                  key={client.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                        <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {client.first_name} {client.last_name}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.phone}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.id_number}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {client.address_city && client.address_street ? 
-                          `${client.address_city}, ${client.address_street}` : 
-                          'לא צוין'
-                        }
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {client.employment_type === 'employed' ? 
-                          `שכיר - ${client.employer_name || ''}` : 
-                          client.employment_type === 'self-employed' ? 
-                          `עצמאי - ${client.business_name || ''}` : 
-                          'לא צוין'
-                        }
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      "px-2 py-1 text-xs rounded-full",
-                      client.status === 'active' ? "bg-green-100 text-green-800" :
-                      client.status === 'inactive' ? "bg-red-100 text-red-800" :
-                      "bg-yellow-100 text-yellow-800"
-                    )}>
-                      {client.status === 'active' ? 'פעיל' :
-                       client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {new Date(client.created_at).toLocaleDateString('he-IL')}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(client)}
-                        className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Edit className="h-4 w-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewDetails(client)}
-                        className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <FileText className="h-4 w-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(client.id)}
-                        className="hover:bg-red-100 dark:hover:bg-red-900"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Side Panel */}
+        <div className="w-96 space-y-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">העלאת קבצי XML</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                העלה קובץ ZIP המכיל קבצי XML לייבוא לקוחות
+              </p>
+            </div>
+            <XmlFileUploader onXmlFilesExtracted={handleXmlFilesExtracted} />
+          </div>
         </div>
       </div>
 
@@ -535,7 +463,7 @@ const ClientsTable = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="birth_date" className="block text-right">תארי�� לידה</Label>
+              <Label htmlFor="birth_date" className="block text-right">תאריך לידה</Label>
               <Input
                 id="birth_date"
                 type="date"
@@ -602,7 +530,7 @@ const ClientsTable = () => {
             {newClient.employment_type === 'employed' ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="employer_name" className="block text-right">שם המעסיק</Label>
+                  <Label htmlFor="employer_name" className="block text-right">שם המעסי</Label>
                   <Input
                     id="employer_name"
                     value={newClient.employer_name}
