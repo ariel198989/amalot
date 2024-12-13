@@ -16,7 +16,9 @@ import {
   Coins,
   Check,
   Download,
-  Save
+  Save,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -26,6 +28,8 @@ import { reportService } from '@/services/reportService';
 import { useNavigate } from 'react-router-dom';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import ClientInfoForm from '../client-info/ClientInfoForm';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormContent, FormDescription, FormMessage } from '@/components/ui/form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectListbox, SelectItem } from '@/components/ui/select';
 
 interface PensionProduct {
   salary: number;
@@ -235,6 +239,20 @@ const insuranceTypeLabels = {
   disability: 'אכע'
 };
 
+const fadeIn = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 20 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
 const CustomerJourneyComponent: React.FC = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
@@ -264,7 +282,7 @@ const CustomerJourneyComponent: React.FC = () => {
     loadCompanyRates();
   }, []);
 
-  // טיפול בהודעות שגיאה בנפרד מstate updates
+  // טיפול בהודעות שגיאה בנרד מstate updates
   useEffect(() => {
     // בודק רק אם אנחנו בשלב של בחירת מוצרים
     if (step === 'products' && !Object.values(selectedProducts).some(Boolean)) {
@@ -380,7 +398,7 @@ const CustomerJourneyComponent: React.FC = () => {
               { value: 'הפניקס', label: 'הפניקס' },
               { value: 'מור', label: 'מור' },
               { value: 'מיטב', label: 'מיטב' },
-              { value: 'אלטשולר שחם', label: 'אלטשולר ��חם' }
+              { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
             ]
           },
           { 
@@ -1074,332 +1092,344 @@ const CustomerJourneyComponent: React.FC = () => {
     return message;
   };
 
+  const CalculatorForm = ({ onSubmit, fields, title, className }) => {
+    return (
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {};
+        fields.forEach(field => {
+          data[field.name] = formData.get(field.name);
+        });
+        onSubmit(data);
+      }} className={className}>
+        <div className="flex flex-row gap-4 items-start">
+          {fields.map((field, index) => (
+            <div key={index} className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {field.label}
+              </label>
+              {field.type === 'select' ? (
+                <select
+                  name={field.name}
+                  className={cn(
+                    "w-full rounded-md border border-gray-300 bg-white px-3 py-2",
+                    "text-gray-900 shadow-sm focus:border-[#4361ee] focus:ring-1 focus:ring-[#4361ee]",
+                    field.className
+                  )}
+                  required={field.required}
+                >
+                  <option value="">{`בחר ${field.label}`}</option>
+                  {field.options?.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  type={field.type}
+                  name={field.name}
+                  className={field.className}
+                  required={field.required}
+                />
+              )}
+            </div>
+          ))}
+          <Button 
+            type="submit" 
+            className="mt-6 bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-white"
+          >
+            שמור
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <motion.div 
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       {step === 'info' && (
         <ClientInfoForm onNext={handleClientInfoSubmit} />
       )}
 
       {step === 'journey' && (
-        <>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-4 rounded-full bg-blue-100">
-              <Brain className="w-12 h-12 text-[#4361ee]" />
+        <motion.div variants={staggerContainer}>
+          <motion.div 
+            className="flex items-center gap-3 mb-8"
+            variants={fadeIn}
+          >
+            <div className="p-4 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
+              <Brain className="w-12 h-12 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">מסע לקוח חכם</h1>
-              <p className="text-gray-500 mt-1">הל את המוצרים והעמלות שלך בצרה חכמה ויעילה</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-transparent bg-clip-text">
+                מסע לקוח חכם
+              </h1>
+              <p className="text-gray-500 mt-1">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex gap-8">
-            <Card className="flex-1 border-0 shadow-lg">
+          <motion.div 
+            className="space-y-8"
+            variants={fadeIn}
+          >
+            <Card className="border-0 shadow-lg">
               <CardHeader className="bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                <h2 className="text-xl font-semibold">בחירת מוצרים והזנת נתונם</h2>
-                <p className="text-sm opacity-90">בחר את המוצרים הרלוויים והזן את הנתונים</p>
+                <h2 className="text-xl font-semibold">בחירת מוצרים</h2>
+                <p className="text-sm opacity-90">בחר את המוצרים הרלוונטיים</p>
               </CardHeader>
               <CardContent className="p-8">
-                <div className="space-y-8">
-                  <div className="grid grid-cols-2 gap-6">
-                    <ProductCard
-                      title="פנסיה"
-                      icon={Building2}
-                      selected={selectedProducts.pension}
-                      onClick={() => handleProductSelect('pension')}
-                    />
-                    <ProductCard
-                      title="סיכונים"
-                      icon={Shield}
-                      selected={selectedProducts.insurance}
-                      onClick={() => handleProductSelect('insurance')}
-                    />
-                    <ProductCard
-                      title="פיננסים"
-                      icon={PiggyBank}
-                      selected={selectedProducts.savings_and_study}
-                      onClick={() => handleProductSelect('savings_and_study')}
-                    />
-                    <ProductCard
-                      title="פוליסת חסכון"
-                      icon={Wallet}
-                      selected={selectedProducts.policy}
-                      onClick={() => handleProductSelect('policy')}
-                    />
-                    <ProductCard
-                      title="גולה- ש��רות"
-                      icon={HeartHandshake}
-                      selected={selectedProducts.service}
-                      onClick={() => handleProductSelect('service')}
-                    />
-                    <ProductCard
-                      title="גולה- פיננסים"
-                      icon={Coins}
-                      selected={selectedProducts.finance}
-                      onClick={() => handleProductSelect('finance')}
-                    />
-                  </div>
-
-                  {/* הצגת טפסי הזנ נתונים למוצרים שנבחרו */}
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      {productTypes.map(({ type, title }) => (
-                        selectedProducts[type] && (
-                          <Card key={type} className="border rounded-lg shadow-sm">
-                            <CardHeader className="border-b bg-gray-50">
-                              <div className="flex items-center gap-2">
-                                <ProductIcon type={type} />
-                                <h3 className="font-medium">{title}</h3>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-4">
-                              <CalculatorForm
-                                onSubmit={(data) => handleSubmit(type, data)}
-                                fields={getProductFields(type)}
-                                title=""
-                              />
-                            </CardContent>
-                          </Card>
-                        )
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* הצג סיכומים נתונים נוספים */}
-                  {clients.length > 0 && (
-                    <div className="space-y-6">
-                      <Card className="border-0 shadow-lg">
-                        <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                          <h3 className="text-xl font-semibold">סיכום עמלות</h3>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-8">
-                          {/* פנסיה */}
-                          {clients.some(client => client.type === 'pension') && (
-                            <div>
-                              <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
-                                <Building2 className="w-5 h-5 text-blue-500" />
-                                פנסיה
-                              </h4>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                  <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'scope')}</p>
-                                  <p className="text-xl font-bold text-gray-900">₪{clients
-                                    .filter(client => client.type === 'pension')
-                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                  <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'monthly')}</p>
-                                  <p className="text-xl font-bold text-gray-900">₪{clients
-                                    .filter(client => client.type === 'pension')
-                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-[#4361ee] rounded-xl text-white">
-                                  <p className="text-sm opacity-90 mb-1">סה"כ</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'pension')
-                                    .reduce((sum, client) => sum + client.totalCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* ביכונים */}
-                          {clients.some(client => client.type === 'insurance') && (
-                            <div>
-                              <h4 className="font-medium mb-3 flex items-center gap-2">
-                                <Shield className="w-4 h-4 text-green-500" />
-                                סיכונים
-                              </h4>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'scope')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'insurance')
-                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('insurance', 'monthly')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'insurance')
-                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ</p>
-                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                    .filter(client => client.type === 'insurance')
-                                    .reduce((sum, client) => sum + client.totalCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* חיננסים */}
-                          {clients.some(client => client.type === 'savings_and_study') && (
-                            <div>
-                              <h4 className="font-medium mb-3 flex items-center gap-2">
-                                <PiggyBank className="w-4 h-4 text-purple-500" />
-                                פיננסים
-                              </h4>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'scope')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'savings_and_study')
-                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('savings_and_study', 'monthly')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'savings_and_study')
-                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ</p>
-                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                    .filter(client => client.type === 'savings_and_study')
-                                    .reduce((sum, client) => sum + client.totalCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* פוליסה */}
-                          {clients.some(client => client.type === 'policy') && (
-                            <div>
-                              <h4 className="font-medium mb-3 flex items-center gap-2">
-                                <Wallet className="w-4 h-4 text-orange-500" />
-                                פוליסת חסכון
-                              </h4>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'scope')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'policy')
-                                    .reduce((sum, client) => sum + client.scopeCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">{getCommissionLabel('policy', 'monthly')}</p>
-                                  <p className="text-xl font-bold">₪{clients
-                                    .filter(client => client.type === 'policy')
-                                    .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-600">סה"כ</p>
-                                  <p className="text-xl font-bold text-[#4361ee]">₪{clients
-                                    .filter(client => client.type === 'policy')
-                                    .reduce((sum, client) => sum + client.totalCommission, 0)
-                                    .toLocaleString()}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* סה"כ ללי */}
-                          <div className="mt-8 pt-6 border-t">
-                            <h4 className="font-medium mb-3">סה"כ כללי</h4>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
-                                <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
-                                <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
-                              </div>
-                              <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-lg">
-                                <p className="text-sm text-gray-600">סה"כ</p>
-                                <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-0 shadow-lg">
-                        <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                          <h3 className="text-xl font-semibold">פירוט מוצרים</h3>
-                        </CardHeader>
-                        <CardContent className="p-6">
-                          <ResultsTable
-                            data={clients}
-                            columns={columns}
-                            onDownload={handleDownload}
-                            onClear={handleClear}
-                            onShare={() => {}}
-                          />
-                        </CardContent>
-                      </Card>
-
-                      <div className="flex justify-end gap-4">
-                        <Button 
-                          onClick={handleDownload}
-                          variant="outline"
-                          className="bg-white hover:bg-gray-50 border-2 border-gray-200"
-                        >
-                          <Download className="w-4 h-4 ml-2" />
-                          הורד דוח
-                        </Button>
-                        <Button 
-                          onClick={handleSave}
-                          className="bg-gradient-to-l from-[#4361ee] to-[#3651d4] hover:opacity-90 text-white"
-                        >
-                          <Save className="w-4 h-4 ml-2" />
-                          שלח לדוחות
-                        </Button>
+                <div className="grid grid-cols-3 gap-4">
+                  {productTypes.map(({ type, title }) => (
+                    <motion.div
+                      key={type}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div
+                        className={cn(
+                          "p-4 rounded-xl cursor-pointer transition-all",
+                          "border-2 hover:shadow-lg",
+                          "flex items-center gap-3",
+                          selectedProducts[type] 
+                            ? "border-[#4361ee] bg-blue-50" 
+                            : "border-gray-200 hover:border-[#4361ee]/50"
+                        )}
+                        onClick={() => handleProductSelect(type)}
+                      >
+                        <div className="p-2 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
+                          <ProductIcon type={type} className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="font-medium">{title}</span>
                       </div>
-                    </div>
-                  )}
+                    </motion.div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
-            <div className="w-96 space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-                  <div className="mt-1 p-2 rounded-full bg-green-100">
-                    <User className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">חישוב עמלות אוטומטי</h3>
-                    <p className="text-gray-500 text-sm">המערכת מחשבת באופן אוטומטי את העמלות המוצעות לך לפי סוגי המוצרים השונים</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-                  <div className="mt-1 p-2 rounded-full bg-blue-100">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">ניהול מוצרים מתקדם</h3>
-                    <p className="text-gray-500 text-sm">ניהול וטיפול במגוון מוצרים: פנסיה, ביטוחים, חיסכון ופוליסות</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-                  <div className="mt-1 p-2 rounded-full bg-purple-100">
-                    <PiggyBank className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">דוחות מפורטים</h3>
-                    <p className="text-gray-500 text-sm">הפקת דוחות מפורטים וייצוא נתונים למערכת הדוחות</p>
-                  </div>
-                </div>
-              </div>
+            {/* הצגת טפסי הזנת נתונים למוצרים שנבחרו */}
+            <div className="space-y-6">
+              {productTypes.map(({ type, title }) => (
+                selectedProducts[type] && (
+                  <motion.div
+                    key={type}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="w-full"
+                  >
+                    <Card className="border rounded-lg shadow-lg hover:shadow-xl transition-all">
+                      <CardHeader className="border-b bg-gradient-to-l from-gray-50 to-white">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
+                            <ProductIcon type={type} className="w-6 h-6 text-white" />
+                          </div>
+                          <h3 className="font-medium text-lg">{title}</h3>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <CalculatorForm
+                          onSubmit={(data) => handleSubmit(type, data)}
+                          fields={getProductFields(type)}
+                          title=""
+                          className="w-full"
+                        />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )
+              ))}
             </div>
-          </div>
-        </>
+
+            {/* הצגת תוצאות החישוב */}
+            {clients.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
+                    <h3 className="text-xl font-semibold">סיכום עמלות</h3>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-8">
+                    {/* פנסיה */}
+                    {clients.some(client => client.type === 'pension') && (
+                      <div>
+                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
+                          <Building2 className="w-5 h-5 text-blue-500" />
+                          פנסיה
+                        </h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'scope')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'pension')
+                              .reduce((sum, client) => sum + client.scopeCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'monthly')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'pension')
+                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
+                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
+                            <p className="text-xl font-bold">₪{clients
+                              .filter(client => client.type === 'pension')
+                              .reduce((sum, client) => sum + client.totalCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* סיכונים */}
+                    {clients.some(client => client.type === 'insurance') && (
+                      <div>
+                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
+                          <Shield className="w-5 h-5 text-green-500" />
+                          סיכונים
+                        </h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('insurance', 'scope')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'insurance')
+                              .reduce((sum, client) => sum + client.scopeCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('insurance', 'monthly')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'insurance')
+                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
+                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
+                            <p className="text-xl font-bold">₪{clients
+                              .filter(client => client.type === 'insurance')
+                              .reduce((sum, client) => sum + client.totalCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* פיננסים */}
+                    {clients.some(client => client.type === 'savings_and_study') && (
+                      <div>
+                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
+                          <PiggyBank className="w-5 h-5 text-purple-500" />
+                          פיננסים
+                        </h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('savings_and_study', 'scope')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'savings_and_study')
+                              .reduce((sum, client) => sum + client.scopeCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('savings_and_study', 'monthly')}</p>
+                            <p className="text-xl font-bold text-gray-900">₪{clients
+                              .filter(client => client.type === 'savings_and_study')
+                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
+                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
+                            <p className="text-xl font-bold">₪{clients
+                              .filter(client => client.type === 'savings_and_study')
+                              .reduce((sum, client) => sum + client.totalCommission, 0)
+                              .toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* סה"כ כללי */}
+                    <div className="mt-8 pt-6 border-t">
+                      <h4 className="font-medium mb-4">סה"כ כללי</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
+                          <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
+                          <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
+                          <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
+                          <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
+                          <p className="text-sm text-gray-600">סה"כ</p>
+                          <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-lg">
+                  <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
+                    <h3 className="text-xl font-semibold">פירוט מוצרים</h3>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <ResultsTable
+                      data={clients}
+                      columns={columns}
+                      onDownload={handleDownload}
+                      onClear={handleClear}
+                      onShare={() => {}}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </motion.div>
+
+          <motion.div 
+            className="mt-8 flex justify-end gap-4"
+            variants={fadeIn}
+          >
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-700 font-medium flex items-center gap-2"
+              onClick={handleDownload}
+            >
+              <Download className="w-5 h-5" />
+              הורד דוח
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-white font-medium flex items-center gap-2"
+              onClick={handleSave}
+            >
+              <Save className="w-5 h-5" />
+              שלח לדוחות
+            </motion.button>
+          </motion.div>
+
+          <style jsx>{`
+            .dir-rtl {
+              direction: rtl;
+            }
+          `}</style>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

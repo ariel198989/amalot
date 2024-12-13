@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
-import { Users, Plus, Search, Phone, Mail, Calendar } from 'lucide-react';
-import ClientDetails from "./ClientDetailsComponent";
 import { Label } from "@/components/ui/label";
 import { useUser } from '@/contexts/UserContext';
+import { cn } from "@/lib/utils";
+import { 
+  Users, 
+  Plus, 
+  Search, 
+  Phone, 
+  Mail, 
+  Calendar, 
+  User, 
+  CreditCard, 
+  MapPin, 
+  Briefcase, 
+  Edit, 
+  FileText, 
+  Trash2 
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabase';
 
 interface Client {
   id: string;
@@ -21,6 +40,18 @@ interface Client {
   status: 'active' | 'inactive' | 'lead';
   created_at: string;
   last_contact: string;
+  id_number: string;
+  address_street: string;
+  address_city: string;
+  employment_type: 'employed' | 'self-employed';
+  employer_name: string;
+  employer_position: string;
+  employer_address: string;
+  employer_start_date: string;
+  business_name: string;
+  business_type: string;
+  business_address: string;
+  business_start_date: string;
 }
 
 interface ClientDetails extends Client {
@@ -51,21 +82,33 @@ interface NewClientData {
 
 const ClientsTable = () => {
   const { user } = useUser();
-  const [clients, setClients] = React.useState<Client[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState<string>('all');
-  const [isAddingClient, setIsAddingClient] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isAddingClient, setIsAddingClient] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [newClient, setNewClient] = useState<NewClientData>({
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
     first_name: '',
     last_name: '',
+    id_number: '',
     email: '',
     phone: '',
-    id_number: '',
-    status: 'active'
+    birth_date: '',
+    address_street: '',
+    address_city: '',
+    employment_type: 'employed' as 'employed' | 'self-employed',
+    employer_name: '',
+    employer_position: '',
+    employer_address: '',
+    employer_start_date: '',
+    business_name: '',
+    business_type: '',
+    business_address: '',
+    business_start_date: ''
   });
 
   // טונקציה לבדיקת המשתמש הנוכחי
@@ -159,21 +202,18 @@ const ClientsTable = () => {
   };
 
   // סינון לקוחות
-  const filteredClients = React.useMemo(() => {
-    if (!clients) return [];
-    
+  const filteredClients = useMemo(() => {
     return clients.filter(client => {
-      if (!client) return false;
-      
-      const nameMatch = `${client.first_name || ''} ${client.last_name || ''}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      
-      const statusMatch = statusFilter === 'all' || client.status === statusFilter;
-      
-      return nameMatch && statusMatch;
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        client.first_name?.toLowerCase().includes(searchLower) ||
+        client.last_name?.toLowerCase().includes(searchLower) ||
+        client.phone?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower) ||
+        client.id_number?.toLowerCase().includes(searchLower)
+      );
     });
-  }, [clients, searchTerm, statusFilter]);
+  }, [clients, searchQuery]);
 
   const handleRowClick = async (client: Client) => {
     try {
@@ -182,347 +222,478 @@ const ClientsTable = () => {
       setIsDetailsOpen(true);
     } catch (error) {
       console.error('Error in handleRowClick:', error);
-      toast.error('שגיאה בטעינת פרטי הלקוח');
+      toast.error('שגיאה בטעינת פר��י הלקוח');
     } finally {
       setIsLoadingDetails(false);
     }
   };
 
-  const handleAddClient = async () => {
+  const handleCreateClient = async () => {
     try {
-      const currentUser = await checkCurrentUser();
-      console.log('Current user:', currentUser);
-      
-      if (!currentUser) {
+      if (!user) {
         toast.error('משתמש לא מחובר');
         return;
       }
 
-      // בדיקת תקינות בסיסית
-      if (!newClient.first_name.trim() || !newClient.last_name.trim() || 
-          !newClient.phone.trim() || !newClient.id_number.trim()) {
+      // Validate required fields
+      if (!newClient.first_name || !newClient.last_name || !newClient.phone || !newClient.id_number) {
         toast.error('נא למלא את כל שדות החובה');
         return;
       }
 
-      // בדיקה אם תעודת זהות כבר קיימת
-      const { data: existingClient } = await supabase
+      // Format dates or set to null if empty
+      const formatDate = (dateStr: string) => dateStr ? dateStr : null;
+
+      const { data: client, error } = await supabase
         .from('clients')
-        .select('id')
-        .eq('id_number', newClient.id_number.trim())
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (existingClient) {
-        toast.error('מספר תעודת זהות כבר קיים במערכת');
-        return;
-      }
-
-      const clientData = {
-        user_id: currentUser.id,
-        first_name: newClient.first_name.trim(),
-        last_name: newClient.last_name.trim(),
-        email: newClient.email.trim(),
-        phone: newClient.phone.trim(),
-        id_number: newClient.id_number.trim(),
-        status: newClient.status
-      };
-
-      console.log('Attempting to insert client with data:', clientData);
-
-      const { data, error } = await supabase
-        .from('clients')
-        .insert(clientData)
+        .insert([
+          {
+            user_id: user.id,
+            first_name: newClient.first_name.trim(),
+            last_name: newClient.last_name.trim(),
+            phone: newClient.phone.trim(),
+            email: newClient.email.trim(),
+            id_number: newClient.id_number.trim(),
+            birth_date: formatDate(newClient.birth_date),
+            address_street: newClient.address_street.trim(),
+            address_city: newClient.address_city.trim(),
+            employment_type: newClient.employment_type,
+            employer_name: newClient.employment_type === 'employed' ? newClient.employer_name.trim() : null,
+            employer_position: newClient.employment_type === 'employed' ? newClient.employer_position.trim() : null,
+            employer_address: newClient.employment_type === 'employed' ? newClient.employer_address.trim() : null,
+            employer_start_date: newClient.employment_type === 'employed' ? formatDate(newClient.employer_start_date) : null,
+            business_name: newClient.employment_type === 'self-employed' ? newClient.business_name.trim() : null,
+            business_type: newClient.employment_type === 'self-employed' ? newClient.business_type.trim() : null,
+            business_address: newClient.employment_type === 'self-employed' ? newClient.business_address.trim() : null,
+            business_start_date: newClient.employment_type === 'self-employed' ? formatDate(newClient.business_start_date) : null,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
         .select()
         .single();
 
       if (error) {
-        console.error('Error adding client:', error);
-        if (error.code === '42501') {
-          toast.error('אין הרשאה להוספת לקוח');
-        } else if (error.code === '23505') {
-          toast.error('מספר תעודת זהות כבר קיים במערכת');
+        console.error('Error creating client:', error);
+        if (error.code === '23505') {
+          toast.error('תעודת זהות כבר קיימת במערכת');
         } else {
-          toast.error('שגיאה בהוספת הלקוח');
+          toast.error('אירעה שגיאה ביצירת הלקוח');
         }
         return;
       }
 
-      if (!data) {
-        toast.error('שגיאה בהוספת הלקוח - לא התקבלו נתונים');
-        return;
-      }
-
-      console.log('Successfully added client:', data);
-      setClients(prev => [data, ...prev]);
-      setIsAddingClient(false);
+      setClients(prevClients => [...prevClients, client]);
+      setIsCreateDialogOpen(false);
       setNewClient({
         first_name: '',
         last_name: '',
+        id_number: '',
         email: '',
         phone: '',
-        id_number: '',
-        status: 'active'
+        birth_date: '',
+        address_street: '',
+        address_city: '',
+        employment_type: 'employed',
+        employer_name: '',
+        employer_position: '',
+        employer_address: '',
+        employer_start_date: '',
+        business_name: '',
+        business_type: '',
+        business_address: '',
+        business_start_date: ''
       });
-      
-      toast.success('הלקוח נוסף בהצלחה');
-      
-      // רענון הרשימה
-      loadClients();
+      toast.success('הלקוח נוצר בהצלחה');
     } catch (error) {
-      console.error('Error in handleAddClient:', error);
-      toast.error('שגיאה בהוספת הלקוח');
+      console.error('Error creating client:', error);
+      toast.error('אירעה שגיאה ביצירת הלקוח');
     }
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6 rtl">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-6 space-y-6" dir="rtl">
+      {/* Header with Add Client Button */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ניהול לקוחות</h1>
-          <p className="text-gray-500">ניהול וצפייה בכל הלקוחות שלך</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ניהול לקוחות</h1>
+          <p className="text-gray-500 dark:text-gray-400">ניהול וצפייה בכל הלקוחות שלך</p>
         </div>
-        <Button onClick={() => setIsAddingClient(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          הוסף לקוח
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <div className="flex-1">
-          <Input
-            placeholder="חיפוש קוחות..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm text-right"
-            dir="rtl"
-          />
+        <div className="flex gap-4 items-center">
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            הוספת לקוח חדש
+          </Button>
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="חיפוש לקוחות..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-64 pl-4 pr-10 text-right"
+            />
+            <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+          </div>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px] text-right">
-            <SelectValue placeholder="סטטוס" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all" className="text-right">הכל</SelectItem>
-            <SelectItem value="active" className="text-right">פעיל</SelectItem>
-            <SelectItem value="inactive" className="text-right">לא פעיל</SelectItem>
-            <SelectItem value="lead" className="text-right">ליד</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Clients Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-right">
-                  <th className="p-4 text-right">שם</th>
-                  <th className="p-4 text-right">טלפון</th>
-                  <th className="p-4 text-right">אימייל</th>
-                  <th className="p-4 text-right">סטטוס</th>
-                  <th className="p-4 text-right">עדכון אחרון</th>
-                  <th className="p-4 text-right">פעולות</th>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">שם מלא</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">טלפון</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">אימייל</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעודת זהות</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">כתובת</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעסוקה</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">סטטוס</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תאריך הצטרפות</th>
+                <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">פעולות</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredClients.map((client) => (
+                <tr 
+                  key={client.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                        <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {client.first_name} {client.last_name}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.phone}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{client.id_number}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {client.address_city && client.address_street ? 
+                          `${client.address_city}, ${client.address_street}` : 
+                          'לא צוין'
+                        }
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {client.employment_type === 'employed' ? 
+                          `שכיר - ${client.employer_name || ''}` : 
+                          client.employment_type === 'self-employed' ? 
+                          `עצמאי - ${client.business_name || ''}` : 
+                          'לא צוין'
+                        }
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      "px-2 py-1 text-xs rounded-full",
+                      client.status === 'active' ? "bg-green-100 text-green-800" :
+                      client.status === 'inactive' ? "bg-red-100 text-red-800" :
+                      "bg-yellow-100 text-yellow-800"
+                    )}>
+                      {client.status === 'active' ? 'פעיל' :
+                       client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {new Date(client.created_at).toLocaleDateString('he-IL')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(client)}
+                        className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Edit className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewDetails(client)}
+                        className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <FileText className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(client.id)}
+                        className="hover:bg-red-100 dark:hover:bg-red-900"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredClients.map((client) => (
-                  <tr 
-                    key={client.id}
-                    className="border-b hover:bg-gray-50 cursor-pointer text-right"
-                    onClick={() => handleRowClick(client)}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                          {client.first_name[0]}{client.last_name[0]}
-                        </div>
-                        <div>
-                          <div className="font-medium">{client.first_name} {client.last_name}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">{client.phone}</td>
-                    <td className="p-4">{client.email}</td>
-                    <td className="p-4">
-                      <Badge variant={
-                        client.status === 'active' ? 'success' :
-                        client.status === 'inactive' ? 'destructive' : 'default'
-                      }>
-                        {client.status === 'active' ? 'פעיל' :
-                         client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      {new Date(client.last_contact).toLocaleDateString('he-IL')}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2 justify-end">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `tel:${client.phone}`;
-                          }}
-                        >
-                          <Phone className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `mailto:${client.email}`;
-                          }}
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {selectedClient && (
-        <ClientDetails
-          client={selectedClient}
-          isOpen={isDetailsOpen}
-          onClose={() => {
-            setIsDetailsOpen(false);
-            setSelectedClient(null);
-          }}
-        />
-      )}
-
-      {/* Add Client Dialog */}
-      <Dialog open={isAddingClient} onOpenChange={setIsAddingClient}>
-        <DialogContent className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-          <DialogHeader className="space-y-2 mb-4">
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
-              הוספת לקוח חדש
-            </DialogTitle>
-            <DialogDescription className="text-gray-500 dark:text-gray-400">
-              הזן את פרטי הלקוח החדש. כל השדות המסומנים ב-* הם חובה.
+      {/* Create Client Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-3xl bg-white dark:bg-gray-800" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">הוספת לקוח חדש</DialogTitle>
+            <DialogDescription className="text-right">
+              מלא את הפרטים הבאים להוספת לקוח חדש למערכת
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="id_number" className="text-gray-700 dark:text-gray-300">
-                תעודת זהות *
-              </Label>
-              <Input
-                id="id_number"
-                value={newClient.id_number}
-                onChange={(e) => setNewClient(prev => ({ ...prev, id_number: e.target.value }))}
-                className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                placeholder="הכנס מספר תעודת זהות"
-                dir="rtl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="first_name" className="text-gray-700 dark:text-gray-300">
-                שם פרטי *
-              </Label>
+              <Label htmlFor="first_name" className="block text-right">שם פרטי</Label>
               <Input
                 id="first_name"
                 value={newClient.first_name}
                 onChange={(e) => setNewClient(prev => ({ ...prev, first_name: e.target.value }))}
-                className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                placeholder="הכנס שם פרטי"
-                dir="rtl"
+                className="w-full text-right"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="last_name" className="text-gray-700 dark:text-gray-300">
-                שם משפחה *
-              </Label>
+              <Label htmlFor="last_name" className="block text-right">שם משפחה</Label>
               <Input
                 id="last_name"
                 value={newClient.last_name}
                 onChange={(e) => setNewClient(prev => ({ ...prev, last_name: e.target.value }))}
-                className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                placeholder="הכנס שם משפחה"
-                dir="rtl"
+                className="w-full text-right"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-gray-700 dark:text-gray-300">
-                טלפון *
-              </Label>
+              <Label htmlFor="id_number" className="block text-right">תעודת זהות</Label>
+              <Input
+                id="id_number"
+                value={newClient.id_number}
+                onChange={(e) => setNewClient(prev => ({ ...prev, id_number: e.target.value }))}
+                className="w-full text-right"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="block text-right">טלפון</Label>
               <Input
                 id="phone"
-                type="tel"
                 value={newClient.phone}
                 onChange={(e) => setNewClient(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                placeholder="הכנס מספר טלפון"
-                dir="rtl"
+                className="w-full text-right"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">
-                אימייל
-              </Label>
+              <Label htmlFor="email" className="block text-right">אימייל</Label>
               <Input
                 id="email"
                 type="email"
                 value={newClient.email}
                 onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                placeholder="הכנס כתובת אימייל"
-                dir="rtl"
+                className="w-full text-right"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status" className="text-gray-700 dark:text-gray-300">
-                סטטוס *
-              </Label>
-              <Select 
-                value={newClient.status}
-                onValueChange={(value: 'active' | 'inactive' | 'lead') => 
-                  setNewClient(prev => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger className="w-full text-right bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
-                  <SelectValue placeholder="בחר סטטוס" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800">
-                  <SelectItem value="active" className="text-right">פעיל</SelectItem>
-                  <SelectItem value="inactive" className="text-right">לא פעיל</SelectItem>
-                  <SelectItem value="lead" className="text-right">ליד</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="birth_date" className="block text-right">תארי�� לידה</Label>
+              <Input
+                id="birth_date"
+                type="date"
+                value={newClient.birth_date}
+                onChange={(e) => setNewClient(prev => ({ ...prev, birth_date: e.target.value }))}
+                className="w-full text-right"
+              />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address_street" className="block text-right">רחוב</Label>
+              <Input
+                id="address_street"
+                value={newClient.address_street}
+                onChange={(e) => setNewClient(prev => ({ ...prev, address_street: e.target.value }))}
+                className="w-full text-right"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address_city" className="block text-right">עיר</Label>
+              <Input
+                id="address_city"
+                value={newClient.address_city}
+                onChange={(e) => setNewClient(prev => ({ ...prev, address_city: e.target.value }))}
+                className="w-full text-right"
+              />
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label className="block text-right">סוג תעסוקה</Label>
+              <div className="flex gap-4 justify-end">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="employed" className="text-right">שכיר</Label>
+                  <input
+                    id="employed"
+                    type="radio"
+                    name="employment_type"
+                    value="employed"
+                    checked={newClient.employment_type === 'employed'}
+                    onChange={(e) => setNewClient(prev => ({
+                      ...prev,
+                      employment_type: e.target.value as 'employed' | 'self-employed'
+                    }))}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="self-employed" className="text-right">עצמאי</Label>
+                  <input
+                    id="self-employed"
+                    type="radio"
+                    name="employment_type"
+                    value="self-employed"
+                    checked={newClient.employment_type === 'self-employed'}
+                    onChange={(e) => setNewClient(prev => ({
+                      ...prev,
+                      employment_type: e.target.value as 'employed' | 'self-employed'
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {newClient.employment_type === 'employed' ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="employer_name" className="block text-right">שם המעסיק</Label>
+                  <Input
+                    id="employer_name"
+                    value={newClient.employer_name}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, employer_name: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employer_position" className="block text-right">תפקיד</Label>
+                  <Input
+                    id="employer_position"
+                    value={newClient.employer_position}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, employer_position: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employer_address" className="block text-right">כתובת מקום העבודה</Label>
+                  <Input
+                    id="employer_address"
+                    value={newClient.employer_address}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, employer_address: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employer_start_date" className="block text-right">תאריך תחילת עבודה</Label>
+                  <Input
+                    id="employer_start_date"
+                    type="date"
+                    value={newClient.employer_start_date}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, employer_start_date: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="business_name" className="block text-right">שם העסק</Label>
+                  <Input
+                    id="business_name"
+                    value={newClient.business_name}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, business_name: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="business_type" className="block text-right">סוג העסק</Label>
+                  <Input
+                    id="business_type"
+                    value={newClient.business_type}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, business_type: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="business_address" className="block text-right">כתובת העסק</Label>
+                  <Input
+                    id="business_address"
+                    value={newClient.business_address}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, business_address: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="business_start_date" className="block text-right">תאריך תחילת פעילות</Label>
+                  <Input
+                    id="business_start_date"
+                    type="date"
+                    value={newClient.business_start_date}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, business_start_date: e.target.value }))}
+                    className="w-full text-right"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
-          <DialogFooter className="mt-6 flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsAddingClient(false)}
-              className="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              ביטול
-            </Button>
-            <Button
-              onClick={handleAddClient}
-              disabled={!newClient.first_name || !newClient.last_name || !newClient.phone || !newClient.id_number}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
+          <DialogFooter className="flex justify-start gap-2 mt-6">
+            <Button onClick={handleCreateClient} className="bg-blue-600 hover:bg-blue-700 text-white">
               הוסף לקוח
+            </Button>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              ביטול
             </Button>
           </DialogFooter>
         </DialogContent>

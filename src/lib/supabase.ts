@@ -25,8 +25,8 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
     global: {
         headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Prefer': 'return=minimal'
+            'Accept': '*/*',
+            'Prefer': 'return=representation'
         }
     }
 });
