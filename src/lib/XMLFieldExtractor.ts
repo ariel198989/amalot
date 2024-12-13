@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { toast } from 'sonner';
 
 interface Categories {
   [key: string]: {
@@ -138,7 +139,7 @@ export class XMLFieldExtractor {
   private formatValuesList(values: string[]): string {
     const convertToSortable = (x: string): number | string => {
       try {
-        return parseFloat(x.replace('₪','').replace('%','').replace(',',''));
+        return parseFloat(x.replace('��','').replace('%','').replace(',',''));
       } catch {
         return x;
       }
@@ -167,10 +168,20 @@ export class XMLFieldExtractor {
     try {
       const parser = new XMLParser({
         ignoreAttributes: false,
-        removeNSPrefix: true
+        removeNSPrefix: true,
+        isArray: (_name: string, _jpath: string, _isLeafNode: boolean, _isAttribute: boolean) => {
+          // Handle arrays properly
+          return false;
+        },
+        // Add proper parsing options
+        parseAttributeValue: true,
+        parseTagValue: true,
+        trimValues: true
       });
       
       const result = parser.parse(xmlContent);
+      // Log the parsed result to debug
+      console.log('Parsed XML:', JSON.stringify(result, null, 2));
       this.extractFields(result);
     } catch (e) {
       console.error('Error processing XML:', e);
@@ -184,14 +195,26 @@ export class XMLFieldExtractor {
       const value = obj[key];
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
-      if (typeof value === 'string' && value.trim()) {
-        if (!this.consolidatedFields.has(key)) {
-          this.consolidatedFields.set(key, new Set());
+      if (typeof value === 'string' || typeof value === 'number') {
+        const stringValue = String(value).trim();
+        if (stringValue) {
+          if (!this.consolidatedFields.has(key)) {
+            this.consolidatedFields.set(key, new Set());
+          }
+          this.consolidatedFields.get(key)?.add(stringValue);
         }
-        this.consolidatedFields.get(key)?.add(value.trim());
       } else if (Array.isArray(value)) {
-        value.forEach(item => this.extractFields(item, fullKey));
-      } else if (typeof value === 'object') {
+        value.forEach(item => {
+          if (typeof item === 'string' || typeof item === 'number') {
+            if (!this.consolidatedFields.has(key)) {
+              this.consolidatedFields.set(key, new Set());
+            }
+            this.consolidatedFields.get(key)?.add(String(item).trim());
+          } else {
+            this.extractFields(item, fullKey);
+          }
+        });
+      } else if (typeof value === 'object' && value !== null) {
         this.extractFields(value, fullKey);
       }
     }
@@ -239,10 +262,20 @@ export class XMLFieldExtractor {
     try {
       const getFirstValue = (field: string): string => {
         const values = this.consolidatedFields.get(field);
-        return values ? Array.from(values)[0] || '' : '';
+        const value = values ? Array.from(values)[0] || '' : '';
+        // Don't return 'NaN' as a value
+        return value === 'NaN' ? '' : value;
       };
 
-      return {
+      // Log the consolidated fields for debugging
+      console.log('Consolidated Fields:', 
+        Object.fromEntries(
+          Array.from(this.consolidatedFields.entries())
+            .map(([k, v]) => [k, Array.from(v)])
+        )
+      );
+
+      const data = {
         first_name: getFirstValue('SHEM-PRATI'),
         last_name: getFirstValue('SHEM-MISHPACHA'),
         id_number: getFirstValue('MISPAR-ZIHUY'),
@@ -250,8 +283,19 @@ export class XMLFieldExtractor {
         phone: getFirstValue('MISPAR-CELLULARI') || getFirstValue('MISPAR-TELEPHONE-KAVI'),
         address_street: getFirstValue('SHEM-RECHOV'),
         address_city: getFirstValue('SHEM-YISHUV'),
-        status: 'active'
+        status: 'active' as const
       };
+
+      // Log the extracted data
+      console.log('Extracted Client Data:', data);
+
+      // Only return if we have at least some basic data
+      if (data.first_name || data.last_name || data.id_number) {
+        return data;
+      }
+      
+      toast.error('לא נמצאו פרטי לקוח ב��ובץ');
+      return null;
     } catch (error) {
       console.error('Error extracting client data:', error);
       return null;

@@ -1,17 +1,24 @@
 export interface Client {
   id: string;
-  user_id: string;
   first_name: string;
   last_name: string;
-  id_number: string;
-  email?: string;
-  mobile_phone?: string;
-  status: string;
+  email: string;
+  phone: string;
+  status: 'active' | 'inactive' | 'lead';
   created_at: string;
+  last_contact: string;
+  id_number: string;
+  address_street: string;
+  address_city: string;
+  employment_type: 'employed' | 'self-employed';
+  employer_name: string;
+  employer_position: string;
+  employer_address: string;
+  employer_start_date: string;
+  business_name: string;
+  business_type: string;
+  business_address: string;
+  business_start_date: string;
+  user_id: string;
   updated_at: string;
-  last_contact?: string;
-  total_pension_sales: number;
-  total_revenue: number;
-  total_commission: number;
-  total_policies: number;
 }

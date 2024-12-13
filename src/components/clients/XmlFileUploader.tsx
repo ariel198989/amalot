@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { XMLFieldExtractor } from '@/lib/XMLFieldExtractor';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
+import { Client } from '@/types/client';
 
 interface XmlFileUploaderProps {
-  onXmlFilesExtracted: (xmlFiles: { name: string; content: string }[]) => void;
+  onXmlFilesExtracted: (xmlFiles: { name: string; content: string }[], updatedClient?: Client) => void;
 }
 
 interface ClientData {
@@ -29,32 +30,72 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
   const createClientFromXml = async (clientData: ClientData) => {
     try {
       if (!clientData || !user) return null;
+      console.log('Creating/updating client with data:', clientData);
 
-      const { data: client, error } = await supabase
+      // First check if client exists
+      const { data: existingClient } = await supabase
         .from('clients')
-        .insert([{
-          ...clientData,
-          user_id: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
+        .select('*')
+        .eq('id_number', clientData.id_number)
         .single();
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('לקוח עם תעודת זהות זו כבר קיים במערכת');
-        } else {
-          toast.error('שגיאה ביצירת הלקוח');
-        }
-        return null;
-      }
+      console.log('Existing client check:', existingClient);
 
-      toast.success('לקוח חדש נוצר בהצלחה');
-      return client;
+      if (existingClient) {
+        // Only update if the client belongs to the current user
+        if (existingClient.user_id !== user.id) {
+          toast.error('לא ניתן לעדכן לקוח השייך למשתמש אחר');
+          return null;
+        }
+
+        // Update existing client
+        const { data: updatedClient, error: updateError } = await supabase
+          .from('clients')
+          .update({
+            ...clientData,
+            user_id: user.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id_number', clientData.id_number)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating client:', updateError);
+          toast.error('שגיאה בעדכון הלקוח');
+          return null;
+        }
+
+        toast.success('פרטי הלקוח עודכנו בהצלחה');
+        console.log('Updated client:', updatedClient);
+        return updatedClient;
+      } else {
+        // Create new client
+        const { data: newClient, error: insertError } = await supabase
+          .from('clients')
+          .insert([{
+            ...clientData,
+            user_id: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating client:', insertError);
+          toast.error('שגיאה ביצירת הלקוח');
+          return null;
+        }
+
+        toast.success('לקוח חדש נוצר בהצלחה');
+        console.log('Created new client:', newClient);
+        return newClient;
+      }
     } catch (error) {
-      console.error('Error creating client:', error);
-      toast.error('שגיאה ביצירת הלקוח');
+      console.error('Error processing client:', error);
+      toast.error('שגיאה בעיבוד נתוני הלקוח');
       return null;
     }
   };
@@ -95,9 +136,9 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
 
       const clientData = extractor.extractClientData();
       if (clientData) {
-        const newClient = await createClientFromXml(clientData);
-        if (newClient) {
-          onXmlFilesExtracted(xmlFiles);
+        const client = await createClientFromXml(clientData);
+        if (client) {
+          onXmlFilesExtracted(xmlFiles, client);
         }
       }
 

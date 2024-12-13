@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +53,7 @@ interface Client {
   business_start_date: string;
 }
 
-const ClientsTable = () => {
+export default function ClientsTable() {
   const { user } = useUser();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,51 +77,51 @@ const ClientsTable = () => {
     business_address: '',
     business_start_date: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // טונקציה לבדיקת המשתמש הנוכחי
-  const checkCurrentUser = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('Error checking session:', error);
-      return null;
-    }
-    return session?.user;
-  };
-
-  // טעינת נתוני לקוחות
-  const loadClients = async () => {
+  const fetchClients = useCallback(async () => {
+    if (!user) return;
+    
     try {
-      const currentUser = await checkCurrentUser();
-      
-      if (!currentUser) {
-        console.error('No user found');
-        return;
-      }
-
-      console.log('Loading clients for user:', currentUser.id);
+      setIsLoading(true);
+      console.log('Fetching clients for user:', user.id);
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading clients:', error);
-        toast.error('שגיאה בטעינת רשימת הלקוחות');
-        return;
-      }
-
-      console.log('Loaded clients:', data);
+      if (error) throw error;
+      console.log('Fetched clients:', data);
       setClients(data || []);
     } catch (error) {
-      console.error('Error in loadClients:', error);
-      toast.error('שגיאה בטעינת רשימת הלקוחות');
+      console.error('Error loading clients:', error);
+      toast.error('שגיאה בטעינת הלקוחות');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [user]);
 
-  React.useEffect(() => {
-    loadClients();
-  }, []);
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
+
+  useEffect(() => {
+    // בדיקה שהלקוח מופיע ברשימה
+    const checkClientExists = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id_number', '205600224') // מספר הזהות של הלקוח שאנחנו מחפשים
+        .single();
+        
+      console.log('Client exists check:', data);
+    };
+    
+    checkClientExists();
+  }, [user]);
 
   // סינון לקוחות
   const filteredClients = useMemo(() => {
@@ -216,10 +216,28 @@ const ClientsTable = () => {
     }
   };
 
-  const handleXmlFilesExtracted = (xmlFiles: { name: string; content: string }[]) => {
+  const handleXmlFilesExtracted = async (xmlFiles: { name: string; content: string }[], updatedClient?: Client) => {
     console.log('Extracted XML files:', xmlFiles);
-    // Here you can process the XML files
-    // For example, parse them and add to clients list
+    console.log('Updated/Created client:', updatedClient);
+    
+    if (updatedClient) {
+      // עדכון מיידי של מערך הלקוחות
+      setClients(prevClients => {
+        const index = prevClients.findIndex(c => c.id === updatedClient.id);
+        if (index !== -1) {
+          // עדכון לקוח קיים
+          const newClients = [...prevClients];
+          newClients[index] = updatedClient;
+          return newClients;
+        } else {
+          // הוספת לקוח חדש בתחילת הרשימה
+          return [updatedClient, ...prevClients];
+        }
+      });
+    } else {
+      // אם אין לקוח מעודכן, נטען מחדש את כל הרשימה
+      await fetchClients();
+    }
   };
 
   return (
@@ -257,131 +275,144 @@ const ClientsTable = () => {
           {/* Clients Table */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-700">
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">שם מלא</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">טלפון</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">אימייל</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעודת זהות</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">כתובת</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעסוקה</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">סטטוס</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תאריך הצטרפות</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">פעולות</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredClients.map((client) => (
-                    <tr 
-                      key={client.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {client.first_name} {client.last_name}
+              {isLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="mt-2 text-gray-500 dark:text-gray-400">טוען נתונים...</p>
+                </div>
+              ) : filteredClients.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {searchQuery ? 'לא נמצאו לקוחות התואמים את החיפוש' : 'אין לקוחות להצגה'}
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-700">
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">שם מלא</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">טלפון</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">אימייל</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעודת זהות</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">כתובת</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תעסוקה</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">סטטוס</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">תאריך הצטרפות</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-200 text-right">פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredClients.map((client) => (
+                      <tr 
+                        key={client.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                              <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {client.first_name} {client.last_name}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.phone}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">{client.id_number}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {client.address_city && client.address_street ? 
-                              `${client.address_city}, ${client.address_street}` : 
-                              'לא צוין'
-                            }
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{client.phone}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{client.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{client.id_number}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {client.address_city && client.address_street ? 
+                                `${client.address_city}, ${client.address_street}` : 
+                                'לא צוין'
+                              }
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {client.employment_type === 'employed' ? 
+                                `שכיר - ${client.employer_name || ''}` : 
+                                client.employment_type === 'self-employed' ? 
+                                `עצמאי - ${client.business_name || ''}` : 
+                                'לא צוין'
+                              }
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "px-2 py-1 text-xs rounded-full",
+                            client.status === 'active' ? "bg-green-100 text-green-800" :
+                            client.status === 'inactive' ? "bg-red-100 text-red-800" :
+                            "bg-yellow-100 text-yellow-800"
+                          )}>
+                            {client.status === 'active' ? 'פעיל' :
+                             client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {client.employment_type === 'employed' ? 
-                              `שכיר - ${client.employer_name || ''}` : 
-                              client.employment_type === 'self-employed' ? 
-                              `עצמאי - ${client.business_name || ''}` : 
-                              'לא צוין'
-                            }
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn(
-                          "px-2 py-1 text-xs rounded-full",
-                          client.status === 'active' ? "bg-green-100 text-green-800" :
-                          client.status === 'inactive' ? "bg-red-100 text-red-800" :
-                          "bg-yellow-100 text-yellow-800"
-                        )}>
-                          {client.status === 'active' ? 'פעיל' :
-                           client.status === 'inactive' ? 'לא פעיל' : 'ליד'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {new Date(client.created_at).toLocaleDateString('he-IL')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(client)}
-                            className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            <Edit className="h-4 w-4 text-gray-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewDetails(client)}
-                            className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            <FileText className="h-4 w-4 text-gray-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(client)}
-                            className="hover:bg-red-100 dark:hover:bg-red-900"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {new Date(client.created_at).toLocaleDateString('he-IL')}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(client)}
+                              className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <Edit className="h-4 w-4 text-gray-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDetails(client)}
+                              className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <FileText className="h-4 w-4 text-gray-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(client)}
+                              className="hover:bg-red-100 dark:hover:bg-red-900"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
@@ -628,6 +659,4 @@ const ClientsTable = () => {
       </Dialog>
     </div>
   );
-};
-
-export default ClientsTable;
+}
