@@ -1,9 +1,10 @@
+import React from 'react';
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import { Upload, File, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { XMLFieldExtractor } from '@/lib/XMLFieldExtractor';
+import { XMLFieldExtractor, YeshutLakoach, YeshutMaasik } from '@/lib/XMLFieldExtractor';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { Client } from '@/types/client';
@@ -120,7 +121,32 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
               name: fileName,
               content
             });
-            await extractor.extractFieldsFromXml(content);
+            const result = await extractor.extractFieldsFromXml(content);
+            
+            // Pass the extracted data to createMarkdownReport
+            const report = extractor.createMarkdownReport(result.data.lakoach, result.data.maasik);
+            console.log('Generated Report:', report);
+
+            // Pass the data to extractClientData
+            const clientData = extractor.extractClientData(result.data);
+            if (clientData) {
+              // Map the client data to match ClientData interface
+              const mappedClientData: ClientData = {
+                first_name: clientData.firstName,
+                last_name: clientData.lastName,
+                id_number: clientData.id,
+                email: clientData.email,
+                phone: clientData.phone,
+                address_street: clientData.address.split(',')[0] || '',
+                address_city: clientData.address.split(',')[1]?.trim() || '',
+                status: 'active'
+              };
+
+              const client = await createClientFromXml(mappedClientData);
+              if (client) {
+                onXmlFilesExtracted(xmlFiles, client);
+              }
+            }
           }
         });
 
@@ -129,17 +155,6 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
       if (xmlFiles.length === 0) {
         toast.error('לא נמצאו קבצי XML בקובץ ה-ZIP');
         return;
-      }
-
-      const report = extractor.createMarkdownReport();
-      console.log('Generated Report:', report);
-
-      const clientData = extractor.extractClientData();
-      if (clientData) {
-        const client = await createClientFromXml(clientData);
-        if (client) {
-          onXmlFilesExtracted(xmlFiles, client);
-        }
       }
 
     } catch (error) {
