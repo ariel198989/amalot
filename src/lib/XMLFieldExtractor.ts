@@ -242,16 +242,211 @@ export class XMLFieldExtractor {
            ('@_xmlns:xsi' in value || '@_xsi:nil' in value);
   }
 
-  private extractValue(value: any): any {
-    if (this.isNilValue(value)) {
-      return null;
+  private extractValue(value: any): string {
+    if (!value) return '';
+
+    // If it's a string, return it
+    if (typeof value === 'string') return value;
+
+    // If it's a number, convert to string
+    if (typeof value === 'number') return value.toString();
+
+    // If it's an object with a text value
+    if (typeof value === 'object' && value !== null) {
+      // Check for nil value
+      if (value['@_xsi:nil'] === 'true') return '';
+
+      // Try to get the text value
+      return value['#text'] || value['@_value'] || value.toString() || '';
     }
-    if (value && typeof value === 'object') {
-      // If it's an object but not a nil value, try to get its actual value
-      const objValues = Object.values(value).filter(v => !this.isNilValue(v));
-      return objValues.length > 0 ? objValues[0] : null;
+
+    return '';
+  }
+
+  private findFinancialDataInProduct(product: any): any[] {
+    const financialContainers = [];
+    
+    // Recursive function to find financial data containers
+    const findContainers = (obj: any, path = '') => {
+      if (!obj || typeof obj !== 'object') return;
+      
+      // Check if this object has any financial data fields
+      const financialFields = [
+        // סכומים
+        'TOTAL-HAFKADA', 'SCHUM-HAFRASHA', 'TOTAL-CHISACHON-MTZBR',
+        'SCHUM-HAFKADA-CHODSHI', 'SCHUM-TZAVUR', 'YITRA-TZVURA',
+        'YITRAT-KASPEY-TAGMULIM', 'YITRAT-TAGMULIM',
+        'SCHUM-KITZVAT-ZIKNA', 'KITZVA-ZIKNA',
+        'KITZVAT-HODSHIT-TZFUYA', 'KITZVA-TZFUYA',
+        'SCHUM-HAFKADA', 'SCHUM-CHISACHON',
+        'YITRA-TZVURA-LEFI-MISIM', 'YITRA-TZVURA-LIFNEI-MISIM',
+        'SCHUM-HAFKADA-KOLEL', 'SCHUM-HAFKADA-OVED',
+        'SCHUM-HAFKADA-MAASIK', 'SCHUM-HAFKADA-PITZUIM',
+
+        // דמי ניהול
+        'SHEUR-DMEI-NIHUL', 'TOTAL-DMEI-NIHUL-HAFKADA',
+        'DMEI-NIHUL-NECHASIM', 'DMEI-NIHUL-HAFKADOT',
+        'DMEI-NIHUL-KOLEL', 'DMEI-NIHUL-NECHASIM-BEPOEL',
+        'DMEI-NIHUL-HAFKADOT-BEPOEL',
+
+        // תשואות
+        'TSUA-NETO', 'TSUA-SHNATI',
+        'TSUA-NOMINALI', 'TSUA-REALI',
+        'TSUA-MEMUZAAT', 'TSUA-MITZTABERET',
+
+        // ביטוחים
+        'ALUT-KISUI', 'ALUT-KISUI-BITUCHI',
+        'SHEUR-KISUY-NECHUT', 'ACHUZ-KISUI-OVDAN-KOSHER-AVODA',
+        'ALUT-KISUI-MAVET', 'ALUT-KISUI-OVDAN-KOSHER-AVODA',
+
+        // אחוזי הפקדה
+        'ACHUZ-HAFKADA-OVED', 'ACHUZ-HAFKADA-MAASIK',
+        'ACHUZ-HAFKADA-PITZUIM',
+
+        // רווח והפסד
+        'REVACH-HEFSED-BENIKOI-HOZAHOT',
+        'REVACH-HEFSED-SHKALI', 'REVACH-HEFSED-MADAD',
+        'REVACH-HEFSED-MATACH'
+      ];
+
+      const foundFields = financialFields.filter(field => field in obj);
+      if (foundFields.length > 0) {
+        console.log(`Found financial data at ${path}:`, 
+          foundFields.reduce((acc, field) => {
+            acc[field] = obj[field];
+            return acc;
+          }, {}));
+        financialContainers.push(obj);
+      }
+
+      // Recursively search in all object properties
+      Object.entries(obj).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !('@_xmlns:xsi' in value)) {
+          findContainers(value, path ? `${path}.${key}` : key);
+        }
+      });
+    };
+
+    findContainers(product);
+    return financialContainers;
+  }
+
+  private extractFinancialData(product: any): any {
+    console.log('Extracting financial data from product:', product);
+    
+    // Get all possible financial data containers
+    const containers = this.findFinancialDataInProduct(product);
+    console.log('Found financial data containers:', containers);
+
+    // Initialize with default values
+    const financialData = {
+      // סכומים
+      'TOTAL-HAFKADA': 0,
+      'SCHUM-HAFRASHA': 0,
+      'TOTAL-CHISACHON-MTZBR': 0,
+      'YITRAT-KASPEY-TAGMULIM': 0,
+      'KITZVAT-HODSHIT-TZFUYA': 0,
+      'SCHUM-KITZVAT-ZIKNA': 0,
+
+      // דמי ניהול
+      'SHEUR-DMEI-NIHUL': 0,
+      'TOTAL-DMEI-NIHUL-HAFKADA': 0,
+      'DMEI-NIHUL-KOLEL': 0,
+
+      // תשואות
+      'TSUA-NETO': 0,
+      'TSUA-NOMINALI': 0,
+      'TSUA-REALI': 0,
+      'TSUA-MEMUZAAT': 0,
+      'TSUA-MITZTABERET': 0,
+
+      // ביטוחים
+      'ALUT-KISUI': 0,
+      'SHEUR-KISUY-NECHUT': 0,
+
+      // אחוזי הפקדה
+      'ACHUZ-HAFKADA-OVED': 0,
+      'ACHUZ-HAFKADA-MAASIK': 0,
+      'ACHUZ-HAFKADA-PITZUIM': 0,
+
+      // רווח והפסד
+      'REVACH-HEFSED-BENIKOI-HOZAHOT': 0
+    };
+
+    // Search for financial data in all containers
+    for (const container of containers) {
+      for (const [key, value] of Object.entries(container)) {
+        // Map alternative field names to standard ones
+        const mappings: { [key: string]: string } = {
+          // סכומים
+          'SCHUM-HAFKADA-CHODSHI': 'TOTAL-HAFKADA',
+          'SCHUM-HAFKADA': 'TOTAL-HAFKADA',
+          'SCHUM-TZAVUR': 'TOTAL-CHISACHON-MTZBR',
+          'YITRA-TZVURA': 'TOTAL-CHISACHON-MTZBR',
+          'YITRA-TZVURA-LEFI-MISIM': 'TOTAL-CHISACHON-MTZBR',
+          'YITRA-TZVURA-LIFNEI-MISIM': 'TOTAL-CHISACHON-MTZBR',
+          'SCHUM-CHISACHON': 'TOTAL-CHISACHON-MTZBR',
+          'YITRAT-TAGMULIM': 'YITRAT-KASPEY-TAGMULIM',
+          'KITZVA-TZFUYA': 'KITZVAT-HODSHIT-TZFUYA',
+          'KITZVA-ZIKNA': 'SCHUM-KITZVAT-ZIKNA',
+
+          // דמי ניהול
+          'DMEI-NIHUL-NECHASIM': 'SHEUR-DMEI-NIHUL',
+          'DMEI-NIHUL-HAFKADOT': 'TOTAL-DMEI-NIHUL-HAFKADA',
+          'DMEI-NIHUL-NECHASIM-BEPOEL': 'SHEUR-DMEI-NIHUL',
+          'DMEI-NIHUL-HAFKADOT-BEPOEL': 'TOTAL-DMEI-NIHUL-HAFKADA',
+
+          // תשואות
+          'TSUA-SHNATI': 'TSUA-NETO',
+
+          // ביטוחים
+          'ALUT-KISUI-BITUCHI': 'ALUT-KISUI',
+          'ACHUZ-KISUI-OVDAN-KOSHER-AVODA': 'SHEUR-KISUY-NECHUT',
+          'ALUT-KISUI-MAVET': 'ALUT-KISUI',
+          'ALUT-KISUI-OVDAN-KOSHER-AVODA': 'ALUT-KISUI'
+        };
+
+        const standardKey = mappings[key] || key;
+        if (standardKey in financialData) {
+          const extractedValue = this.extractNumber(value);
+          if (extractedValue > 0) { // Only update if we found a positive value
+            console.log(`Found value for ${standardKey}:`, extractedValue, 'from original key:', key);
+            financialData[standardKey] = extractedValue;
+          }
+        }
+      }
     }
-    return value;
+
+    console.log('Final financial data:', financialData);
+    return financialData;
+  }
+
+  private extractProductData(product: any): any {
+    // Extract basic product data
+    const basicData = {
+      'MISPAR-POLISA-O-HESHBON': this.extractValue(product['MISPAR-POLISA-O-HESHBON']) || 
+                                 this.extractValue(product['MISPAR-POLISA']) || 
+                                 this.extractValue(product['MISPAR-CHESHBON']) || '',
+      'SUG-KUPA': this.extractValue(product['SUG-KUPA']) || '',
+      'SUG-MUTZAR': this.extractValue(product['SUG-MUTZAR']) || '',
+      'SUG-TOCHNIT-O-CHESHBON': this.extractValue(product['SUG-TOCHNIT-O-CHESHBON']) || 
+                                this.extractValue(product['SUG-TOCHNIT']) || '',
+      'SHEM-TOCHNIT': this.extractValue(product['SHEM-TOCHNIT']) || '',
+      'STATUS-POLISA-O-CHESHBON': this.extractValue(product['STATUS-POLISA-O-CHESHBON']) || 
+                                  this.extractValue(product['STATUS-POLISA']) || 
+                                  this.extractValue(product['STATUS-CHESHBON']) || '',
+      'TAARICH-TCHILAT-HABITUACH': this.extractValue(product['TAARICH-TCHILAT-HABITUACH']) || 
+                                   this.extractValue(product['TAARICH-TCHILAT-BITTUACH']) || 
+                                   this.extractValue(product['TAARICH-TCHILA']) || ''
+    };
+
+    // Get financial data
+    const financialData = this.extractFinancialData(product);
+
+    return {
+      ...basicData,
+      ...financialData
+    };
   }
 
   extractFieldsFromXml(xmlContent: string) {
@@ -315,45 +510,7 @@ export class XMLFieldExtractor {
               
               // Map each product to our standardized format
               const mappedProducts = products.map(product => {
-                // Extract financial data from all possible paths
-                const financialData = {
-                  ...product,
-                  ...product.NetuneiCheshbon,
-                  ...product.PirteiPolisa,
-                  ...product.NetuneiPolisa,
-                  ...product.YitraOTnua,
-                  ...product.PirteiTochnit,
-                  ...product.NetuneiTochnit
-                };
-
-                // Clean up nil values and extract actual values from objects
-                const cleanData = Object.entries(financialData).reduce((acc, [key, value]) => {
-                  acc[key] = this.extractValue(value);
-                  return acc;
-                }, {} as Record<string, any>);
-
-                return {
-                  'MISPAR-POLISA-O-HESHBON': cleanData['MISPAR-POLISA-O-HESHBON'] || cleanData['MISPAR-POLISA'] || cleanData['MISPAR-CHESHBON'] || '',
-                  'SUG-KUPA': cleanData['SUG-KUPA'] || mutzar.NetuneiMutzar['SUG-KUPA'] || '',
-                  'SUG-MUTZAR': cleanData['SUG-MUTZAR'] || mutzar.NetuneiMutzar['SUG-MUTZAR'] || '',
-                  'SUG-TOCHNIT-O-CHESHBON': cleanData['SUG-TOCHNIT-O-CHESHBON'] || cleanData['SUG-TOCHNIT'] || '',
-                  'SHEM-TOCHNIT': cleanData['SHEM-TOCHNIT'] || '',
-                  'STATUS-POLISA-O-CHESHBON': cleanData['STATUS-POLISA-O-CHESHBON'] || cleanData['STATUS-POLISA'] || cleanData['STATUS-CHESHBON'] || '',
-                  'TOTAL-HAFKADA': this.extractNumber(cleanData['TOTAL-HAFKADA']) || this.extractNumber(cleanData['SCHUM-HAFKADA-CHODSHI']) || this.extractNumber(cleanData['SCHUM-HAFKADA']) || 0,
-                  'SCHUM-HAFRASHA': this.extractNumber(cleanData['SCHUM-HAFRASHA']) || 0,
-                  'TOTAL-CHISACHON-MTZBR': this.extractNumber(cleanData['TOTAL-CHISACHON-MTZBR']) || this.extractNumber(cleanData['SCHUM-TZAVUR']) || this.extractNumber(cleanData['YITRA-TZVURA']) || 0,
-                  'SHEUR-DMEI-NIHUL': this.extractNumber(cleanData['SHEUR-DMEI-NIHUL']) || this.extractNumber(cleanData['DMEI-NIHUL-NECHASIM']) || 0,
-                  'TOTAL-DMEI-NIHUL-HAFKADA': this.extractNumber(cleanData['TOTAL-DMEI-NIHUL-HAFKADA']) || this.extractNumber(cleanData['DMEI-NIHUL-HAFKADOT']) || 0,
-                  'ALUT-KISUI': this.extractNumber(cleanData['ALUT-KISUI']) || this.extractNumber(cleanData['ALUT-KISUI-BITUCHI']) || 0,
-                  'SHEUR-KISUY-NECHUT': this.extractNumber(cleanData['SHEUR-KISUY-NECHUT']) || this.extractNumber(cleanData['ACHUZ-KISUI-OVDAN-KOSHER-AVODA']) || 0,
-                  'TAARICH-TCHILAT-HABITUACH': cleanData['TAARICH-TCHILAT-HABITUACH'] || cleanData['TAARICH-TCHILAT-BITTUACH'] || cleanData['TAARICH-TCHILA'] || '',
-                  'TSUA-NETO': this.extractNumber(cleanData['TSUA-NETO']) || this.extractNumber(cleanData['TSUA-SHNATI']) || 0,
-                  'REVACH-HEFSED-BENIKOI-HOZAHOT': this.extractNumber(cleanData['REVACH-HEFSED-BENIKOI-HOZAHOT']) || 0,
-                  'YITRAT-KASPEY-TAGMULIM': this.extractNumber(cleanData['YITRAT-KASPEY-TAGMULIM']) || this.extractNumber(cleanData['YITRAT-TAGMULIM']) || 0,
-                  'KITZVAT-HODSHIT-TZFUYA': this.extractNumber(cleanData['KITZVAT-HODSHIT-TZFUYA']) || this.extractNumber(cleanData['KITZVA-TZFUYA']) || 0,
-                  'GIL-PRISHA': this.extractNumber(cleanData['GIL-PRISHA']) || 0,
-                  'SCHUM-KITZVAT-ZIKNA': this.extractNumber(cleanData['SCHUM-KITZVAT-ZIKNA']) || this.extractNumber(cleanData['KITZVA-ZIKNA']) || 0
-                };
+                return this.extractProductData(product);
               });
 
               allProducts.push(...mappedProducts);
@@ -427,14 +584,33 @@ export class XMLFieldExtractor {
   }
 
   private extractNumber(value: any): number {
+    if (!value) return 0;
+
+    // If it's already a number, return it
     if (typeof value === 'number') return value;
+
+    // If it's a string that can be converted to a number
     if (typeof value === 'string') {
-      const num = parseFloat(value.replace(/[^\d.-]/g, ''));
+      // Remove any non-numeric characters except decimal point and minus sign
+      const cleanValue = value.replace(/[^\d.-]/g, '');
+      const num = parseFloat(cleanValue);
       return isNaN(num) ? 0 : num;
     }
-    if (value && typeof value === 'object' && !('@_xmlns:xsi' in value)) {
-      return this.extractNumber(Object.values(value)[0]);
+
+    // If it's an object with a text value
+    if (typeof value === 'object' && value !== null) {
+      // Check for nil value
+      if (value['@_xsi:nil'] === 'true') return 0;
+
+      // Try to get the text value
+      const textValue = value['#text'] || value['@_value'] || value.toString();
+      if (textValue) {
+        const cleanValue = textValue.toString().replace(/[^\d.-]/g, '');
+        const num = parseFloat(cleanValue);
+        return isNaN(num) ? 0 : num;
+      }
     }
+
     return 0;
   }
 
@@ -510,12 +686,13 @@ export class XMLFieldExtractor {
     }
   }
 
-  private formatCurrency(amount: number): string {
+  private formatCurrency(value: number): string {
     return new Intl.NumberFormat('he-IL', {
       style: 'currency',
       currency: 'ILS',
-      maximumFractionDigits: 0
-    }).format(amount);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   }
 
   private formatDate(date: string | number): string {
@@ -555,7 +732,7 @@ export class XMLFieldExtractor {
       '4': 'קופת גמל מרכזית לפיצויים',
       '5': 'קרן פנסיה ותיקה',
       '6': 'קרן פנסיה חדשה מקיפה',
-      '7': 'קרן פנסיה חדשה כללית'
+      '7': 'ק��ן פנסיה חדשה כללית'
     };
     return types[type || ''] || 'לא צוין';
   }
@@ -597,5 +774,49 @@ export class XMLFieldExtractor {
         status: this.extractValue(mutzar['STATUS-POLISA-O-CHESHBON'])
       })) : []
     };
+  }
+
+  private formatProductDetails(mutzar: any): string {
+    return `
+מספר פוליסה/חשבון: ${mutzar['MISPAR-POLISA-O-HESHBON'] || 'לא צוין'}
+סוג קופה: ${mutzar['SUG-KUPA'] || 'לא צוין'}
+סוג מוצר: ${mutzar['SUG-MUTZAR'] || 'לא צוין'}
+סוג תוכנית: ${mutzar['SUG-TOCHNIT-O-CHESHBON'] || 'לא צוין'}
+שם תוכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
+סטטוס: ${mutzar['STATUS-POLISA-O-CHESHBON'] || 'לא צוין'}
+תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] || 'לא צוין'}
+
+נתונים פיננסיים:
+- סכומים:
+  * סה"כ הפקדה חודשית: ${mutzar['TOTAL-HAFKADA'] ? this.formatCurrency(mutzar['TOTAL-HAFKADA']) : 'לא צוין'}
+  * סה"כ חיסכון מצטבר: ${mutzar['TOTAL-CHISACHON-MTZBR'] ? this.formatCurrency(mutzar['TOTAL-CHISACHON-MTZBR']) : 'לא צוין'}
+  * יתרת כספי תגמולים: ${mutzar['YITRAT-KASPEY-TAGMULIM'] ? this.formatCurrency(mutzar['YITRAT-KASPEY-TAGMULIM']) : 'לא צוין'}
+  * קצבה חודשית צפויה: ${mutzar['KITZVAT-HODSHIT-TZFUYA'] ? this.formatCurrency(mutzar['KITZVAT-HODSHIT-TZFUYA']) : 'לא צוין'}
+  * סכום קצבת זקנה: ${mutzar['SCHUM-KITZVAT-ZIKNA'] ? this.formatCurrency(mutzar['SCHUM-KITZVAT-ZIKNA']) : 'לא צוין'}
+
+- דמי ניהול:
+  * דמי ניהול מנכסים: ${mutzar['SHEUR-DMEI-NIHUL'] ? mutzar['SHEUR-DMEI-NIHUL'] + '%' : 'לא צוין'}
+  * דמי ניהול מהפקדה: ${mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] ? mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] + '%' : 'לא צוין'}
+  * דמי ניהול כולל: ${mutzar['DMEI-NIHUL-KOLEL'] ? mutzar['DMEI-NIHUL-KOLEL'] + '%' : 'לא צוין'}
+
+- תשואות:
+  * תשואה נטו: ${mutzar['TSUA-NETO'] ? mutzar['TSUA-NETO'] + '%' : 'לא צוין'}
+  * תשואה נומינלית: ${mutzar['TSUA-NOMINALI'] ? mutzar['TSUA-NOMINALI'] + '%' : 'לא צוין'}
+  * תשואה ריאלית: ${mutzar['TSUA-REALI'] ? mutzar['TSUA-REALI'] + '%' : 'לא צוין'}
+  * תשואה ממוצעת: ${mutzar['TSUA-MEMUZAAT'] ? mutzar['TSUA-MEMUZAAT'] + '%' : 'לא צוין'}
+  * תשואה מצטברת: ${mutzar['TSUA-MITZTABERET'] ? mutzar['TSUA-MITZTABERET'] + '%' : 'לא צוין'}
+
+- ביטוחים:
+  * עלות כיסוי ביטוחי: ${mutzar['ALUT-KISUI'] ? this.formatCurrency(mutzar['ALUT-KISUI']) : 'לא צוין'}
+  * שיעור כיסוי נכות: ${mutzar['SHEUR-KISUY-NECHUT'] ? mutzar['SHEUR-KISUY-NECHUT'] + '%' : 'לא צוין'}
+
+- אחוזי הפקדה:
+  * אחוז הפקדת עובד: ${mutzar['ACHUZ-HAFKADA-OVED'] ? mutzar['ACHUZ-HAFKADA-OVED'] + '%' : 'לא צוין'}
+  * אחוז הפקדת מעסיק: ${mutzar['ACHUZ-HAFKADA-MAASIK'] ? mutzar['ACHUZ-HAFKADA-MAASIK'] + '%' : 'לא צוין'}
+  * אחוז הפקדה לפיצויים: ${mutzar['ACHUZ-HAFKADA-PITZUIM'] ? mutzar['ACHUZ-HAFKADA-PITZUIM'] + '%' : 'לא צוין'}
+
+- רווח והפסד:
+  * רווח/הפסד בניכוי הוצאות: ${mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT'] ? this.formatCurrency(mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT']) : 'לא צוין'}
+`;
   }
 } 
