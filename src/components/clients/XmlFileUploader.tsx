@@ -17,48 +17,93 @@ interface ClientData {
   first_name: string;
   last_name: string;
   id_number: string;
-  email: string;
-  phone: string;
-  address_street: string;
-  address_city: string;
+  email?: string;
+  phone?: string;
+  address_street?: string;
+  address_city?: string;
   status: 'active' | 'inactive' | 'lead';
+  products?: Array<{
+    type: string;
+    name: string;
+    policy_number?: string;
+    start_date?: string;
+    balance?: number;
+    monthly_deposit?: number;
+    employee_contribution?: number;
+    employer_contribution?: number;
+    compensation_contribution?: number;
+    status?: string;
+  }>;
 }
 
 export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
   const { user } = useUser();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const normalizeClientData = (data: any): ClientData & { user_id: string } => {
+    // Clean up phone number - remove non-digits and add prefix if needed
+    let phone = data.phone ? String(data.phone).replace(/\D/g, '') : undefined;
+    if (phone && !phone.startsWith('0')) {
+      phone = '0' + phone;
+    }
+
+    // Don't save '-' as email
+    const email = data.email && data.email !== '-' ? String(data.email).toLowerCase().trim() : undefined;
+
+    // Exclude products from client data since they're stored in a separate table
+    const { products, ...clientData } = data;
+
+    return {
+      user_id: data.user_id,
+      first_name: String(data.first_name || '').trim(),
+      last_name: String(data.last_name || '').trim(),
+      id_number: String(data.id_number || '').trim(),
+      email,
+      phone,
+      address_street: data.address_street ? String(data.address_street).trim() : undefined,
+      address_city: data.address_city ? String(data.address_city).trim() : undefined,
+      status: 'active'
+    };
+  };
+
   const createClientFromXml = async (clientData: ClientData) => {
     try {
-      if (!clientData || !user) return null;
-      console.log('Creating/updating client with data:', clientData);
+      if (!clientData?.id_number || !user?.id) {
+        console.error('Missing required data:', { clientData, userId: user?.id });
+        return null;
+      }
 
-      // First check if client exists
-      const { data: existingClient } = await supabase
+      const normalizedData = normalizeClientData({
+        ...clientData,
+        user_id: user.id
+      });
+
+      console.log('Creating/updating client with data:', normalizedData);
+
+      // Check if client exists
+      const { data: existingClient, error: searchError } = await supabase
         .from('clients')
         .select('*')
-        .eq('id_number', clientData.id_number)
-        .single();
+        .eq('id_number', normalizedData.id_number)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      console.log('Existing client check:', existingClient);
+      if (searchError) {
+        console.error('Error checking existing client:', searchError);
+        toast.error('שגיאה בבדיקת לקוח קיים');
+        return null;
+      }
 
+      let client;
       if (existingClient) {
-        // Only update if the client belongs to the current user
-        if (existingClient.user_id !== user.id) {
-          toast.error('לא ניתן לעדכן לקוח השייך למשתמש אחר');
-          return null;
-        }
-
         // Update existing client
         const { data: updatedClient, error: updateError } = await supabase
           .from('clients')
           .update({
-            ...clientData,
-            user_id: user.id,
+            ...normalizedData,
             updated_at: new Date().toISOString()
           })
-          .eq('id_number', clientData.id_number)
-          .eq('user_id', user.id)
+          .eq('id', existingClient.id)
           .select()
           .single();
 
@@ -68,34 +113,68 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
           return null;
         }
 
+        client = updatedClient;
         toast.success('פרטי הלקוח עודכנו בהצלחה');
-        console.log('Updated client:', updatedClient);
-        return updatedClient;
       } else {
         // Create new client
-        const { data: newClient, error: insertError } = await supabase
+        const { data: newClient, error: createError } = await supabase
           .from('clients')
           .insert([{
-            ...clientData,
-            user_id: user.id,
+            ...normalizedData,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }])
           .select()
           .single();
 
-        if (insertError) {
-          console.error('Error creating client:', insertError);
+        if (createError) {
+          console.error('Error creating client:', createError);
           toast.error('שגיאה ביצירת הלקוח');
           return null;
         }
 
-        toast.success('לקוח חדש נוצר בהצלחה');
-        console.log('Created new client:', newClient);
-        return newClient;
+        client = newClient;
+        toast.success('הלקוח נוצר בהצלחה');
       }
+
+      // Handle pension products if they exist
+      if (client && normalizedData.products?.length) {
+        const { error: productsError } = await supabase
+          .from('pension_products')
+          .upsert(
+            normalizedData.products.map(product => ({
+              client_id: client.id,
+              user_id: user.id,
+              type: product.type,
+              name: product.name,
+              policy_number: product.policy_number,
+              start_date: product.start_date,
+              balance: product.balance,
+              monthly_deposit: product.monthly_deposit,
+              employee_contribution: product.employee_contribution,
+              employer_contribution: product.employer_contribution,
+              compensation_contribution: product.compensation_contribution,
+              status: product.status,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })),
+            {
+              onConflict: 'policy_number',
+              ignoreDuplicates: false
+            }
+          );
+
+        if (productsError) {
+          console.error('Error saving pension products:', productsError);
+          toast.error('שגיאה בשמירת המוצרים הפנסיוניים');
+        } else {
+          toast.success('המוצרים הפנסיוניים נשמרו בהצלחה');
+        }
+      }
+
+      return client;
     } catch (error) {
-      console.error('Error processing client:', error);
+      console.error('Error in createClientFromXml:', error);
       toast.error('שגיאה בעיבוד נתוני הלקוח');
       return null;
     }
@@ -109,52 +188,54 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
       
       const xmlFiles: { name: string; content: string }[] = [];
       const extractor = new XMLFieldExtractor();
+      let lastProcessedClient: Client | null = null;
       
-      // Extract only XML files
-      const extractionPromises = Object.keys(zipContents.files)
-        .filter(fileName => fileName.toLowerCase().endsWith('.xml'))
-        .map(async (fileName) => {
-          const fileData = zipContents.files[fileName];
-          if (!fileData.dir) {
-            const content = await fileData.async('text');
-            xmlFiles.push({
-              name: fileName,
-              content
-            });
-            const result = await extractor.extractFieldsFromXml(content);
-            
-            // Pass the extracted data to createMarkdownReport
-            const report = extractor.createMarkdownReport(result.data.lakoach, result.data.maasik);
-            console.log('Generated Report:', report);
+      const xmlFileNames = Object.keys(zipContents.files)
+        .filter(fileName => fileName.toLowerCase().endsWith('.xml'));
 
-            // Pass the data to extractClientData
-            const clientData = extractor.extractClientData(result.data);
-            if (clientData) {
-              // Map the client data to match ClientData interface
-              const mappedClientData: ClientData = {
-                first_name: clientData.firstName,
-                last_name: clientData.lastName,
-                id_number: clientData.id,
-                email: clientData.email,
-                phone: clientData.phone,
-                address_street: clientData.address.split(',')[0] || '',
-                address_city: clientData.address.split(',')[1]?.trim() || '',
-                status: 'active'
-              };
-
-              const client = await createClientFromXml(mappedClientData);
-              if (client) {
-                onXmlFilesExtracted(xmlFiles, client);
-              }
-            }
-          }
-        });
-
-      await Promise.all(extractionPromises);
-      
-      if (xmlFiles.length === 0) {
+      if (xmlFileNames.length === 0) {
         toast.error('לא נמצאו קבצי XML בקובץ ה-ZIP');
         return;
+      }
+
+      for (const fileName of xmlFileNames) {
+        const fileData = zipContents.files[fileName];
+        if (fileData.dir) continue;
+
+        try {
+          const content = await fileData.async('text');
+          xmlFiles.push({ name: fileName, content });
+
+          const result = await extractor.extractFieldsFromXml(content);
+          console.log('Generated Report:', result.report);
+
+          const clientData = extractor.extractClientData(result.data);
+          if (clientData) {
+            const mappedClientData: ClientData = {
+              first_name: clientData.firstName,
+              last_name: clientData.lastName,
+              id_number: clientData.id,
+              email: clientData.email,
+              phone: clientData.phone,
+              address_street: clientData.address.split(',')[0] || '',
+              address_city: clientData.address.split(',')[1]?.trim() || '',
+              status: 'active',
+              products: clientData.products
+            };
+
+            const client = await createClientFromXml(mappedClientData);
+            if (client) {
+              lastProcessedClient = client;
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing file ${fileName}:`, error);
+          toast.error(`שגיאה בעיבוד קובץ ${fileName}`);
+        }
+      }
+
+      if (xmlFiles.length > 0 && lastProcessedClient) {
+        onXmlFilesExtracted(xmlFiles, lastProcessedClient);
       }
 
     } catch (error) {
