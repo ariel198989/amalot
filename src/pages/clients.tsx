@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { XmlFileUploader } from '@/components/clients/XmlFileUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { XmlImportService } from '@/services/XmlImportService';
 import { toast } from 'sonner';
+import { ClientsTable } from '@/components/ClientsTable';
+import { supabase } from '@/lib/supabase';
+import { Client } from '@/types/clearing-house';
 
 interface XmlFile {
   name: string;
@@ -15,13 +18,51 @@ const xmlImportService = new XmlImportService();
 export default function ClientsPage() {
   const [xmlFiles, setXmlFiles] = useState<XmlFile[]>([]);
   const [parsedData, setParsedData] = useState<any[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [activeTab, setActiveTab] = useState('list');
 
-  const handleXmlFilesExtracted = (files: XmlFile[]) => {
+  const fetchClients = async () => {
+    console.log('Fetching clients...');
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*');
+    
+    if (error) {
+      console.error('Error fetching clients:', error);
+      toast.error('שגיאה בטעינת הלקוחות');
+      return;
+    }
+
+    console.log('Fetched clients:', data);
+    if (data) {
+      // וודא שיש לכל לקוח את כל השדות הנדרשים
+      const validClients = data.map(client => ({
+        ...client,
+        id: client.id || '',
+        first_name: client.first_name || '',
+        last_name: client.last_name || '',
+        id_number: client.id_number || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        products: client.products || []
+      }));
+      setClients(validClients);
+      console.log('Processed clients:', validClients);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const handleXmlFilesExtracted = async (files: XmlFile[]) => {
+    console.log('Processing XML files:', files);
     setXmlFiles(files);
     try {
       const processedFiles = xmlImportService.processXmlFiles(files);
+      console.log('Processed files:', processedFiles);
       setParsedData(processedFiles);
-      console.log('Processed XML files:', processedFiles);
+      await fetchClients();
     } catch (error) {
       console.error('Error processing XML files:', error);
       toast.error('שגיאה בעיבוד קבצי ה-XML');
@@ -35,11 +76,28 @@ export default function ClientsPage() {
         <p className="text-gray-500 mt-1">ניהול וייבוא נתוני לקוחות</p>
       </div>
 
-      <Tabs defaultValue="import" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="import">ייבוא נתונים</TabsTrigger>
           <TabsTrigger value="list">רשימת לקוחות</TabsTrigger>
+          <TabsTrigger value="import">ייבוא נתונים</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="list">
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold">רשימת לקוחות</h2>
+            </CardHeader>
+            <CardContent>
+              {clients.length > 0 ? (
+                <ClientsTable clients={clients} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  לא נמצאו לקוחות. אנא ייבא קבצי XML כדי להוסיף לקוחות.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="import">
           <Card>
@@ -90,17 +148,6 @@ export default function ClientsPage() {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="list">
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold">רשימת לקוחות</h2>
-            </CardHeader>
-            <CardContent>
-              {/* Your existing clients table or list component can go here */}
             </CardContent>
           </Card>
         </TabsContent>

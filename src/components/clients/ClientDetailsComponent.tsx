@@ -39,11 +39,13 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
   const [existingFiles, setExistingFiles] = useState<ClientFile[]>([]);
   const [financialDetails, setFinancialDetails] = useState<ClientFinancialDetails | null>(null);
   const [journeys, setJourneys] = useState<CustomerJourney[]>([]);
+  const [xmlData, setXmlData] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen && client) {
       loadClientData();
       loadJourneyData();
+      loadXmlData();
     }
   }, [isOpen, client]);
 
@@ -96,6 +98,31 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
     } catch (error) {
       console.error('Error loading journey data:', error);
       toast.error('שגיאה בטעינת נתוני מסע לקוח');
+    }
+  };
+
+  const loadXmlData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_xml_data')
+        .select('raw_data')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error loading XML data:', error);
+        toast.error('שגיאה בטעינת נתוני המסלקה');
+        return;
+      }
+
+      if (data?.[0]?.raw_data) {
+        setXmlData(data[0].raw_data);
+        console.log('Loaded XML data:', data[0].raw_data);
+      }
+    } catch (error) {
+      console.error('Error in loadXmlData:', error);
+      toast.error('שגיאה בטעינת נתוני המסלקה');
     }
   };
 
@@ -256,9 +283,62 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
     </div>
   );
 
+  const renderXmlDataTab = () => {
+    if (!xmlData) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">אין נתוני מסלקה זמינים</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Client Data */}
+        <Card>
+          <CardHeader>
+            <CardTitle>נתוני לקוח</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {xmlData.lakoach && Object.entries(xmlData.lakoach).map(([key, value]) => (
+                <div key={key} className="flex justify-between">
+                  <span className="font-medium">{key}:</span>
+                  <span>{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products */}
+        {xmlData.mutzarim?.map((product: any, index: number) => (
+          <Card key={index}>
+            <CardHeader>
+              <CardTitle>מוצר {index + 1}</CardTitle>
+              <CardDescription>
+                {product['SHEM-TOCHNIT'] || product['SUG-MUTZAR'] || 'מוצר פנסיוני'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(product).map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="font-medium">{key}:</span>
+                    <span>{String(value)}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white dark:bg-gray-800 w-[600px] max-h-[600px] overflow-hidden flex flex-col p-4 rounded-lg shadow-lg">
+      <DialogContent className="bg-white dark:bg-gray-800 w-[800px] max-h-[80vh] overflow-hidden flex flex-col p-4 rounded-lg shadow-lg">
         <DialogHeader className="pb-3 border-b dark:border-gray-700">
           <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
             {client?.first_name} {client?.last_name}
@@ -271,117 +351,26 @@ const ClientDetails = ({ client, isOpen, onClose }: ClientDetailsProps) => {
         <div className="flex-1 overflow-y-auto py-3">
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-3 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-              <TabsTrigger 
-                value="overview"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
-              >
-                מידע כללי
-              </TabsTrigger>
-              <TabsTrigger 
-                value="files"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
-              >
-                מסמכים
-              </TabsTrigger>
-              <TabsTrigger 
-                value="activities"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
-              >
-                פעילויות
-              </TabsTrigger>
-              <TabsTrigger 
-                value="financial"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600"
-              >
-                פרטים פיננסיים
-              </TabsTrigger>
+              <TabsTrigger value="overview">מידע כללי</TabsTrigger>
+              <TabsTrigger value="files">מסמכים</TabsTrigger>
+              <TabsTrigger value="activities">פעילויות</TabsTrigger>
+              <TabsTrigger value="xml">נתוני מסלקה</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-3">
-              <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-gray-900 dark:text-white">פרטים אישיים</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-3 pt-0">
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">שם מלא</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{client?.first_name} {client?.last_name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">תעודת זהות</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{client?.id_number}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">טלפון</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{client?.phone}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">אימייל</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{client?.email}</p>
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="overview">
+              {renderOverviewTab()}
             </TabsContent>
 
-            <TabsContent value="files" className="space-y-3">
-              {/* תוכן הקבצים */}
+            <TabsContent value="files">
+              {renderDocumentsTab()}
             </TabsContent>
 
-            <TabsContent value="activities" className="space-y-3">
-              <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-gray-900 dark:text-white">מסעות לקוח</CardTitle>
-                  <CardDescription>היסטוריית מסעות הלקוח ופעילויות</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {journeys.length > 0 ? (
-                    journeys.map((journey) => (
-                      <div 
-                        key={journey.id} 
-                        className="border dark:border-gray-700 rounded-lg p-3 space-y-2"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {format(new Date(journey.created_at), 'dd/MM/yyyy', { locale: he })}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              סה"כ: ₪{journey.amount?.toLocaleString() || '0'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid gap-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <ArrowRight className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-900 dark:text-white">
-                              {getProductTypeDisplay(journey.product_type)}
-                            </span>
-                            {journey.notes && (
-                              <>
-                                <span className="text-gray-500">|</span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {journey.notes}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        לא נמצאו מסעות לקוח
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <TabsContent value="activities">
+              {renderActivitiesTab()}
             </TabsContent>
 
-            <TabsContent value="financial" className="space-y-3">
-              {/* תוכן פיננסי */}
+            <TabsContent value="xml">
+              {renderXmlDataTab()}
             </TabsContent>
           </Tabs>
         </div>

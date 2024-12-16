@@ -31,15 +31,14 @@ Mimshak
                 │   ├── SHEM-MAASIK: שם מעסיק
                 │   ├── MISPAR-MEZAHE-MAASIK: מספר מזהה מעסיק
                 │   ├── STATUS-MAASIK: סטטוס מעסיק
-                │   ├── MPR-MAASIK-BE-YATZRAN: מספר מעסיק אצל יצרן
+                │   ├── MPR-MAASIK-BE-YATZRAN: מספר מעסיק אצל היצרן
                 │   ├── ERETZ: ארץ
                 │   ├── SHEM-YISHUV: עיר
                 │   ├── SHEM-RECHOV: רחוב
                 │   ├── MISPAR-BAIT: מספר בית
                 │   ├── MIKUD: מיקוד
                 │   ├── MISPAR-TELEPHONE-KAVI: טלפון
-                │   ├── E-MAIL: דוא"ל
-                │   │
+                │   └── E-MAIL: דוא"ל
                 │   └── IshKesherYeshutMaasik (איש קשר)
                 │       ├── SHEM-PRATI: שם פרטי
                 │       ├── SHEM-MISHPACHA: שם משפחה
@@ -47,116 +46,219 @@ Mimshak
                 │       ├── MISPAR-CELLULARI: נייד
                 │       └── E-MAIL: דוא"ל
                 │
-                └── HeshbonotOPolisot (חשבונות ופוליסות)
-                    └── HeshbonOPolisa
+                └── HeshbonotOPolisot
+                    └── HeshbonOPolisa (מוצר פנסיוני)
                         ├── MISPAR-POLISA-O-HESHBON: מספר פוליסה/חשבון
+                        ├── MISPAR-POLISA-O-HESHBON-NEGDI: מספר חשבון נגדי
                         ├── SUG-KUPA: סוג קופה
                         ├── SUG-MUTZAR: סוג מוצר
-                        ├── SUG-TOCHNIT-O-CHESHBON: סוג תכנית/חשבון
+                        ├── SUG-TOCHNIT-O-CHESHBON: סוג תכנית
                         ├── SHEM-TOCHNIT: שם תכנית
-                        ├── STATUS-POLISA-O-CHESHBON: סטטוס פוליסה/חשבון
+                        ├── SHEM-MASLUL-HASHKAA: שם מסלול השקעה
+                        ├── SHEM-MASLUL-HABITUAH: שם מסלול ביטוח
+                        ├── STATUS-POLISA-O-CHESHBON: סטטוס
                         │
                         ├── סכומים
                         │   ├── TOTAL-HAFKADA: סה"כ הפקדה
+                        │   ├── TOTAL-HAFKADA-ACHRONA: סה"כ הפקדה אחרונה
                         │   ├── SCHUM-HAFRASHA: סכום הפרשה
-                        │   └── TOTAL-CHISACHON-MTZBR: סה"כ חיסכון מצטבר
+                        │   ├── SCHUM-HAFKADA-SHESHULAM: סכום הפקדה ששולם
+                        │   ├── TOTAL-CHISACHON-MTZBR: סה"כ חיסכון מצטבר
+                        │   ├── TOTAL-CHISACHON-MITZTABER-TZAFUY: סה"כ חיסכון מצטבר צפוי
+                        │   ├── YITRAT-PITZUIM-LELO-HITCHASHBENOT: יתרת פיצויים ללא התחשבנות
+                        │   └── YITRAT-KASPEY: יתרת כספים
                         │
                         ├── דמי ניהול
                         │   ├── SHEUR-DMEI-NIHUL: שיעור דמי ניהול
-                        │   └── TOTAL-DMEI-NIHUL-HAFKADA: סה"כ דמי ניהול הפקדה
+                        │   ├── SHEUR-DMEI-NIHUL-TZVIRA: שיעור דמי ניהול מצבירה
+                        │   ├── SHEUR-DMEI-NIHUL-HAFKADA: שיעור דמי ניהול מהפקדה
+                        │   ├── TOTAL-DMEI-NIHUL-HAFKADA: סה"כ דמי ניהול מהפקדה
+                        │   └── TOTAL-DMEI-NIHUL-POLISA-O-HESHBON: סה"כ דמי ניהול פוליסה/חשבון
                         │
                         ├── ביטוח
                         │   ├── ALUT-KISUI: עלות כיסוי
+                        │   ├── ALUT-KISUI-NECHUT: עלות כיסוי נכות
                         │   ├── SHEUR-KISUY-NECHUT: שיעור כיסוי נכות
-                        │   └── TAARICH-TCHILAT-HABITUACH: תאר��ך תחילת ביטוח
+                        │   ├── TAARICH-TCHILAT-HABITUACH: תאריך תחילת ביטוח
+                        │   └── SUG-KISUY-BITOCHI: סוג כיסוי ביטוחי
                         │
                         ├── נתונים פיננסיים
                         │   ├── TSUA-NETO: תשואה נטו
+                        │   ├── SHEUR-TSUA-NETO: שיעור תשואה נטו
                         │   ├── REVACH-HEFSED-BENIKOI-HOZAHOT: רווח/הפסד בניכוי הוצאות
                         │   └── YITRAT-KASPEY-TAGMULIM: יתרת כספי תגמולים
                         │
-                        └── פנסיה (אופציונלי)
+                        └── פנסיה
                             ├── KITZVAT-HODSHIT-TZFUYA: קצבה חודשית צפויה
                             ├── GIL-PRISHA: גיל פרישה
-                            └── SCHUM-KITZVAT-ZIKNA: סכום קצבת זקנה
+                            ├── GIL-PRISHA-LEPENSIYAT-ZIKNA: גיל פרישה לפנסיית זקנה
+                            ├── SCHUM-KITZVAT-ZIKNA: סכום קצבת זקנה
+                            ├── MENAT-PENSIA-TZVURA: מנת פנסיה צבורה
+                            └── SUG-KEREN-PENSIA: סוג קרן פנסיה
 ```
 
-## מיפוי שדות
+## מיפוי קודים
 
-### פרטי לקוח (YeshutLakoach)
-| שדה ב-XML | תיאור | דוגמה |
-|-----------|--------|--------|
-| SHEM-PRATI | שם פרטי | שיר פרחיה |
-| SHEM-MISHPACHA | שם משפחה | עמר |
-| MISPAR-ZIHUY | מספר זהות | 205600224 |
-| TAARICH-LEYDA | תאריך לידה | 19940423 |
-| MISPAR-CELLULARI | טלפון נייד | 0526557865 |
-| E-MAIL | דוא"ל | shiramar0014@gmail.com |
-| ERETZ | ארץ | ישראל |
-| SHEM-YISHUV | עיר | אלעד |
-| SHEM-RECHOV | רחוב | רבן יוחנן בן זכאי |
-| MISPAR-BAIT | מספר בית | 5 |
-| MIKUD | מיקוד | 4080007 |
+### סוג קופה (SUG-KUPA)
+- 1: קופת גמל
+- 2: קרן פנסיה
+- 3: קרן השתלמות
+- 4: ביטוח מנהלים
 
-### פרטי מצרן (YeshutYatzran)
-| שדה ב-XML | תיאור | דוגמה |
-|-----------|--------|--------|
-| SHEM-YATZRAN | שם יצרן | הפניקס חברה לביטוח בע"מ |
-| KOD-MEZAHE-YATZRAN | קוד מזהה יצרן | 520023185 |
-| SHEM-METAFEL | שם מטפל | הפניקס חברה לביטוח בע"מ |
-| MEZAHE-LAKOACH-MISLAKA | מזהה לקוח מסלקה | 520023185 |
+### סטטוס פוליסה/חשבון (STATUS-POLISA-O-CHESHBON)
+- 1: פעיל
+- 2: מוקפא
+- 3: מבוטל
+- 7: מבוטל
 
-### פרטי מעסיק (YeshutMaasik)
-| שדה ב-XML | תיאור | דוגמה |
-|-----------|--------|--------|
-| SHEM-MAASIK | שם מעסיק | הסתדרות המורים בישראל בע"מ |
-| MISPAR-MEZAHE-MAASIK | מספר מזהה מעסיק | 589924810 |
-| STATUS-MAASIK | סטטוס מעסיק | 1 |
-| MPR-MAASIK-BE-YATZRAN | מספר מעסיק אצל יצרן | 0400030003 |
-| ERETZ | ארץ | ישראל |
-| SHEM-YISHUV | עיר | תל אביב-יפו |
-| SHEM-RECHOV | רחוב | - |
-| MISPAR-BAIT | מספר בית | - |
-| MIKUD | מיקוד | - |
-| MISPAR-TELEPHONE-KAVI | טלפון | - |
-| E-MAIL | דוא"ל | - |
+### סטטוס מעסיק (STATUS-MAASIK)
+- 1: פעיל
+- 2: לא פעיל
+- 3: מוקפ��
 
-### פרטי איש קשר (IshKesherYeshutMaasik)
-| שדה ב-XML | תיאור | דוגמה |
-|-----------|--------|--------|
-| SHEM-PRATI | שם פרטי | אירין |
-| SHEM-MISHPACHA | שם משפחה | לוי |
-| MISPAR-TELEPHONE-KAVI | טלפון | 03-5639999 |
-| MISPAR-CELLULARI | נייד | 053-3373704 |
-| E-MAIL | דוא"ל | irenel@manpowergroup.co.il |
+### סוג הפרש (SUG-HAFRASHA)
+- 1: תגמולי עובד
+- 2: תגמולי מעביד
+- 3: פיצויים
+- 8: אחר
+- 9: הפקדה חד פעמית
 
-### פרטי חשבון/פוליסה (HeshbonOPolisa)
-| שדה ב-XML | תיאור | דוגמה |
-|-----------|--------|--------|
-| MISPAR-POLISA-O-HESHBON | מספר פוליסה/חשבון | 3000-205600224 |
-| SUG-KUPA | סוג קופה | ריסק |
-| SUG-MUTZAR | סוג מוצר | 8 |
-| SUG-TOCHNIT-O-CHESHBON | סוג תכנית/חשבון | 4 |
-| SHEM-TOCHNIT | שם תכנית | ריסק |
-| STATUS-POLISA-O-CHESHBON | סטטוס פוליסה/חשבון | פעיל |
-| TOTAL-HAFKADA | סה"כ הפקדה | ₪186.00 |
-| SCHUM-HAFRASHA | סכום הפרשה | ₪186.00 |
-| TOTAL-CHISACHON-MTZBR | סה"כ חיסכון מצטבר | ₪0.00 |
-| SHEUR-DMEI-NIHUL | שיעור דמי ניהול | 0.00% |
-| TOTAL-DMEI-NIHUL-HAFKADA | סה"כ דמי ניהול הפקדה | ₪0.00 |
-| ALUT-KISUI | עלות כיסוי | ₪168.77 |
-| SHEUR-KISUY-NECHUT | שיעור כיסוי נכות | 75.00% |
-| TAARICH-TCHILAT-HABITUACH | תאריך תחילת ביטוח | 01/01/2023 |
-| TSUA-NETO | תשואה נטו | 0.00% |
-| REVACH-HEFSED-BENIKOI-HOZAHOT | רווח/הפסד בניכוי הוצאות | ₪0.00 |
-| YITRAT-KASPEY-TAGMULIM | יתרת כספי תגמולים | ₪0.00 |
-| KITZVAT-HODSHIT-TZFUYA | קצבה חודשית צפויה | - |
-| GIL-PRISHA | גיל פרישה | - |
-| SCHUM-KITZVAT-ZIKNA | סכום קצבת זקנה | - |
+## פורמט נתונים
+- סכומים: מוצגים בש"ח עם שתי ספרות אחרי הנקודה
+- אחוזים: מוצגים עם סימן % ושתי ספרות אחרי הנקודה
+- תאריכים: מוצגים בפורמט DD/MM/YYYY
+- מספרי טלפון: מוצגים עם מקף מפריד
+- ערכים חסרים: מוצגים כ"לא צוין"
 
-## ערכי סטטוס מעסיק
-| קוד | משמעות |
-|-----|---------|
-| 1 | פעיל |
-| 2 | מוקפא |
-| 3 | מבוטל |
+## דוגמאות מהקבצים
+
+### דוגמה 1 - ביטוח מנהלים (הפניקס)
+```xml
+<YeshutYatzran>
+    <SHEM-YATZRAN>הפניקס חברה לביטוח בע"מ</SHEM-YATZRAN>
+    <KOD-MEZAHE-YATZRAN>520023185</KOD-MEZAHE-YATZRAN>
+    <YeshutLakoach>
+        <SHEM-PRATI>ר פרחיה</SHEM-PRATI>
+        <SHEM-MISHPACHA>עמר</SHEM-MISHPACHA>
+        <MISPAR-ZIHUY-LAKOACH>205600224</MISPAR-ZIHUY-LAKOACH>
+        <TAARICH-LEYDA>19940423</TAARICH-LEYDA>
+    </YeshutLakoach>
+    <HeshbonOPolisa>
+        <MISPAR-POLISA-O-HESHBON>3000-205600224</MISPAR-POLISA-O-HESHBON>
+        <SHEM-TOCHNIT>ריסק</SHEM-TOCHNIT>
+        <STATUS-POLISA-O-CHESHBON>1</STATUS-POLISA-O-CHESHBON>
+        <PerutMitryot>
+            <SCHUM-BITUACH>130000.00</SCHUM-BITUACH>
+            <ALUT-KISUI>168.77</ALUT-KISUI>
+        </PerutMitryot>
+    </HeshbonOPolisa>
+</YeshutYatzran>
+```
+
+### דוגמה 2 - קרן השתלמות (קרן השתלמות למורים)
+```xml
+<YeshutYatzran>
+    <SHEM-YATZRAN>קרן השתלמות למורים תיכוניים מורי סמינרים ומפקחים ב</SHEM-YATZRAN>
+    <KOD-MEZAHE-YATZRAN>520028390</KOD-MEZAHE-YATZRAN>
+    <HeshbonOPolisa>
+        <MISPAR-POLISA-O-HESHBON>18144675</MISPAR-POLISA-O-HESHBON>
+        <SHEM-TOCHNIT>קרן השתלמות למורים תיכוניים, מורי סמינרים ומפקחים - המסלול הרגיל-כללי</SHEM-TOCHNIT>
+        <STATUS-POLISA-O-CHESHBON>7</STATUS-POLISA-O-CHESHBON>
+        <BlockItrot>
+            <PerutYitrot>
+                <TOTAL-CHISACHON-MTZBR>34581.53</TOTAL-CHISACHON-MTZBR>
+            </PerutYitrot>
+        </BlockItrot>
+        <Tsua>
+            <SHEUR-TSUA-NETO>12.26</SHEUR-TSUA-NETO>
+        </Tsua>
+    </HeshbonOPolisa>
+</YeshutYatzran>
+```
+
+### דוגמה 3 - פרטי מעסיק
+```xml
+<YeshutMaasik>
+    <SHEM-MAASIK>הסתדרות המורים בישראל בע"מ</SHEM-MAASIK>
+    <MISPAR-MEZAHE-MAASIK>589924810</MISPAR-MEZAHE-MAASIK>
+    <STATUS-MAASIK>1</STATUS-MAASIK>
+    <MPR-MAASIK-BE-YATZRAN>0400030003</MPR-MAASIK-BE-YATZRAN>
+    <ERETZ>ישראל</ERETZ>
+    <SHEM-YISHUV>תל אביב-יפו</SHEM-YISHUV>
+</YeshutMaasik>
+```
+
+### דוגמה 4 - הפקדות והפרשות
+```xml
+<PerutHafrashotLePolisa>
+    <SUG-HAMAFKID>2</SUG-HAMAFKID>
+    <SUG-HAFRASHA>8</SUG-HAFRASHA>
+    <ACHUZ-HAFRASHA>4.2</ACHUZ-HAFRASHA>
+    <SCHUM-HAFRASHA>186.00</SCHUM-HAFRASHA>
+</PerutHafrashotLePolisa>
+```
+
+### דוגמה 5 - דמי ניהול
+```xml
+<HotzaotBafoalLehodeshDivoach>
+    <SHEUR-DMEI-NIHUL-HAFKADA>0.00</SHEUR-DMEI-NIHUL-HAFKADA>
+    <TOTAL-DMEI-NIHUL-HAFKADA>0.00</TOTAL-DMEI-NIHUL-HAFKADA>
+    <SHEUR-DMEI-NIHUL-TZVIRA>0.0109</SHEUR-DMEI-NIHUL-TZVIRA>
+    <TOTAL-DMEI-NIHUL-TZVIRA>11.06</TOTAL-DMEI-NIHUL-TZVIRA>
+    <TOTAL-DMEI-NIHUL-POLISA-O-HESHBON>122.3</TOTAL-DMEI-NIHUL-POLISA-O-HESHBON>
+</HotzaotBafoalLehodeshDivoach>
+```
+
+## מבנה המסמך
+
+## קרנות פנסיה
+
+### מבנה נתונים
+```xml
+<YeshutYatzran>
+    <SHEM-YATZRAN>הראל פנסיה וגמל בע"מ</SHEM-YATZRAN>
+    <KOD-MEZAHE-YATZRAN>512267592</KOD-MEZAHE-YATZRAN>
+    <HeshbonOPolisa>
+        <TAARICH-HITZTARFUT-RISHON>20140201</TAARICH-HITZTARFUT-RISHON>
+        <SUG-KEREN-PENSIA>2</SUG-KEREN-PENSIA>
+        <STATUS-POLISA-O-CHESHBON>1</STATUS-POLISA-O-CHESHBON>
+        <MaslulBituach>
+            <MASLUL-BITUACH-BAKEREN-PENSIA>512267592000000000000000000116</MASLUL-BITUACH-BAKEREN-PENSIA>
+            <SHEM-MASLUL-HABITUAH>פנסיה מקיפה נכות מוגדלת 75%</SHEM-MASLUL-HABITUAH>
+        </MaslulBituach>
+        <TOTAL-CHISACHON-MTZBR>270397</TOTAL-CHISACHON-MTZBR>
+        <SCHUM-KITZVAT-ZIKNA>18040.70</SCHUM-KITZVAT-ZIKNA>
+        <KITZVAT-HODSHIT-TZFUYA>5044.35</KITZVAT-HODSHIT-TZFUYA>
+    </HeshbonOPolisa>
+</YeshutYatzran>
+```
+
+### דוגמאות מהקבצים
+
+#### קרן פנסיה פעילה - הראל
+- סוג קרן: 2 (פנסיה חדשה)
+- סטטוס: פעיל (1)
+- מסלול ביטוח: פנסיה מקיפה נכות מוגדלת 75%
+- צבירה: 270,397 ש"ח
+- קצבה חודשית צפויה: 5,044.35 ש"ח
+- קצבת זקנה: 18,040.70 ש"ח
+- תאריך הצטרפות: 01/02/2014
+
+#### קרן פנסיה נוספת
+- סוג קרן: 2 (פנסיה חדשה)
+- סטטוס: פעיל (1)
+- מסלול ביטוח: מסלול ביטוח 75% לנכות ו-100% לשאירים
+- קצבה חודשית צפויה: 3,817.38 ש"ח
+- קצבת זקנה: 11,626.16 ש"ח
+- תאריך הצטרפות: 01/09/2022
+
+### מיפוי שדות
+| שדה | תיאור | דוגמה |
+|-----|--------|--------|
+| SUG-KEREN-PENSIA | סוג קרן הפנסיה | 2 = פנסיה חדשה |
+| STATUS-POLISA-O-CHESHBON | סטטוס הפוליסה | 1 = פעיל, 2 = מוקפא |
+| SHEM-MASLUL-HABITUAH | שם מסלול הביטוח | פנסיה מקיפה נכות מוגדלת 75% |
+| TOTAL-CHISACHON-MTZBR | סך צבירה | 270,397 |
+| SCHUM-KITZVAT-ZIKNA | סכום קצבת זקנה | 18,040.70 |
+| KITZVAT-HODSHIT-TZFUYA | קצבה חודשית צפויה | 5,044.35 |
+| TAARICH-HITZTARFUT-RISHON | תאריך הצטרפות ראשון | 20140201 |

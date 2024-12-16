@@ -353,7 +353,7 @@ export class XMLFieldExtractor {
       'TOTAL-DMEI-NIHUL-HAFKADA': 0,
       'DMEI-NIHUL-KOLEL': 0,
 
-      // תשואות
+      // תש��אות
       'TSUA-NETO': 0,
       'TSUA-NOMINALI': 0,
       'TSUA-REALI': 0,
@@ -732,7 +732,7 @@ export class XMLFieldExtractor {
       '4': 'קופת גמל מרכזית לפיצויים',
       '5': 'קרן פנסיה ותיקה',
       '6': 'קרן פנסיה חדשה מקיפה',
-      '7': 'ק��ן פנסיה חדשה כללית'
+      '7': 'קרן פנסיה חדשה כללית'
     };
     return types[type || ''] || 'לא צוין';
   }
@@ -781,7 +781,7 @@ export class XMLFieldExtractor {
 מספר פוליסה/חשבון: ${mutzar['MISPAR-POLISA-O-HESHBON'] || 'לא צוין'}
 סוג קופה: ${mutzar['SUG-KUPA'] || 'לא צוין'}
 סוג מוצר: ${mutzar['SUG-MUTZAR'] || 'לא צוין'}
-סוג תוכנית: ${mutzar['SUG-TOCHNIT-O-CHESHBON'] || 'לא צוין'}
+סוג תוכנ��ת: ${mutzar['SUG-TOCHNIT-O-CHESHBON'] || 'לא צוין'}
 שם תוכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
 סטטוס: ${mutzar['STATUS-POLISA-O-CHESHBON'] || 'לא צוין'}
 תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] || 'לא צוין'}
@@ -797,7 +797,7 @@ export class XMLFieldExtractor {
 - דמי ניהול:
   * דמי ניהול מנכסים: ${mutzar['SHEUR-DMEI-NIHUL'] ? mutzar['SHEUR-DMEI-NIHUL'] + '%' : 'לא צוין'}
   * דמי ניהול מהפקדה: ${mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] ? mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] + '%' : 'לא צוין'}
-  * דמי ניהול כולל: ${mutzar['DMEI-NIHUL-KOLEL'] ? mutzar['DMEI-NIHUL-KOLEL'] + '%' : 'לא צוין'}
+  * דמי ניהול כול: ${mutzar['DMEI-NIHUL-KOLEL'] ? mutzar['DMEI-NIHUL-KOLEL'] + '%' : 'לא צוין'}
 
 - תשואות:
   * תשואה נטו: ${mutzar['TSUA-NETO'] ? mutzar['TSUA-NETO'] + '%' : 'לא צוין'}
@@ -818,5 +818,45 @@ export class XMLFieldExtractor {
 - רווח והפסד:
   * רווח/הפסד בניכוי הוצאות: ${mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT'] ? this.formatCurrency(mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT']) : 'לא צוין'}
 `;
+  }
+
+  private isPensionProduct(product: any): boolean {
+    return (
+      product?.SUG_MUTZAR === 2 || // קוד מוצר פנסיה
+      product?.SUG_KEREN_PENSIA || // קיום שדה סוג קרן פנסיה
+      (product?.SHEM_TOCHNIT && /פנסי|קרן|מקיפה/i.test(product.SHEM_TOCHNIT)) || // בדיקת שם התוכנית
+      (product?.MaslulBituach?.SHEM_MASLUL_HABITUAH && 
+        /פנסי|קרן|מקיפה/i.test(product.MaslulBituach.SHEM_MASLUL_HABITUAH))
+    );
+  }
+
+  private determineProductType(product: any): ProductDetails['productType'] {
+    if (this.isPensionProduct(product)) return 'פנסיה';
+    
+    const typeMap: { [key: string]: ProductDetails['productType'] } = {
+      '1': 'ביטוח',
+      '2': 'פנסיה',
+      '3': 'גמל',
+      '4': 'השתלמות'
+    };
+    
+    return typeMap[product?.SUG_MUTZAR] || 'אחר';
+  }
+
+  private extractProductDetails(product: any): ProductDetails {
+    return {
+      productType: this.isPensionProduct(product) ? 'פנסיה' : this.determineProductType(product),
+      pensionType: product?.SUG_KEREN_PENSIA ? 
+        (product.SUG_KEREN_PENSIA === 2 ? 'חדשה' : 'ותיקה') : undefined,
+      // ... other fields
+    };
+  }
+
+  public processXmlContent(content: string) {
+    const result = this.extractFieldsFromXml(content);
+    return {
+      client: result.data.lakoach,
+      products: result.data.mutzarim || []
+    };
   }
 } 

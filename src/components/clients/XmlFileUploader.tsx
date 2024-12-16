@@ -4,13 +4,14 @@ import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import { Upload, File, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { XMLFieldExtractor, YeshutLakoach, YeshutMaasik } from '@/lib/XMLFieldExtractor';
+import { XMLFieldExtractor } from '@/lib/XMLFieldExtractor';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { Client } from '@/types/client';
+import { XmlFile } from '@/types/xml';
 
 interface XmlFileUploaderProps {
-  onXmlFilesExtracted: (xmlFiles: { name: string; content: string }[], updatedClient?: Client) => void;
+  onXmlFilesExtracted: (files: XmlFile[]) => void;
 }
 
 interface ClientData {
@@ -66,7 +67,7 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
     };
   };
 
-  const createClientFromXml = async (clientData: ClientData) => {
+  const createClientFromXml = useCallback(async (clientData: ClientData) => {
     try {
       if (!clientData?.id_number || !user?.id) {
         console.error('Missing required data:', { clientData, userId: user?.id });
@@ -178,9 +179,9 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
       toast.error('שגיאה בעיבוד נתוני הלקוח');
       return null;
     }
-  };
+  }, [user]);
 
-  const processZipFile = async (file: File) => {
+  const processZipFile = useCallback(async (file: File) => {
     try {
       setIsProcessing(true);
       const zip = new JSZip();
@@ -219,13 +220,42 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
               phone: clientData.phone,
               address_street: clientData.address.split(',')[0] || '',
               address_city: clientData.address.split(',')[1]?.trim() || '',
-              status: 'active',
-              products: clientData.products
+              status: 'active' as const,
+              products: clientData.products?.map(p => ({
+                type: p.type,
+                name: p.name,
+                policy_number: p.policyNumber,
+                start_date: p.startDate,
+                balance: p.balance,
+                monthly_deposit: p.monthlyDeposit,
+                employee_contribution: p['HAFRASHAT-OVED'] || 0,
+                employer_contribution: p['HAFRASHAT-MAASIK'] || 0,
+                compensation_contribution: p['HAFRASHAT-PITZUIM'] || 0,
+                status: p.status
+              }))
             };
 
+            // First create/update the client
             const client = await createClientFromXml(mappedClientData);
             if (client) {
               lastProcessedClient = client;
+              
+              // Then save the XML data
+              const { error: xmlError } = await supabase
+                .from('client_xml_data')
+                .insert({
+                  client_id: client.id,
+                  raw_data: result.data,
+                  created_at: new Date().toISOString()
+                });
+
+              if (xmlError) {
+                console.error('Error saving XML data:', xmlError);
+                toast.error('שגיאה בשמירת נתוני המסלקה');
+              } else {
+                console.log('Successfully saved XML data for client:', client.id);
+                toast.success('נתוני המסלקה נשמרו בהצלחה');
+              }
             }
           }
         } catch (error) {
@@ -234,8 +264,8 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
         }
       }
 
-      if (xmlFiles.length > 0 && lastProcessedClient) {
-        onXmlFilesExtracted(xmlFiles, lastProcessedClient);
+      if (xmlFiles.length > 0) {
+        onXmlFilesExtracted(xmlFiles);
       }
 
     } catch (error) {
@@ -244,7 +274,7 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [onXmlFilesExtracted, createClientFromXml]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -256,7 +286,7 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
     }
 
     await processZipFile(file);
-  }, [onXmlFilesExtracted, user]);
+  }, [processZipFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -265,6 +295,67 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
     },
     multiple: false
   });
+
+  const handleFilesProcessed = async (files: XmlFile[]) => {
+    try {
+      const extractor = new XMLFieldExtractor();
+      
+      for (const file of files) {
+        const result = extractor.processXmlContent(file.content);
+        console.log('Processed XML data:', result);
+        
+        if (!result || !result.client || !result.client['MISPAR-ZIHUY']) {
+          console.error('Invalid XML data structure:', result);
+          continue;
+        }
+
+        // First, create or update the client
+        const { data: client, error: clientError } = await supabase
+          .from('clients')
+          .upsert({
+            id_number: result.client['MISPAR-ZIHUY'],
+            first_name: result.client['SHEM-PRATI'],
+            last_name: result.client['SHEM-MISHPACHA'],
+            email: result.client['E-MAIL'],
+            user_id: user?.id
+          }, {
+            onConflict: 'id_number,user_id'
+          })
+          .select()
+          .single();
+
+        if (clientError) {
+          console.error('Error saving client:', clientError);
+          toast.error('שגיאה בשמירת נתוני הלקוח');
+          continue;
+        }
+
+        console.log('Saved/Updated client:', client);
+
+        // Then, save the XML data
+        const { error: xmlError } = await supabase
+          .from('client_xml_data')
+          .insert({
+            client_id: client.id,
+            raw_data: result,
+            created_at: new Date().toISOString()
+          });
+
+        if (xmlError) {
+          console.error('Error saving XML data:', xmlError);
+          toast.error('שגיאה בשמירת נתוני המסלקה');
+        } else {
+          console.log('Successfully saved XML data for client:', client.id);
+        }
+      }
+
+      onXmlFilesExtracted(files);
+      toast.success('הקבצים עובדו ונשמרו בהצלחה');
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toast.error('שגיאה בעיבוד הקבצים');
+    }
+  };
 
   return (
     <div>

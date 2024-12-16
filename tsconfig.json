@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@mui/*": ["node_modules/@mui/*"]
     },
     "moduleResolution": "node",
     "target": "ES2020",
