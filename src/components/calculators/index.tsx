@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   Calculator, 
@@ -9,7 +9,6 @@ import {
   FileText,
   TrendingUp,
   DollarSign,
-  Percent,
   Target
 } from 'lucide-react';
 import InvestmentCalculator from './InvestmentCalculator';

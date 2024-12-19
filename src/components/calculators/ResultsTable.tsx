@@ -1,9 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Share2, Trash2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import html2pdf from 'html2pdf.js';
+import { Download, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface Column {

@@ -1,23 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React from 'react';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PolicyClient } from '../../types/calculators';
 import { calculateCommissions } from '@/services/AgentAgreementService';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 
 const PolicyCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<PolicyClient[]>([]);
-  const [companyRates, setCompanyRates] = React.useState<{ [company: string]: any }>({});
-
-  useEffect(() => {
-    loadCompanyRates();
-  }, []);
-
-  const loadCompanyRates = async () => {
-    const rates = await calculateCommissions('policy');
-    setCompanyRates(rates);
-  };
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
@@ -31,50 +21,49 @@ const PolicyCalculator: React.FC = () => {
         { value: 'ayalon', label: 'איילון' }
       ]
     },
-    { name: 'depositAmount', label: 'סכום ההפקדה', type: 'number', required: true }
+    { name: 'amount', label: 'סכום ההפקדה', type: 'number', required: true }
   ];
 
   const columns = [
     { key: 'monthlyCommission', label: 'עמלת נפרעים (חודשי)', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'oneTimeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'totalDeposit', label: 'סה"כ הפקדה שנתית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'depositAmount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'policyType', label: 'סוג פוליסה' },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
+    { key: 'amount', label: 'סכום הפקדה', format: (value: number) => `₪${value.toLocaleString()}` },
     { key: 'company', label: 'יצרן' },
-    { key: 'name', label: '��ם הלקוח' },
+    { key: 'name', label: 'שם הלקוח' },
     { key: 'date', label: 'תאריך' }
   ];
 
-  const calculateScopeCommission = (amount: number, scopeRate: number) => {
-    return (amount / 1000000) * scopeRate;
-  };
-
-  const calculateMonthlyCommission = (amount: number, monthlyRate: number) => {
-    return amount * monthlyRate;
-  };
-
-  const handleSubmit = (data: any) => {
-    const amount = Number(data.depositAmount) || 0;
+  const handleSubmit = async (data: any) => {
+    const amount = Number(data.amount) || 0;
     
-    // Get rates from agent agreements
-    const companyRate = companyRates[data.company];
-    if (!companyRate?.active) {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('משתמש לא מחובר');
+      return;
+    }
+
+    const commissions = await calculateCommissions(
+      user.id,
+      'policy',
+      data.company,
+      amount,
+      '1', // Default contribution rate for policies
+      0 // No accumulation for policies
+    );
+    
+    if (!commissions) {
       toast.error('החברה לא פעילה בהסכמי הסוכן');
       return;
     }
 
-    const scopeCommission = calculateScopeCommission(amount, companyRate.scope_rate_per_million);
-    const monthlyCommission = calculateMonthlyCommission(amount, companyRate.monthly_rate);
-    
     const newClient: PolicyClient = {
       date: new Date().toLocaleDateString('he-IL'),
       name: data.name,
       company: data.company,
-      policyType: 'regular',
-      depositAmount: amount,
-      totalDeposit: amount * 12,
-      oneTimeCommission: scopeCommission,
-      monthlyCommission: monthlyCommission
+      amount: amount,
+      scopeCommission: commissions.scope_commission,
+      monthlyCommission: commissions.monthly_commission
     };
 
     setClients([...clients, newClient]);
@@ -87,16 +76,15 @@ const PolicyCalculator: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,יצרן,סכום הפקדה,סה\"כ הפקדה שנתית,עמלת היקף,עמלת היקף על הצבירה\n";
+    csvContent += "תאריך,שם הלקוח,יצרן,סכום הפקדה,עמלת היקף,עמלת נפרעים\n";
     
     clients.forEach((client) => {
       const row = [
         client.date,
         client.name,
         client.company,
-        client.depositAmount,
-        client.totalDeposit,
-        client.oneTimeCommission,
+        client.amount,
+        client.scopeCommission,
         client.monthlyCommission
       ].join(",");
       csvContent += row + "\n";
@@ -121,9 +109,9 @@ const PolicyCalculator: React.FC = () => {
     clients.forEach((client, index) => {
       message += `${index + 1}. ${client.name} (${client.company}):\n`;
       message += `   תאריך: ${client.date}\n`;
-      message += `   סכום הפקדה: ${client.depositAmount.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף: ${client.oneTimeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף על הצבירה: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
+      message += `   סכום הפקדה: ${client.amount.toLocaleString()} ₪\n`;
+      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
+      message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
     });
     
     const encodedMessage = encodeURIComponent(message);

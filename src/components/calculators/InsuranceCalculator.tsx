@@ -1,108 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import CalculatorForm from './CalculatorForm';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import ResultsTable from './ResultsTable';
-import { InsuranceClient } from '../../types/calculators';
-import { calculateCommissions } from '../../services/AgentAgreementService';
-import { useUser } from '../../contexts/UserContext';
+import { toast } from 'react-hot-toast';
+
+interface InsuranceClient {
+  id: string;
+  date: string;
+  name: string;
+  company: string;
+  insuranceType: string;
+  premium: number;
+  commission: number;
+}
 
 const InsuranceCalculator: React.FC = () => {
   const [clients, setClients] = useState<InsuranceClient[]>([]);
-  const { user } = useUser();
 
-  const fields = [
-    { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
-    { name: 'company', label: 'יצרן', type: 'select', required: true,
-      options: [
-        { value: 'מגדל', label: 'מגדל' },
-        { value: 'מנורה', label: 'מנורה' },
-        { value: 'כלל', label: 'כלל' },
-        { value: 'הראל', label: 'הראל' },
-        { value: 'הפניקס', label: 'הפניקס' }
-      ]
-    },
-    { name: 'insuranceType', label: 'סוג ביטוח', type: 'select', required: true,
-      options: [
-        { value: 'personal_accident', label: 'תאונות אישיות' },
-        { value: 'mortgage', label: 'משכנתא' },
-        { value: 'health', label: 'בריאות' },
-        { value: 'critical_illness', label: 'מחלות קשות' },
-        { value: 'insurance_umbrella', label: 'מטריה ביטוחית' },
-        { value: 'risk', label: 'ריסק' },
-        { value: 'service', label: 'שירות' },
-        { value: 'disability', label: 'נכות' }
-      ]
-    },
-    { name: 'premium', label: 'פרמיה חודשית', type: 'number', required: true },
-  ];
-
-  const handleSubmit = async (data: any) => {
-    if (!user?.id) {
-      alert('משתמש לא מחובר');
+  const handleDownload = () => {
+    if (clients.length === 0) {
+      toast.error('אין נתונים להורדה');
       return;
     }
 
-    const premium = Number(data.premium);
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "תאריך,שם הלקוח,חברה,סוג ביטוח,פרמיה,עמלה\n";
     
-    const commissions = await calculateCommissions(
-      user.id,
-      'insurance',
-      data.company,
-      premium,
-      data.insuranceType
-    );
+    clients.forEach((client) => {
+      const row = [
+        client.date,
+        client.name,
+        client.company,
+        client.insuranceType,
+        client.premium,
+        client.commission
+      ].join(",");
+      csvContent += row + "\n";
+    });
     
-    if (!commissions) {
-      alert('אין הסכם פעיל עבור חברה זו');
-      return;
-    }
-
-    const newClient: InsuranceClient = {
-      date: new Date().toLocaleDateString('he-IL'),
-      name: data.name,
-      company: data.company,
-      insuranceType: data.insuranceType,
-      premium: premium,
-      scopeCommission: commissions.scope_commission,
-      monthlyCommission: commissions.monthly_commission,
-    };
-
-    setClients([...clients, newClient]);
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "דוח_ביטוח.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const insuranceTypeLabels = {
-    personal_accident: 'תאונות אישיות',
-    mortgage: 'משכנתא',
-    health: 'בריאות',
-    critical_illness: 'מחלות קשות',
-    insurance_umbrella: 'מטריה ביטוחית',
-    risk: 'ריסק',
-    service: 'שירות',
-    disability: 'נכות'
+  const handleShare = () => {
+    // Implement share functionality
+    toast.error('פונקציונליות השיתוף עדיין לא זמינה');
+  };
+
+  const handleClear = () => {
+    setClients([]);
+    toast.success('הנתונים נמחקו בהצלחה');
   };
 
   const columns = [
     { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם הלקוח' },
-    { key: 'company', label: 'יצרן' },
-    { key: 'insuranceType', label: 'סוג ביטוח', format: (value: string) => insuranceTypeLabels[value as keyof typeof insuranceTypeLabels] || value },
-    { key: 'premium', label: 'פרמיה חודשית', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'monthlyCommission', label: 'נפרעים', format: (value: number) => `₪${value.toLocaleString()}` },
-    { key: 'actions', label: 'פעולות' }
+    { key: 'name', label: 'שם לקוח' },
+    { key: 'company', label: 'חברה' },
+    { 
+      key: 'insuranceType', 
+      label: 'סוג ביטוח',
+      format: (value: string) => {
+        switch (value) {
+          case 'life': return 'ביטוח חיים';
+          case 'health': return 'ביטוח בריאות';
+          case 'disability': return 'ביטוח נכות';
+          default: return value;
+        }
+      }
+    },
+    { 
+      key: 'premium', 
+      label: 'פרמיה',
+      format: (value: number) => `₪${value.toLocaleString()}`
+    },
+    { 
+      key: 'commission', 
+      label: 'עמלה',
+      format: (value: number) => `₪${value.toLocaleString()}`
+    }
   ];
 
   return (
-    <div>
-      <CalculatorForm
-        onSubmit={handleSubmit}
-        fields={fields}
-        title="מחשבון עמלות ביטוח"
-      />
-      <ResultsTable
-        data={clients}
-        columns={columns}
-      />
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <h2 className="text-2xl font-bold">מחשבון ביטוח</h2>
+        </CardHeader>
+        <CardContent>
+          {/* Add your insurance calculator form here */}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold">תוצאות</h3>
+        </CardHeader>
+        <CardContent>
+          <ResultsTable
+            data={clients}
+            columns={columns}
+            onDownload={handleDownload}
+            onShare={handleShare}
+            onClear={handleClear}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };

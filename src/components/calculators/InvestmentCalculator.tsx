@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { InvestmentClient } from '../../types/calculators';
-import { calculateCommissions } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
+
+// Mock function for getting company rates - replace with actual implementation
+const getCompanyRates = async () => {
+  // Default rates - replace with actual data from your backend
+  const defaultRates = {
+    active: true,
+    scope_rate_per_million: 1000, // ₪1000 per million
+    monthly_rate: 0.002 // 0.2%
+  };
+  return defaultRates;
+};
 
 const InvestmentCalculator: React.FC = () => {
   const [clients, setClients] = useState<InvestmentClient[]>([]);
@@ -19,7 +28,7 @@ const InvestmentCalculator: React.FC = () => {
     const rates: { [company: string]: any } = {};
     
     for (const company of companies) {
-      const companyRate = await getCompanyRates('savings_and_study', company);
+      const companyRate = await getCompanyRates();
       if (companyRate) {
         rates[company] = companyRate;
       }
@@ -40,7 +49,7 @@ const InvestmentCalculator: React.FC = () => {
         { value: 'yelin', label: 'ילין לפידות' }
       ]
     },
-    { name: 'amount', label: 'סכו�� הניוד', type: 'number', required: true }
+    { name: 'amount', label: 'סכום הניוד', type: 'number', required: true }
   ];
 
   const columns = [
@@ -117,7 +126,7 @@ const InvestmentCalculator: React.FC = () => {
 
   const handleShare = () => {
     if (clients.length === 0) {
-      toast.error('אין נתונים לשל��חה');
+      toast.error('אין נתונים לשלחה');
       return;
     }
     

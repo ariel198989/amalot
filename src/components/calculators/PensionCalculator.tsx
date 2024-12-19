@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
 import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { PensionClient } from '../../types/calculators';
@@ -8,25 +7,6 @@ import { supabase } from '@/lib/supabase';
 
 const PensionCalculator: React.FC = () => {
   const [clients, setClients] = useState<PensionClient[]>([]);
-  const [companyRates, setCompanyRates] = useState<{ [company: string]: any }>({});
-
-  useEffect(() => {
-    loadCompanyRates();
-  }, []);
-
-  const loadCompanyRates = async () => {
-    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
-    const rates: { [company: string]: any } = {};
-    
-    for (const company of companies) {
-      const companyRate = await getCompanyRates('pension', company);
-      if (companyRate) {
-        rates[company] = companyRate;
-      }
-    }
-    
-    setCompanyRates(rates);
-  };
 
   const fields = [
     { name: 'name', label: 'שם הלקוח', type: 'text', required: true },
