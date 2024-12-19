@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/shadcn/checkbox";
 import { motion } from "framer-motion";
 import { 
   Wallet, 
