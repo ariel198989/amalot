@@ -7,6 +7,7 @@ interface SalesTargetsContextType {
   closingRate: number;
   monthlyMeetings: number;
   isDirty: boolean;
+  setIsDirty: (value: boolean) => void;
   updateClosingRate: (value: number) => void;
   updateMonthlyMeetings: (value: number) => void;
   saveChanges: () => Promise<void>;
@@ -183,6 +184,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       closingRate,
       monthlyMeetings,
       isDirty,
+      setIsDirty,
       updateClosingRate,
       updateMonthlyMeetings,
       saveChanges

@@ -1,18 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, Area, AreaChart } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-
-interface Performance {
-  category: string;
-  month: number;
-  year: number;
-  performance: number;
-}
 
 interface CategoryData {
   id: string;
@@ -178,43 +171,48 @@ export const SalesProgressChart: React.FC = () => {
 
   useEffect(() => {
     const fetchPerformances = async () => {
-      const { data, error } = await supabase
-        .from('sales_targets')
-        .select('*')
-        .eq('year', currentYear);
+      try {
+        const { data, error } = await supabase
+          .from('sales_targets')
+          .select('*')
+          .eq('year', currentYear);
 
-      if (error) {
-        console.error('Error fetching performances:', error);
-        return;
-      }
+        if (error) {
+          console.error('Error fetching performances:', error);
+          return;
+        }
 
-      const updatedCategories = categories.map(category => {
-        // חישוב היעדים לקטגוריה
-        const targets = getUpdatedTargets(category.baseAmount, category.percentage);
-        const yearlyTarget = targets.reduce((sum, target) => sum + target, 0);
-        
-        // עדכון הביצועים מהדאטאבייס
-        const performances = Array(12).fill(0);
-        const categoryPerformances = data?.filter(p => p.category === category.id) || [];
-        categoryPerformances.forEach(p => {
-          if (p.month >= 1 && p.month <= 12) {
-            performances[p.month - 1] = p.performance;
-          }
+        const updatedCategories = CATEGORIES.map(category => {
+          // חישוב היעדים לקטגוריה
+          const targets = getUpdatedTargets(category.baseAmount, category.percentage);
+          const yearlyTarget = targets.reduce((sum, target) => sum + target, 0);
+          
+          // עדכון הביצועים מהדאטאבייס
+          const performances = Array(12).fill(0);
+          const categoryPerformances = data?.filter(p => p.category === category.id) || [];
+          categoryPerformances.forEach(p => {
+            if (p.month >= 1 && p.month <= 12) {
+              performances[p.month - 1] = p.performance;
+            }
+          });
+
+          return {
+            ...category,
+            targets,
+            performances,
+            yearlyTarget
+          };
         });
 
-        return {
-          ...category,
-          targets,
-          performances,
-          yearlyTarget
-        };
-      });
-
-      setCategories(updatedCategories);
+        setCategories(updatedCategories);
+      } catch (error) {
+        console.error('Error in fetchPerformances:', error);
+        toast.error('שגיאה בטעינת נתונים');
+      }
     };
 
     fetchPerformances();
-  }, [closingRate, monthlyMeetings]);
+  }, [closingRate, monthlyMeetings, currentYear]);
 
   const resetYearlyData = async () => {
     if (window.confirm('האם אתה בטוח שברצונך לאפס את כל הנתונים השנתיים?')) {
@@ -222,12 +220,40 @@ export const SalesProgressChart: React.FC = () => {
         const { error } = await supabase
           .from('sales_targets')
           .update({ performance: 0 })
-          .eq('year', new Date().getFullYear());
+          .eq('year', currentYear);
 
         if (error) throw error;
         
-        // רענון הנתונים בממשק
-        fetchPerformances();
+        // Fetch fresh data after reset
+        const { data: freshData, error: fetchError } = await supabase
+          .from('sales_targets')
+          .select('*')
+          .eq('year', currentYear);
+
+        if (fetchError) throw fetchError;
+
+        // Update the categories with fresh data
+        const updatedCategories = CATEGORIES.map(category => {
+          const targets = getUpdatedTargets(category.baseAmount, category.percentage);
+          const yearlyTarget = targets.reduce((sum, target) => sum + target, 0);
+          
+          const performances = Array(12).fill(0);
+          const categoryPerformances = freshData?.filter(p => p.category === category.id) || [];
+          categoryPerformances.forEach(p => {
+            if (p.month >= 1 && p.month <= 12) {
+              performances[p.month - 1] = p.performance;
+            }
+          });
+
+          return {
+            ...category,
+            targets,
+            performances,
+            yearlyTarget
+          };
+        });
+
+        setCategories(updatedCategories);
         toast.success("נתונים אופסו בהצלחה");
       } catch (error) {
         console.error('Error resetting data:', error);

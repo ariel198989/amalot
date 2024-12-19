@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  BadgeDollarSign,
   Bell,
   Menu,
   Gift,
@@ -13,29 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import Sidebar from './Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from "@/lib/utils";
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 interface HeaderProps {
   children: React.ReactNode;
   onLogout: () => void;
-}
-
-interface Client {
-  id: string;
-  first_name: string;
-  last_name: string;
-  birthday?: string;
-}
-
-interface Promotion {
-  id: string;
-  title: string;
-  company: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ children, onLogout }) => {

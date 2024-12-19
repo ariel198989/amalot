@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,29 +12,38 @@ import {
   PiggyBank, 
   Building2, 
   Shield,
-  Settings2,
   CheckCircle2,
   XCircle,
   Save,
   RefreshCw
 } from 'lucide-react';
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 
 import { 
   AgentRates, 
-  CompanyRates, 
-  DEFAULT_COMPANY_RATES 
+  CompanyRates,
+  PensionCompanyRates,
+  DEFAULT_COMPANY_RATES,
+  DEFAULT_PENSION_RATES
 } from './AgentAgreementsTypes';
 
 import { 
-  getInsuranceProductName, 
   fetchAgentRates, 
   updateAgentRates,
   getInsuranceProductTypes 
 } from './AgentAgreementsHelpers';
 
-const insuranceCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'];
+type ProductKey = keyof CompanyRates['products'];
+type PensionRateKey = keyof PensionCompanyRates;
+
+const FINANCIAL_PRODUCTS = [
+  { value: 'gemel' as ProductKey, label: 'גמל' },
+  { value: 'investment_gemel' as ProductKey, label: 'גמל להשקעה' },
+  { value: 'hishtalmut' as ProductKey, label: 'השתלמות' },
+  { value: 'savings_policy' as ProductKey, label: 'פוליסת חסכון' }
+] as const;
+
+const insuranceCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'] as const;
 
 const TabColors = {
   pension: {
@@ -76,13 +85,6 @@ const INSURANCE_PRODUCTS = [
 
 type InsuranceProductType = typeof INSURANCE_PRODUCTS[number]['value'];
 
-const FINANCIAL_PRODUCTS = [
-  { value: 'gemel', label: 'גמל' },
-  { value: 'investment_gemel', label: 'גמל להשקעה' },
-  { value: 'hishtalmut', label: 'השתלמות' },
-  { value: 'savings_policy', label: 'פוליסת חסכון' }
-];
-
 const AgentAgreements: React.FC = () => {
   const [agentRates, setAgentRates] = useState<AgentRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -116,48 +118,44 @@ const AgentAgreements: React.FC = () => {
   const handleRateChange = (
     category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies' | 'insurance_companies'>, 
     company: string, 
-    field: keyof CompanyRates, 
+    field: PensionRateKey | keyof CompanyRates, 
     value: number | boolean
   ) => {
     if (!agentRates) return;
 
-    const updatedRates = {
+    const updatedRates: AgentRates = {
       ...agentRates,
+      user_id: agentRates.user_id,
       [category]: {
         ...agentRates[category],
         [company]: {
-          ...agentRates[category][company],
+          ...(agentRates[category][company] || 
+            (category === 'pension_companies' ? DEFAULT_PENSION_RATES : DEFAULT_COMPANY_RATES)),
           [field]: value
         }
       }
     };
 
-    setAgentRates(updatedRates as AgentRates);
-  };
-
-  const saveRates = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !agentRates) {
-        toast.error('משתמש לא מחובר');
-        return;
-      }
-
-      const updatedRates = await updateAgentRates(user.id, agentRates);
-      if (updatedRates) {
-        setAgentRates(updatedRates);
-      }
-    } catch (error) {
-      console.error('Error saving rates:', error);
-      toast.error('שגיאה בשמירת נתוני עמלות');
-    }
+    setAgentRates(updatedRates);
   };
 
   const renderFinancialRatesSection = (company: string, companyRates: CompanyRates) => {
+    if (!agentRates) return null;
+
+    // Initialize products if they don't exist
+    if (!companyRates.products) {
+      companyRates.products = {
+        gemel: { scope_commission: 0, monthly_rate: 0 },
+        investment_gemel: { scope_commission: 0, monthly_rate: 0 },
+        hishtalmut: { scope_commission: 0, monthly_rate: 0 },
+        savings_policy: { scope_commission: 0, monthly_rate: 0 }
+      };
+    }
+
     return (
       <div className="space-y-6">
-        {Object.entries(FINANCIAL_PRODUCTS).map(([key, { label }]) => (
-          <div key={key} className="space-y-2">
+        {FINANCIAL_PRODUCTS.map(({ value, label }) => (
+          <div key={value} className="space-y-2">
             <Label>{label}</Label>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -165,18 +163,19 @@ const AgentAgreements: React.FC = () => {
                 <Input
                   type="number"
                   step="100"
-                  value={companyRates?.products?.[key]?.scope_commission || 0}
+                  value={companyRates.products[value]?.scope_commission || 0}
                   onChange={(e) => {
-                    const updatedRates = {
+                    const updatedRates: AgentRates = {
                       ...agentRates,
+                      user_id: agentRates.user_id,
                       savings_and_study_companies: {
                         ...agentRates.savings_and_study_companies,
                         [company]: {
                           ...companyRates,
                           products: {
-                            ...companyRates?.products,
-                            [key]: {
-                              ...companyRates?.products?.[key],
+                            ...companyRates.products,
+                            [value]: {
+                              ...companyRates.products[value],
                               scope_commission: Number(e.target.value)
                             }
                           }
@@ -192,18 +191,19 @@ const AgentAgreements: React.FC = () => {
                 <Input
                   type="number"
                   step="0.01"
-                  value={companyRates?.products?.[key]?.monthly_rate || 0}
+                  value={companyRates.products[value]?.monthly_rate || 0}
                   onChange={(e) => {
-                    const updatedRates = {
+                    const updatedRates: AgentRates = {
                       ...agentRates,
+                      user_id: agentRates.user_id,
                       savings_and_study_companies: {
                         ...agentRates.savings_and_study_companies,
                         [company]: {
                           ...companyRates,
                           products: {
-                            ...companyRates?.products,
-                            [key]: {
-                              ...companyRates?.products?.[key],
+                            ...companyRates.products,
+                            [value]: {
+                              ...companyRates.products[value],
                               monthly_rate: Number(e.target.value)
                             }
                           }
@@ -228,13 +228,46 @@ const AgentAgreements: React.FC = () => {
   ) => {
     if (!agentRates) return null;
 
+    // Initialize default products for savings companies if they don't exist
+    if (category === 'savings_and_study_companies') {
+      companies.forEach(company => {
+        if (!agentRates.savings_and_study_companies[company]) {
+          agentRates.savings_and_study_companies[company] = {
+            ...DEFAULT_COMPANY_RATES,
+            products: {
+              gemel: { scope_commission: 0, monthly_rate: 0 },
+              investment_gemel: { scope_commission: 0, monthly_rate: 0 },
+              hishtalmut: { scope_commission: 0, monthly_rate: 0 },
+              savings_policy: { scope_commission: 0, monthly_rate: 0 }
+            }
+          };
+        } else if (!agentRates.savings_and_study_companies[company].products) {
+          agentRates.savings_and_study_companies[company].products = {
+            gemel: { scope_commission: 0, monthly_rate: 0 },
+            investment_gemel: { scope_commission: 0, monthly_rate: 0 },
+            hishtalmut: { scope_commission: 0, monthly_rate: 0 },
+            savings_policy: { scope_commission: 0, monthly_rate: 0 }
+          };
+        }
+      });
+    }
+
     return (
       <div className="space-y-8">
         <div>
           <h2 className="text-2xl font-bold mb-6">{sectionTitle || category}</h2>
           <div className="grid grid-cols-3 gap-6" dir="rtl">
             {companies.map((company) => {
-              const companyRates = agentRates[category][company] || DEFAULT_COMPANY_RATES;
+              const companyRates = agentRates[category][company] || 
+                (category === 'pension_companies' ? DEFAULT_PENSION_RATES : {
+                  ...DEFAULT_COMPANY_RATES,
+                  products: {
+                    gemel: { scope_commission: 0, monthly_rate: 0 },
+                    investment_gemel: { scope_commission: 0, monthly_rate: 0 },
+                    hishtalmut: { scope_commission: 0, monthly_rate: 0 },
+                    savings_policy: { scope_commission: 0, monthly_rate: 0 }
+                  }
+                });
 
               return (
                 <Card key={company} className="overflow-hidden">
@@ -243,56 +276,103 @@ const AgentAgreements: React.FC = () => {
                       <h3 className="text-lg font-medium">{company}</h3>
                       <Checkbox
                         checked={companyRates.active}
-                        onCheckedChange={(checked) => handleRateChange(category, company, 'active', !!checked)}
+                        onCheckedChange={(checked: boolean) => handleRateChange(category, company, 'active', checked)}
                         className="border-2"
                       />
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
                     {category === 'savings_and_study_companies' ? (
-                      renderFinancialRatesSection(company, companyRates)
+                      renderFinancialRatesSection(company, companyRates as CompanyRates)
                     ) : (
                       <div className="space-y-6">
-                        <div>
-                          <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                            עמלת היקף על השכר (%)
-                          </label>
-                          <Input 
-                            type="number" 
-                            step={category === 'pension_companies' ? '0.01' : '100'} 
-                            value={category === 'pension_companies' ? 
-                              (companyRates.scope_rate || 0) * 100 : 
-                              companyRates.scope_rate_per_million} 
-                            onChange={(e) => handleRateChange(
-                              category, 
-                              company, 
-                              category === 'pension_companies' ? 'scope_rate' : 'scope_rate_per_million', 
-                              category === 'pension_companies' ? Number(e.target.value) / 100 : Number(e.target.value)
-                            )}
-                            className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                            dir="rtl"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                            עמלת היקף על צבירה (₪ למיליון)
-                          </label>
-                          <Input 
-                            type="number" 
-                            step={category === 'pension_companies' ? '100' : '0.001'}
-                            value={category === 'pension_companies' ? 
-                              companyRates.scope_rate_per_million : 
-                              (companyRates.monthly_rate || 0) * 100} 
-                            onChange={(e) => handleRateChange(
-                              category, 
-                              company, 
-                              category === 'pension_companies' ? 'scope_rate_per_million' : 'monthly_rate', 
-                              category === 'pension_companies' ? Number(e.target.value) : Number(e.target.value) / 100
-                            )}
-                            className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                            dir="rtl"
-                          />
-                        </div>
+                        {category === 'pension_companies' ? (
+                          <>
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                                עמלת היקף על השכר (%)
+                              </label>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                value={(companyRates as PensionCompanyRates).scope_rate * 100} 
+                                onChange={(e) => handleRateChange(
+                                  category, 
+                                  company, 
+                                  'scope_rate',
+                                  Number(e.target.value) / 100
+                                )}
+                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                                עמלת היקף על צבירה (₪ למיליון)
+                              </label>
+                              <Input 
+                                type="number" 
+                                step="100"
+                                value={(companyRates as PensionCompanyRates).scope_rate_per_million} 
+                                onChange={(e) => handleRateChange(
+                                  category, 
+                                  company, 
+                                  'scope_rate_per_million',
+                                  Number(e.target.value)
+                                )}
+                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                                dir="rtl"
+                              />
+                            </div>
+                          </>
+                        ) : category === 'policy_companies' ? (
+                          <>
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                                עמלת היקף (₪ למיליון)
+                              </label>
+                              <Input 
+                                type="number" 
+                                step="100"
+                                value={
+                                  'products' in companyRates && companyRates.products?.gemel?.scope_commission !== undefined
+                                    ? companyRates.products.gemel.scope_commission
+                                    : 0
+                                }
+                                onChange={(e) => handleRateChange(
+                                  category, 
+                                  company, 
+                                  'scope_rate_per_million',
+                                  Number(e.target.value)
+                                )}
+                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
+                                נפרעים (%)
+                              </label>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                value={
+                                  'products' in companyRates && companyRates.products?.gemel?.monthly_rate !== undefined
+                                    ? companyRates.products.gemel.monthly_rate
+                                    : 0
+                                }
+                                onChange={(e) => handleRateChange(
+                                  category, 
+                                  company, 
+                                  'scope_rate_per_million',
+                                  Number(e.target.value) / 100
+                                )}
+                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
+                                dir="rtl"
+                              />
+                            </div>
+                          </>
+                        ) : null}
                       </div>
                     )}
                   </CardContent>
@@ -303,6 +383,34 @@ const AgentAgreements: React.FC = () => {
         </div>
       </div>
     );
+  };
+
+  const handleInsuranceRateChange = (
+    company: string,
+    productType: InsuranceProductType,
+    field: 'one_time_rate' | 'monthly_rate',
+    value: string
+  ) => {
+    if (!agentRates) return;
+    
+    const updatedRates: AgentRates = {
+      ...agentRates,
+      user_id: agentRates.user_id,
+      insurance_companies: {
+        ...agentRates.insurance_companies,
+        [company]: {
+          ...agentRates.insurance_companies[company],
+          products: {
+            ...agentRates.insurance_companies[company]?.products,
+            [productType]: {
+              ...agentRates.insurance_companies[company]?.products[productType],
+              [field]: Number(value)
+            }
+          }
+        }
+      }
+    };
+    setAgentRates(updatedRates);
   };
 
   const renderInsuranceRatesSection = () => {
@@ -322,7 +430,7 @@ const AgentAgreements: React.FC = () => {
       agentRates.insurance_companies = {};
     }
 
-    insuranceCompanies.forEach((company: string) => {
+    insuranceCompanies.forEach((company) => {
       if (!agentRates.insurance_companies[company]) {
         agentRates.insurance_companies[company] = {
           active: false,
@@ -333,7 +441,7 @@ const AgentAgreements: React.FC = () => {
 
     return (
       <div className="grid grid-cols-3 gap-6" dir="rtl">
-        {insuranceCompanies.map((company: string, index: number) => {
+        {insuranceCompanies.map((company, index) => {
           const companyRates = agentRates.insurance_companies[company] || {
             active: false,
             products: defaultProductStructure
@@ -361,14 +469,15 @@ const AgentAgreements: React.FC = () => {
                   <div className="flex items-center gap-2 mb-6">
                     <Checkbox 
                       checked={companyRates.active}
-                      onCheckedChange={(checked) => {
-                        const updatedRates = {
+                      onCheckedChange={(checked: boolean) => {
+                        const updatedRates: AgentRates = {
                           ...agentRates,
+                          user_id: agentRates.user_id,
                           insurance_companies: {
                             ...agentRates.insurance_companies,
                             [company]: {
                               ...companyRates,
-                              active: !!checked
+                              active: checked
                             }
                           }
                         };
@@ -394,25 +503,7 @@ const AgentAgreements: React.FC = () => {
                               type="number"
                               step="0.01"
                               value={companyRates?.products?.[value]?.one_time_rate || 0}
-                              onChange={(e) => {
-                                const updatedRates = {
-                                  ...agentRates,
-                                  insurance_companies: {
-                                    ...agentRates.insurance_companies,
-                                    [company]: {
-                                      ...companyRates,
-                                      products: {
-                                        ...companyRates?.products,
-                                        [value]: {
-                                          ...companyRates?.products?.[value],
-                                          one_time_rate: Number(e.target.value)
-                                        }
-                                      }
-                                    }
-                                  }
-                                };
-                                setAgentRates(updatedRates);
-                              }}
+                              onChange={(e) => handleInsuranceRateChange(company, value, 'one_time_rate', e.target.value)}
                               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             />
                           </div>
@@ -424,25 +515,7 @@ const AgentAgreements: React.FC = () => {
                               type="number"
                               step="0.01"
                               value={companyRates?.products?.[value]?.monthly_rate || 0}
-                              onChange={(e) => {
-                                const updatedRates = {
-                                  ...agentRates,
-                                  insurance_companies: {
-                                    ...agentRates.insurance_companies,
-                                    [company]: {
-                                      ...companyRates,
-                                      products: {
-                                        ...companyRates?.products,
-                                        [value]: {
-                                          ...companyRates?.products?.[value],
-                                          monthly_rate: Number(e.target.value)
-                                        }
-                                      }
-                                    }
-                                  }
-                                };
-                                setAgentRates(updatedRates);
-                              }}
+                              onChange={(e) => handleInsuranceRateChange(company, value, 'monthly_rate', e.target.value)}
                               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             />
                           </div>
@@ -459,28 +532,22 @@ const AgentAgreements: React.FC = () => {
     );
   };
 
-  const handleInsuranceRateChange = (
-    company: string,
-    productType: InsuranceProductType,
-    field: 'one_time_rate' | 'monthly_rate',
-    value: string
-  ) => {
-    setRates(prev => ({
-      ...prev,
-      insurance_companies: {
-        ...prev.insurance_companies,
-        [company]: {
-          ...prev.insurance_companies[company],
-          products: {
-            ...prev.insurance_companies[company]?.products,
-            [productType]: {
-              ...prev.insurance_companies[company]?.products[productType],
-              [field]: Number(value)
-            }
-          }
-        }
+  const saveRates = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !agentRates) {
+        toast.error('משתמש לא מחובר');
+        return;
       }
-    }));
+
+      const updatedRates = await updateAgentRates(user.id, agentRates);
+      if (updatedRates) {
+        setAgentRates(updatedRates);
+      }
+    } catch (error) {
+      console.error('Error saving rates:', error);
+      toast.error('שגיאה בשמירת נתוני עמלות');
+    }
   };
 
   if (isLoading) {
@@ -570,13 +637,13 @@ const AgentAgreements: React.FC = () => {
             transition={{ duration: 0.3 }}
           >
             <TabsContent value="pension" className="mt-0">
-              {renderCompanyRatesSection('pension_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'])}
+              {renderCompanyRatesSection('pension_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'])}
             </TabsContent>
             <TabsContent value="savings" className="mt-0">
-              {renderCompanyRatesSection('savings_and_study_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'], 'פיננסים')}
+              {renderCompanyRatesSection('savings_and_study_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'], 'פיננסים')}
             </TabsContent>
             <TabsContent value="policy" className="mt-0">
-              {renderCompanyRatesSection('policy_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'])}
+              {renderCompanyRatesSection('policy_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'])}
             </TabsContent>
             <TabsContent value="insurance" className="mt-0">
               {renderInsuranceRatesSection()}

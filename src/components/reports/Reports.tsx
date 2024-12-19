@@ -5,10 +5,6 @@ import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import { 
   FileText, 
-  Download, 
-  Share2, 
-  Filter, 
-  Calendar,
   Building2,
   Shield,
   PiggyBank,
@@ -54,7 +50,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
 
       <div className="print-content">
         <div className="print-header">
-          <h1>דוח מכירות חודשי</h1>
+          <h1>דוח מכירות חודש��</h1>
           <p>{new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</p>
         </div>
 
@@ -335,8 +331,8 @@ const Reports: React.FC = () => {
           <thead className="bg-muted/50">
             <tr>
               <th className="p-3 text-right font-medium">סה"כ עמלה</th>
-              <th className="p-3 text-right font-medium">היקף על השכר</th>
-              <th className="p-3 text-right font-medium">היקף על הצבירה</th>
+              <th className="p-3 text-right font-medium">עמלת היקף</th>
+              <th className="p-3 text-right font-medium">היקף על הפבירה</th>
               <th className="p-3 text-right font-medium">הפרשה</th>
               <th className="p-3 text-right font-medium">סכום ניוד</th>
               <th className="p-3 text-right font-medium">שכר</th>
@@ -358,9 +354,9 @@ const Reports: React.FC = () => {
                   <td className="p-3 font-medium">{formatCurrency(sale.total_commission)} ₪</td>
                   <td className="p-3">{formatCurrency(sale.scope_commission)} ₪</td>
                   <td className="p-3">{formatCurrency(sale.monthly_commission)} ₪</td>
-                  <td className="p-3">{formatPercentage(sale.provision)}</td>
-                  <td className="p-3">{formatCurrency(sale.accumulation)} ₪</td>
-                  <td className="p-3">{formatCurrency(sale.salary)} ₪</td>
+                  <td className="p-3">{formatPercentage(sale.pensionContribution)}</td>
+                  <td className="p-3">{formatCurrency(sale.pensionAccumulation)} ₪</td>
+                  <td className="p-3">{formatCurrency(sale.pensionSalary)} ₪</td>
                   <td className="p-3">{sale.company}</td>
                   <td className="p-3">{sale.client_name}</td>
                   <td className="p-3">{formatDate(sale.date)}</td>

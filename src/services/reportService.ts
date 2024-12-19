@@ -16,6 +16,38 @@ export interface SalesData {
   user_id: string;
 }
 
+interface StatsData {
+  count: number;
+  commission: number;
+}
+
+export interface DashboardStats {
+  total: {
+    pension: StatsData;
+    insurance: StatsData;
+    investment: StatsData;
+    policy: StatsData;
+    commission: number;
+    count: number;
+  };
+  currentMonth: {
+    pension: StatsData;
+    insurance: StatsData;
+    investment: StatsData;
+    policy: StatsData;
+    commission: number;
+    count: number;
+  };
+  previousMonth: {
+    pension: StatsData;
+    insurance: StatsData;
+    investment: StatsData;
+    policy: StatsData;
+    commission: number;
+    count: number;
+  };
+}
+
 export const reportService = {
   async saveCustomerJourney(journey: CustomerJourney) {
     try {
@@ -156,7 +188,7 @@ export const reportService = {
     };
   },
 
-  async fetchDashboardStats() {
+  async fetchDashboardStats(): Promise<DashboardStats> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
@@ -188,11 +220,15 @@ export const reportService = {
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString();
 
-      const filterCurrentMonth = (sales: any[] | null) => {
+      // Get previous month's data
+      const startOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString();
+      const endOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).toISOString();
+
+      const filterByDateRange = (sales: any[] | null, start: string, end: string) => {
         if (!sales) return [];
         return sales.filter(sale => {
           const saleDate = new Date(sale.date);
-          return saleDate >= new Date(startOfMonth) && saleDate <= new Date(endOfMonth);
+          return saleDate >= new Date(start) && saleDate <= new Date(end);
         });
       };
 
@@ -203,10 +239,16 @@ export const reportService = {
       const policyStats = calculateTotal(policySales);
 
       // Calculate current month stats
-      const currentMonthPensionStats = calculateTotal(filterCurrentMonth(pensionSales));
-      const currentMonthInsuranceStats = calculateTotal(filterCurrentMonth(insuranceSales));
-      const currentMonthInvestmentStats = calculateTotal(filterCurrentMonth(investmentSales));
-      const currentMonthPolicyStats = calculateTotal(filterCurrentMonth(policySales));
+      const currentMonthPensionStats = calculateTotal(filterByDateRange(pensionSales, startOfMonth, endOfMonth));
+      const currentMonthInsuranceStats = calculateTotal(filterByDateRange(insuranceSales, startOfMonth, endOfMonth));
+      const currentMonthInvestmentStats = calculateTotal(filterByDateRange(investmentSales, startOfMonth, endOfMonth));
+      const currentMonthPolicyStats = calculateTotal(filterByDateRange(policySales, startOfMonth, endOfMonth));
+
+      // Calculate previous month stats
+      const prevMonthPensionStats = calculateTotal(filterByDateRange(pensionSales, startOfPrevMonth, endOfPrevMonth));
+      const prevMonthInsuranceStats = calculateTotal(filterByDateRange(insuranceSales, startOfPrevMonth, endOfPrevMonth));
+      const prevMonthInvestmentStats = calculateTotal(filterByDateRange(investmentSales, startOfPrevMonth, endOfPrevMonth));
+      const prevMonthPolicyStats = calculateTotal(filterByDateRange(policySales, startOfPrevMonth, endOfPrevMonth));
 
       return {
         total: {
@@ -228,6 +270,16 @@ export const reportService = {
                      currentMonthInvestmentStats.commission + currentMonthPolicyStats.commission,
           count: currentMonthPensionStats.count + currentMonthInsuranceStats.count + 
                  currentMonthInvestmentStats.count + currentMonthPolicyStats.count
+        },
+        previousMonth: {
+          pension: prevMonthPensionStats,
+          insurance: prevMonthInsuranceStats,
+          investment: prevMonthInvestmentStats,
+          policy: prevMonthPolicyStats,
+          commission: prevMonthPensionStats.commission + prevMonthInsuranceStats.commission + 
+                     prevMonthInvestmentStats.commission + prevMonthPolicyStats.commission,
+          count: prevMonthPensionStats.count + prevMonthInsuranceStats.count + 
+                 prevMonthInvestmentStats.count + prevMonthPolicyStats.count
         }
       };
     } catch (error) {

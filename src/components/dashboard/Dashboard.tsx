@@ -11,35 +11,11 @@ import {
   BarChart4,
   HandCoins
 } from 'lucide-react';
-import { reportService } from '@/services/reportService';
+import { reportService, DashboardStats } from '@/services/reportService';
 import { toast } from 'react-hot-toast';
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
 import { motion } from 'framer-motion';
-
-interface DashboardStats {
-  total: {
-    commission: number;
-    count: number;
-    pension: { count: number; commission: number };
-    insurance: { count: number; commission: number };
-    investment: { count: number; commission: number };
-    policy: { count: number; commission: number };
-  };
-  currentMonth: {
-    pension?: { count: number };
-    insurance?: { count: number };
-    investment?: { count: number };
-    policy?: { count: number };
-    count?: number;
-  };
-  previousMonth: {
-    pension?: { count: number };
-    insurance?: { count: number };
-    investment?: { count: number };
-    policy?: { count: number };
-  };
-}
 
 const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
   const RADIAN = Math.PI / 180;
