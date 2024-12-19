@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Lock, Mail, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, UserPlus, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 
