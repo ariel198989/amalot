@@ -14,7 +14,7 @@ interface XmlFile {
 }
 
 interface ClientsTableProps {
-  clients: Client[];
+  data: Client[];
 }
 
 const xmlImportService = new XmlImportService();
@@ -93,7 +93,7 @@ export default function ClientsPage() {
             </CardHeader>
             <CardContent>
               {clients.length > 0 ? (
-                <ClientsTable clients={clients} />
+                <ClientsTable data={clients} />
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   לא נמצאו לקוחות. אנא ייבא קבצי XML כדי להוסיף לקוחות.

@@ -13,11 +13,6 @@ interface FinancialData {
   [key: string]: number;
 }
 
-interface ProductDetails {
-  productType: string;
-  pensionType?: string;
-}
-
 export interface HeshbonOPolisa {
   'MISPAR-POLISA-O-HESHBON': string;
   'SUG-KUPA': string;
@@ -782,16 +777,6 @@ export class XMLFieldExtractor {
         status: this.extractValue(mutzar['STATUS-POLISA-O-CHESHBON'])
       })) : []
     };
-  }
-
-  private isPensionProduct(product: any): boolean {
-    return (
-      product?.SUG_MUTZAR === 2 || 
-      product?.SUG_KEREN_PENSIA || 
-      (product?.SHEM_TOCHNIT && /פנסי|קרן|מקיפה/i.test(product.SHEM_TOCHNIT)) || 
-      (product?.MaslulBituach?.SHEM_MASLUL_HABITUAH && 
-        /פנסי|קרן|מקיפה/i.test(product.MaslulBituach.SHEM_MASLUL_HABITUAH))
-    );
   }
 
   public processXmlContent(content: string): any {

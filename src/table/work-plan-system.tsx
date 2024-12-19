@@ -2,13 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface WorkPlanTableProps {
   agent_id: string;
@@ -50,28 +43,6 @@ interface RecruitmentSources {
   renewals: string;
   loans: string;
   others: string;
-}
-
-interface SalesTarget {
-  target: number;
-  achieved: number;
-  percentage: number;
-}
-
-interface MonthlySalesData {
-  insurance: SalesTarget;
-  pension: SalesTarget;
-  pensionTransfer: SalesTarget;
-  financeTransfer: SalesTarget;
-  mortgage: SalesTarget;
-  familyEconomics: SalesTarget;
-  employment: SalesTarget;
-  businessConsulting: SalesTarget;
-  retirement: SalesTarget;
-  organizationalRecruitment: SalesTarget;
-  monthlySubscription: SalesTarget;
-  loans: SalesTarget;
-  realEstate: SalesTarget;
 }
 
 const STORAGE_KEY_PREFIX = 'workPlanData_';
@@ -571,7 +542,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 text-slate-700 font-medium">כלכלת המשפח��</td>
+                  <td className="py-2.5 text-slate-700 font-medium">כלכלת המשפחה</td>
                   <td className="py-2">
                     <Input
                       type="number"
