@@ -1,82 +1,61 @@
 import { describe, it, expect } from '@jest/globals';
-import { calculateInsuranceCommission } from '../utils/calculators';
+import { calculateCommission } from '../utils/calculators';
 
 describe('Insurance Commission Calculations', () => {
   describe('Life Insurance', () => {
-    it('should calculate life insurance correctly', () => {
-      const result = calculateInsuranceCommission({
-        insurance_type: 'life',
-        premium: 1000,
-        commission_rate: 20,
-        payment_method: 'monthly' as const
-      });
+    const lifeRates = {
+      oneTime: 0.2,
+      monthly: 0.1,
+      age_factor: 0.02
+    };
 
-      expect(result).toBe(200);
+    it('should calculate life insurance correctly', () => {
+      const result = calculateCommission(1000, 30, 1, lifeRates);
+      expect(result.oneTime).toBe(200); // 1000 * 0.2 * 1 (age factor at 30)
+      expect(result.monthly).toBe(100); // 1000 * 0.1
     });
 
-    it('should handle annual payment method', () => {
-      const result = calculateInsuranceCommission({
-        insurance_type: 'life',
-        premium: 1000,
-        commission_rate: 20,
-        payment_method: 'annual' as const
-      });
-
-      expect(result).toBe(400);
+    it('should handle age factor', () => {
+      const result = calculateCommission(1000, 40, 1, lifeRates);
+      expect(result.oneTime).toBe(400); // 1000 * 0.2 * 2 (age factor at 40)
     });
   });
 
   describe('Disability Insurance', () => {
-    const baseInput = {
-      premium: 1000,
-      commission_rate: 20,
-      payment_method: 'monthly' as const
+    const disabilityRates = {
+      oneTime: 0.3,
+      monthly: 0.15,
+      period_factor: 0.1
     };
 
     it('should calculate disability insurance correctly', () => {
-      const result = calculateInsuranceCommission({
-        ...baseInput,
-        insurance_type: 'disability' as const
-      });
-
-      expect(result).toBe(300);
+      const result = calculateCommission(1000, 30, 1, disabilityRates);
+      expect(result.oneTime).toBe(300); // 1000 * 0.3
+      expect(result.monthly).toBe(165); // 1000 * 0.15 * 1.1 (period factor for 1 year)
     });
 
-    it('should handle annual payment method', () => {
-      const result = calculateInsuranceCommission({
-        ...baseInput,
-        insurance_type: 'disability' as const,
-        payment_method: 'annual' as const
-      });
-
-      expect(result).toBe(600);
+    it('should handle period factor', () => {
+      const result = calculateCommission(1000, 30, 2, disabilityRates);
+      expect(result.monthly).toBe(180); // 1000 * 0.15 * 1.2 (period factor for 2 years)
     });
   });
 
   describe('Long Term Care Insurance', () => {
-    const baseInput = {
-      premium: 1000,
-      commission_rate: 20,
-      payment_method: 'monthly' as const
+    const ltcRates = {
+      oneTime: 0.25,
+      monthly: 0.12,
+      age_factor: 0.015
     };
 
     it('should calculate LTC insurance correctly', () => {
-      const result = calculateInsuranceCommission({
-        ...baseInput,
-        insurance_type: 'ltc' as const
-      });
-
-      expect(result).toBe(250);
+      const result = calculateCommission(1000, 30, 1, ltcRates);
+      expect(result.oneTime).toBe(250); // 1000 * 0.25 * 1 (age factor at 30)
+      expect(result.monthly).toBe(120); // 1000 * 0.12
     });
 
-    it('should handle annual payment method', () => {
-      const result = calculateInsuranceCommission({
-        ...baseInput,
-        insurance_type: 'ltc' as const,
-        payment_method: 'annual' as const
-      });
-
-      expect(result).toBe(500);
+    it('should handle age factor', () => {
+      const result = calculateCommission(1000, 50, 1, ltcRates);
+      expect(result.oneTime).toBe(400); // 1000 * 0.25 * 1.6 (age factor at 50)
     });
   });
 }); 
