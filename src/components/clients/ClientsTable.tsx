@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -901,14 +900,14 @@ export default function ClientsTable() {
                     <div>
                       <span className="font-medium">סה"כ צבירה: </span>
                       <span className="text-green-600">
-                        ₪{selectedClient.raw_data.mutzarim?.reduce((sum, product) => 
+                        ₪{selectedClient.raw_data.mutzarim?.reduce((sum: number, product: any) => 
                           sum + (Number(product['TOTAL-CHISACHON-MTZBR']) || 0), 0).toLocaleString()}
                       </span>
                     </div>
                     <div>
                       <span className="font-medium">סה"כ הפקדה חודשית: </span>
                       <span>
-                        ₪{selectedClient.raw_data.mutzarim?.reduce((sum, product) => 
+                        ₪{selectedClient.raw_data.mutzarim?.reduce((sum: number, product: any) => 
                           sum + (Number(product['HAFRASHAT-OVED']) || 0) + 
                           (Number(product['HAFRASHAT-MAASIK']) || 0) + 
                           (Number(product['HAFRASHAT-PITZUIM']) || 0), 0).toLocaleString()}
@@ -920,7 +919,7 @@ export default function ClientsTable() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-500">אין נתוני מסלקה זמינים עבור לקוח זה</p>
-                <p className="text-sm text-gray-400 mt-2">נא להעלות קובץ XML כדי ��צפות בנתונים</p>
+                <p className="text-sm text-gray-400 mt-2">נא להעלות קובץ XML כדי לצפות בנתונים</p>
               </div>
             )}
           </div>

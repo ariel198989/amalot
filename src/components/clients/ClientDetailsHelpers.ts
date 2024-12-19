@@ -11,17 +11,15 @@ export const uploadClientFiles = async (files: File[], clientId: string): Promis
     const filePath = `clients/${clientId}/${fileName}`;
 
     try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('client_documents')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl }, error: urlError } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('client_documents')
         .getPublicUrl(filePath);
-
-      if (urlError) throw urlError;
 
       const fileRecord: ClientFile = {
         client_id: clientId,

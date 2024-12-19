@@ -27,6 +27,14 @@ export function CreateJourney() {
     id_number: ''
   });
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'amount' ? Number(value) : value
+    }));
+  };
+
   const createOrUpdateClient = async () => {
     try {
       if (!user) return null;

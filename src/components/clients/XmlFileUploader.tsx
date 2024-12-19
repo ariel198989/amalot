@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
@@ -7,7 +6,6 @@ import { toast } from 'react-hot-toast';
 import { XMLFieldExtractor } from '@/lib/XMLFieldExtractor';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
-import { Client } from '@/types/client';
 import { XmlFile } from '@/types/xml';
 
 interface XmlFileUploaderProps {
@@ -50,9 +48,6 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
 
     // Don't save '-' as email
     const email = data.email && data.email !== '-' ? String(data.email).toLowerCase().trim() : undefined;
-
-    // Exclude products from client data since they're stored in a separate table
-    const { products, ...clientData } = data;
 
     return {
       user_id: data.user_id,
@@ -115,7 +110,7 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
         }
 
         client = updatedClient;
-        toast.success('פרטי הלקוח עודכנו בהצלחה');
+        toast.success('פרטי הלקוח עודכו בהצלחה');
       } else {
         // Create new client
         const { data: newClient, error: createError } = await supabase
@@ -189,7 +184,6 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
       
       const xmlFiles: { name: string; content: string }[] = [];
       const extractor = new XMLFieldExtractor();
-      let lastProcessedClient: Client | null = null;
       
       const xmlFileNames = Object.keys(zipContents.files)
         .filter(fileName => fileName.toLowerCase().endsWith('.xml'));
@@ -221,7 +215,18 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
               address_street: clientData.address.split(',')[0] || '',
               address_city: clientData.address.split(',')[1]?.trim() || '',
               status: 'active' as const,
-              products: clientData.products?.map(p => ({
+              products: clientData.products?.map((p: { 
+                type: string;
+                name: string;
+                policyNumber?: string;
+                startDate?: string;
+                balance?: number;
+                monthlyDeposit?: number;
+                'HAFRASHAT-OVED'?: number;
+                'HAFRASHAT-MAASIK'?: number;
+                'HAFRASHAT-PITZUIM'?: number;
+                status?: string;
+              }) => ({
                 type: p.type,
                 name: p.name,
                 policy_number: p.policyNumber,
@@ -237,9 +242,7 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
 
             // First create/update the client
             const client = await createClientFromXml(mappedClientData);
-            if (client) {
-              lastProcessedClient = client;
-              
+            if (client) {              
               // Then save the XML data
               const { error: xmlError } = await supabase
                 .from('client_xml_data')
@@ -295,67 +298,6 @@ export function XmlFileUploader({ onXmlFilesExtracted }: XmlFileUploaderProps) {
     },
     multiple: false
   });
-
-  const handleFilesProcessed = async (files: XmlFile[]) => {
-    try {
-      const extractor = new XMLFieldExtractor();
-      
-      for (const file of files) {
-        const result = extractor.processXmlContent(file.content);
-        console.log('Processed XML data:', result);
-        
-        if (!result || !result.client || !result.client['MISPAR-ZIHUY']) {
-          console.error('Invalid XML data structure:', result);
-          continue;
-        }
-
-        // First, create or update the client
-        const { data: client, error: clientError } = await supabase
-          .from('clients')
-          .upsert({
-            id_number: result.client['MISPAR-ZIHUY'],
-            first_name: result.client['SHEM-PRATI'],
-            last_name: result.client['SHEM-MISHPACHA'],
-            email: result.client['E-MAIL'],
-            user_id: user?.id
-          }, {
-            onConflict: 'id_number,user_id'
-          })
-          .select()
-          .single();
-
-        if (clientError) {
-          console.error('Error saving client:', clientError);
-          toast.error('שגיאה בשמירת נתוני הלקוח');
-          continue;
-        }
-
-        console.log('Saved/Updated client:', client);
-
-        // Then, save the XML data
-        const { error: xmlError } = await supabase
-          .from('client_xml_data')
-          .insert({
-            client_id: client.id,
-            raw_data: result,
-            created_at: new Date().toISOString()
-          });
-
-        if (xmlError) {
-          console.error('Error saving XML data:', xmlError);
-          toast.error('שגיאה בשמירת נתוני המסלקה');
-        } else {
-          console.log('Successfully saved XML data for client:', client.id);
-        }
-      }
-
-      onXmlFilesExtracted(files);
-      toast.success('הקבצים עובדו ונשמרו בהצלחה');
-    } catch (error) {
-      console.error('Error processing files:', error);
-      toast.error('שגיאה בעיבוד הקבצים');
-    }
-  };
 
   return (
     <div>

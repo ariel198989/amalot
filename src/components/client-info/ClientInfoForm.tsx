@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Brain, User, Briefcase, Building2, Mail, MapPin, Calendar, CreditCard, Building } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { cn } from '@/lib/utils';
 
 interface ClientInfoFormProps {
   onNext: (clientInfo: {

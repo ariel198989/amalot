@@ -2,29 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { 
   ArrowUpIcon, 
-  TrendingUp, 
-  Users, 
   BadgeDollarSign,
-  Wallet,
-  Target,
-  PiggyBank,
   CircleDollarSign,
-  Building2,
-  Receipt,
   ArrowDownIcon,
-  LineChart,
   BarChart4,
   HandCoins
 } from 'lucide-react';
 import { reportService } from '@/services/reportService';
 import { toast } from 'react-hot-toast';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from 'framer-motion';
 
 interface DashboardStats {
@@ -50,8 +40,6 @@ interface DashboardStats {
     policy?: { count: number };
   };
 }
-
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
 const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
   const RADIAN = Math.PI / 180;
@@ -83,7 +71,33 @@ export default function ModernAnalyticsDashboard() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const dashboardStats = await reportService.fetchDashboardStats();
+        const rawStats = await reportService.fetchDashboardStats();
+        
+        // Create a type-safe object with all required properties
+        const dashboardStats: DashboardStats = {
+          total: {
+            commission: rawStats.total.commission,
+            count: rawStats.total.count,
+            pension: rawStats.total.pension,
+            insurance: rawStats.total.insurance,
+            investment: rawStats.total.investment,
+            policy: rawStats.total.policy
+          },
+          currentMonth: rawStats.currentMonth || {
+            pension: { count: 0 },
+            insurance: { count: 0 },
+            investment: { count: 0 },
+            policy: { count: 0 },
+            count: 0
+          },
+          previousMonth: rawStats.previousMonth || {
+            pension: { count: 0 },
+            insurance: { count: 0 },
+            investment: { count: 0 },
+            policy: { count: 0 }
+          }
+        };
+        
         setStats(dashboardStats);
 
         // Get all sales from the service
@@ -120,19 +134,6 @@ export default function ModernAnalyticsDashboard() {
 
   const handleDateChange = (value: Date | undefined) => {
     setDate(value);
-  };
-
-  const tileContent = ({ date: tileDate }: { date: Date }) => {
-    const dateStr = tileDate.toISOString().split('T')[0];
-    const eventCount = events[dateStr];
-    
-    return eventCount ? (
-      <div className="flex items-center justify-center">
-        <span className="text-xs bg-blue-500 text-white rounded-full px-1.5 py-0.5">
-          {eventCount}
-        </span>
-      </div>
-    ) : null;
   };
 
   const formatCurrency = (amount: number) => {
@@ -177,13 +178,6 @@ export default function ModernAnalyticsDashboard() {
       description: 'מכירות בחודש הנוכחי'
     }
   ];
-
-  const productIcons = {
-    pension: Building2,
-    insurance: PiggyBank,
-    investment: Wallet,
-    policy: Receipt
-  };
 
   const pieData = [
     { name: 'פנסיה', value: stats.total.pension.count || 0 },
@@ -345,10 +339,6 @@ export default function ModernAnalyticsDashboard() {
                     day_range_middle: "aria-selected:bg-primary-50 aria-selected:text-primary-600",
                     day_hidden: "invisible",
                   }}
-                  components={{
-                    IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-                    IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-                  }}
                 />
               </div>
             </CardContent>
@@ -429,7 +419,7 @@ export default function ModernAnalyticsDashboard() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {pieData.map((entry, index) => (
+                      {pieData.map((_, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={`hsl(${200 + index * 30}, 84%, ${60 - index * 10}%)`}
