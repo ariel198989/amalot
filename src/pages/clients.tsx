@@ -13,6 +13,10 @@ interface XmlFile {
   content: string;
 }
 
+interface ClientsTableProps {
+  clients: Client[];
+}
+
 const xmlImportService = new XmlImportService();
 
 export default function ClientsPage() {

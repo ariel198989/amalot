@@ -293,6 +293,8 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     debouncedSave(updatedWorkPlan);
   };
 
+  const monthlyTargetsLength = yearlyWorkPlan?.monthlyTargets?.length || 0;
+
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden relative">
@@ -333,7 +335,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
             <tbody className="divide-y divide-gray-200">
               {/* יותרת משנה - נתוני פגישות */}
               <tr>
-                <td colSpan={yearlyWorkPlan?.monthlyTargets?.length + 1 || 1} 
+                <td colSpan={monthlyTargetsLength + 1} 
                     className="bg-gradient-to-r from-gray-100 to-gray-50 p-3 font-semibold text-gray-800 border-y border-gray-200">
                   נתוני פגישות
                 </td>
@@ -569,7 +571,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 text-slate-700 font-medium">כלכלת המשפחה</td>
+                  <td className="py-2.5 text-slate-700 font-medium">כלכלת המשפח��</td>
                   <td className="py-2">
                     <Input
                       type="number"

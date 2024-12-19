@@ -237,7 +237,7 @@ export class XMLFieldExtractor {
     const month = parseInt(dateStr.substring(4, 6));
     const day = parseInt(dateStr.substring(6, 8));
     
-    // בדוק טווח תארי��ים הגיוני
+    // בדוק טווח תאריים הגיוני
     if (year < 1900 || year > new Date().getFullYear()) {
       console.log('Invalid year:', year);
       return false;
@@ -644,7 +644,7 @@ export class XMLFieldExtractor {
           report += `
 - סג מוצר: ${this.getProductTypeText(mutzar['SUG-MUTZAR'])}
 - שם תכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
-- ��טטוס: ${this.getProductStatusText(mutzar['STATUS-POLISA-O-CHESHBON'])}
+- מטטוס: ${this.getProductStatusText(mutzar['STATUS-POLISA-O-CHESHBON'])}
 - תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] ? this.formatDate(mutzar['TAARICH-TCHILAT-HABITUACH']) : 'לא צוין'}
 - סה"כ הפקדה: ${mutzar['TOTAL-HAFKADA'] ? this.formatCurrency(mutzar['TOTAL-HAFKADA']) : 'לא צוין'}
 - סה"כ חיסכון מצטבר: ${mutzar['TOTAL-CHISACHON-MTZBR'] ? this.formatCurrency(mutzar['TOTAL-CHISACHON-MTZBR']) : 'לא צוין'}
@@ -723,7 +723,7 @@ export class XMLFieldExtractor {
       '3': 'קופת גמל להשקעה',
       '4': 'קרן השתלמות',
       '5': 'קופת גמל להשקעה',
-      '6': 'ביטוח ��יים'
+      '6': 'ביטוח יים'
     };
     return types[type || ''] || 'לא צוין';
   }
@@ -792,19 +792,6 @@ export class XMLFieldExtractor {
       (product?.MaslulBituach?.SHEM_MASLUL_HABITUAH && 
         /פנסי|קרן|מקיפה/i.test(product.MaslulBituach.SHEM_MASLUL_HABITUAH))
     );
-  }
-
-  private determineProductType(product: any): ProductDetails['productType'] {
-    if (this.isPensionProduct(product)) return 'פנסיה';
-    
-    const typeMap: { [key: string]: ProductDetails['productType'] } = {
-      '1': 'ביטוח',
-      '2': 'פנסיה',
-      '3': 'גמל',
-      '4': 'השתלמות'
-    };
-    
-    return typeMap[product?.SUG_MUTZAR] || 'אחר';
   }
 
   public processXmlContent(content: string): any {
