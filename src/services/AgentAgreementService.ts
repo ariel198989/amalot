@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
-import { AgentRates, CompanyRates } from '@/components/settings/AgentAgreements/AgentAgreementsTypes';
+import { 
+  AgentRates, 
+  PensionCompanyRates,
+  CompanyRates,
+  InsuranceCompanyRates 
+} from '@/components/settings/AgentAgreements/AgentAgreementsTypes';
 
 type InsuranceType = 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability';
 
@@ -38,7 +43,10 @@ export async function getAgentAgreement(userId: string): Promise<AgentRates | nu
   }
 }
 
-export async function getCompanyRates(category: string, company: string): Promise<any> {
+export async function getCompanyRates(
+  category: string,
+  company: string
+): Promise<PensionCompanyRates | CompanyRates | InsuranceCompanyRates | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -100,7 +108,7 @@ export async function calculateCommissions(
   }
 
   if (category === 'pension') {
-    const companyRates = agentRates.pension_companies?.[company];
+    const companyRates = agentRates.pension_companies?.[company] as PensionCompanyRates;
     console.log('Pension company rates:', { 
       company, 
       companyRates, 
@@ -115,10 +123,10 @@ export async function calculateCommissions(
 
     const annualContribution = amount * (Number(insuranceType) || 0.2083) * 12;
     
-    // Calculate scope commission based on annual contribution (e.g. 8%)
+    // Calculate scope commission based on annual contribution
     const scopeCommissionFromContribution = companyRates.scope_rate * annualContribution;
     
-    // Calculate accumulation commission based on total accumulated amount (e.g. 11,000 per million)
+    // Calculate accumulation commission based on total accumulated amount
     const accumulationCommission = totalAccumulated 
       ? companyRates.scope_rate_per_million * (totalAccumulated / 1000000)
       : 0;
@@ -179,21 +187,16 @@ export async function calculateCommissions(
       return getEmptyCalculation(amount);
     }
 
-    // For financial products:
-    // scope_commission is fixed amount per million
-    // monthly_commission is fixed amount per million per month
-    const millionsInAmount = amount / 1000000;
-    const scope_commission = (companyRates.scope_rate_per_million || 6000) * millionsInAmount;
-    const monthly_commission = (companyRates.monthly_rate_per_million || 250) * millionsInAmount;
-    const total_commission = scope_commission + (monthly_commission * 12);
+    // For financial products, use the product rates
+    const productRates = companyRates.products.investment_gemel || companyRates.products.hishtalmut;
+    if (!productRates) {
+      return getEmptyCalculation(amount);
+    }
 
-    console.log('Calculated financial commissions:', {
-      millionsInAmount,
-      scope_commission,
-      monthly_commission,
-      total_commission,
-      rates: companyRates
-    });
+    const millionsInAmount = amount / 1000000;
+    const scope_commission = productRates.scope_commission * millionsInAmount;
+    const monthly_commission = productRates.monthly_rate * millionsInAmount;
+    const total_commission = scope_commission + (monthly_commission * 12);
 
     return {
       category,
@@ -202,8 +205,8 @@ export async function calculateCommissions(
       monthly_commission,
       total_commission,
       details: {
-        scope_commission_explanation: `${companyRates.scope_rate_per_million.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${scope_commission.toLocaleString()}₪`,
-        monthly_commission_explanation: `${companyRates.monthly_rate_per_million.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪ לחודש`
+        scope_commission_explanation: `${productRates.scope_commission.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${scope_commission.toLocaleString()}₪`,
+        monthly_commission_explanation: `${productRates.monthly_rate.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪ לחודש`
       }
     };
   }

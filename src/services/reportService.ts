@@ -83,20 +83,21 @@ export const reportService = {
           }
 
           case 'insurance': {
-            // שמירת מוצר ביטוח
+            // שמירת מוצר ביטו��
+            const details = product.details as InsuranceProduct;
             const insuranceData = {
               user_id: user.id,
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
               date: journey.date,
-              premium: product.details.premium,
-              insurance_type: product.details.insurance_type,
-              payment_method: product.details.payment_method,
-              nifraim: product.details.nifraim,
-              scope_commission: product.details.scope_commission,
-              monthly_commission: product.details.monthly_commission,
-              total_commission: product.details.total_commission,
+              premium: details.premium,
+              insurance_type: details.insurance_type,
+              payment_method: details.payment_method,
+              nifraim: details.nifraim,
+              scope_commission: details.scope_commission,
+              monthly_commission: details.monthly_commission,
+              total_commission: details.total_commission,
               journey_id: journey.id
             };
 
@@ -110,17 +111,18 @@ export const reportService = {
 
           case 'investment': {
             // שמירת מוצר השקעות
+            const details = product.details as InvestmentProduct;
             const investmentData = {
               user_id: user.id,
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
               date: journey.date,
-              investment_amount: product.details.investment_amount,
-              investment_period: product.details.investment_period,
-              investment_type: product.details.investment_type,
-              scope_commission: product.details.scope_commission,
-              total_commission: product.details.total_commission,
+              investment_amount: details.investment_amount,
+              investment_period: details.investment_period,
+              investment_type: details.investment_type,
+              scope_commission: details.scope_commission,
+              total_commission: details.total_commission,
               journey_id: journey.id
             };
 
@@ -134,17 +136,18 @@ export const reportService = {
 
           case 'policy': {
             // שמירת מוצר פוליסות
+            const details = product.details as PolicyProduct;
             const policyData = {
               user_id: user.id,
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
               date: journey.date,
-              policy_amount: product.details.policy_amount,
-              policy_period: product.details.policy_period,
-              policy_type: product.details.policy_type,
-              scope_commission: product.details.scope_commission,
-              total_commission: product.details.total_commission,
+              policy_amount: details.policy_amount,
+              policy_period: details.policy_period,
+              policy_type: details.policy_type,
+              scope_commission: details.scope_commission,
+              total_commission: details.total_commission,
               journey_id: journey.id
             };
 

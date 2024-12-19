@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { toast } from 'react-hot-toast';
-import { Client, PensionSale, SaleType } from './ClientServiceTypes';
+import { Client } from './ClientServiceTypes';
 
 export const validateClientData = (data: Partial<Client>): void => {
   if (!data.first_name || !data.last_name || !data.id_number) {
