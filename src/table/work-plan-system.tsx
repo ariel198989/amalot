@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface WorkPlanTableProps {
   agent_id: string;
@@ -122,25 +123,6 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     }
   };
 
-  const handleInputChange = (monthIndex: number, field: string, value: string) => {
-    if (!yearlyWorkPlan) return;
-
-    const newMonthlyTargets = [...yearlyWorkPlan.monthlyTargets];
-    newMonthlyTargets[monthIndex] = {
-      ...newMonthlyTargets[monthIndex],
-      [field]: value
-    };
-
-    const updatedWorkPlan = {
-      ...yearlyWorkPlan,
-      monthlyTargets: newMonthlyTargets,
-      lastModified: new Date().toISOString()
-    };
-
-    setYearlyWorkPlan(updatedWorkPlan);
-    debouncedSave(updatedWorkPlan);
-  };
-
   const debouncedSave = (data: WorkPlanData) => {
     if (saveTimeout.current) {
       clearTimeout(saveTimeout.current);
@@ -153,17 +135,6 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
   const showSaveNotification = () => {
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 2000);
-  };
-
-  const calculatePercentage = (achieved: string | number = '0', target: string | number = '0') => {
-    const achievedNum = Number(achieved);
-    const targetNum = Number(target);
-    if (targetNum === 0) return 0;
-    return Math.round((achievedNum / targetNum) * 100);
-  };
-
-  const calculateTotal = (targets: any[], field: string) => {
-    return targets.reduce((sum, target) => sum + Number(target?.[field] || 0), 0);
   };
 
   const handleActivityChange = (monthIndex: number, field: keyof ActivityAverages, value: string) => {
@@ -523,7 +494,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
         {/* טבלה 3 - ממוצע לפגישה מוצרי גולה */}
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
-            ממוצע לפגישה מוצרי גולה
+            ממוצע לפגישה מוצרי גול��
           </div>
           <div className="p-4 bg-white rounded-b-lg">
             <table className="w-full text-sm">
@@ -671,7 +642,16 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
         </div>
         <div className="p-4">
           <Tabs defaultValue="insurance" className="w-full">
-            {/* ... תוכן הטאבים כמו ב-sales-targets-system ... */}
+            <TabsList>
+              <TabsTrigger value="insurance">ביטוח</TabsTrigger>
+              <TabsTrigger value="pension">פנסיה</TabsTrigger>
+            </TabsList>
+            <TabsContent value="insurance">
+              {/* Insurance content */}
+            </TabsContent>
+            <TabsContent value="pension">
+              {/* Pension content */}
+            </TabsContent>
           </Tabs>
         </div>
       </Card>
