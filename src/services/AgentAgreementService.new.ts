@@ -1,139 +1,246 @@
-import { supabase } from '@/lib/supabase';
-import { AgentRates } from '../components/settings/AgentAgreements/AgentAgreementsTypes';
+import { supabase } from '../lib/supabase';
+import type { AgentRates } from '../components/settings/AgentAgreements/AgentAgreementsTypes';
 
-const DEFAULT_COMPANY_RATES = {
-  scope_rate: 0,
-  monthly_rate: 0,
-  scope_rate_per_million: 0,
-  active: false
-};
+type InsuranceType = 'personal_accident' | 'mortgage' | 'health' | 'critical_illness' | 'insurance_umbrella' | 'risk' | 'service' | 'disability';
 
-export const getAgentRates = async (): Promise<AgentRates | null> => {
+interface CommissionCalculation {
+  category: string;
+  amount: number;
+  scope_commission: number;
+  monthly_commission: number;
+  total_commission: number;
+  details: {
+    scope_commission_explanation: string;
+    monthly_commission_explanation: string;
+  };
+}
+
+export async function getAgentAgreement(userId: string): Promise<AgentRates | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
+    console.log('Fetching agent agreement for user:', userId);
+    
     const { data, error } = await supabase
       .from('agent_commission_rates')
-      .select('*')
-      .eq('user_id', user.id)
+      .select()
+      .eq('user_id', userId)
       .single();
 
     if (error) {
-      throw error;
+      console.error('Error fetching agent agreement:', error);
+      return null;
     }
 
+    console.log('Retrieved agent agreement:', data);
     return data;
   } catch (error) {
-    console.error('Error fetching agent rates:', error);
+    console.error('Error in getAgentAgreement:', error);
     return null;
   }
-};
+}
 
-export const getCompanyRates = async (category: 'pension' | 'savings_and_study' | 'policy' | 'insurance', company: string): Promise<{
-  scope_rate_per_million: number;
-  monthly_rate: number;
-  active: boolean;
-} | null> => {
+export async function getCompanyRates(category: string, company: string): Promise<any> {
   try {
-    const rates = await getAgentRates();
-    if (!rates) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('User not authenticated');
+      return null;
+    }
 
-    let companyRates;
+    const agentRates = await getAgentAgreement(user.id);
+    if (!agentRates) {
+      return null;
+    }
+
     switch (category) {
       case 'pension':
-        companyRates = rates.pension_companies?.[company];
-        if (!companyRates?.active) return null;
-        return {
-          scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
-          monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
-          active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
-        };
-
+        return agentRates.pension_companies?.[company] || null;
       case 'savings_and_study':
-        companyRates = rates.savings_and_study_companies?.[company];
-        if (!companyRates?.active) return null;
-        break;
-
-      case 'policy':
-        companyRates = rates.policy_companies?.[company];
-        if (!companyRates?.active) return null;
-        break;
-
+        return agentRates.savings_and_study_companies?.[company] || null;
       case 'insurance':
-        if (!rates.insurance_companies?.[company]?.active) return null;
-        return {
-          scope_rate_per_million: rates.insurance_companies[company].products.risk.one_time_rate * 1000000,
-          monthly_rate: rates.insurance_companies[company].products.risk.monthly_rate,
-          active: rates.insurance_companies[company].active
-        };
-
+        return agentRates.insurance_companies?.[company] || null;
+      case 'policy':
+        return agentRates.policy_companies?.[company] || null;
       default:
         return null;
     }
-
-    if (!companyRates) return null;
-
-    return {
-      scope_rate_per_million: companyRates.scope_rate_per_million ?? DEFAULT_COMPANY_RATES.scope_rate_per_million,
-      monthly_rate: companyRates.monthly_rate ?? DEFAULT_COMPANY_RATES.monthly_rate,
-      active: companyRates.active ?? DEFAULT_COMPANY_RATES.active
-    };
   } catch (error) {
     console.error('Error getting company rates:', error);
     return null;
   }
-};
+}
 
-export const calculateCommissions = async (
-  category: 'pension' | 'savings_and_study' | 'policy' | 'insurance',
+function getEmptyCalculation(amount: number): CommissionCalculation {
+  return {
+    category: '',
+    amount,
+    scope_commission: 0,
+    monthly_commission: 0,
+    total_commission: 0,
+    details: {
+      scope_commission_explanation: 'No commission rates found',
+      monthly_commission_explanation: 'No commission rates found'
+    }
+  };
+}
+
+export async function calculateCommissions(
+  userId: string,
+  category: string,
   company: string,
   amount: number,
-  accumulation?: number,
-  contributionRate?: number
-): Promise<{
-  scope_commission: number;
-  monthly_commission: number;
-  total_commission: number;
-} | null> => {
-  try {
-    const rates = await getCompanyRates(category, company);
-    if (!rates || !rates.active) return null;
+  insuranceType?: string,
+  totalAccumulated?: number
+): Promise<CommissionCalculation> {
+  console.log('Starting commission calculation:', { userId, category, company, amount, insuranceType, totalAccumulated });
 
-    let scope_commission = 0;
-    let monthly_commission = 0;
-    let total_commission = 0;
+  const agentRates = await getAgentAgreement(userId);
+  if (!agentRates) {
+    console.log('No agent rates found');
+    return getEmptyCalculation(amount);
+  }
 
-    const millionsInAmount = amount / 1000000;
-    scope_commission = Math.round(millionsInAmount * (rates.scope_rate_per_million || 0));
-    monthly_commission = Math.round(amount * (rates.monthly_rate || 0));
-    total_commission = scope_commission + (monthly_commission * 12);
+  if (category === 'pension') {
+    const companyRates = agentRates.pension_companies?.[company];
+    console.log('Pension company rates:', { 
+      company, 
+      companyRates, 
+      allRates: agentRates.pension_companies,
+      totalAccumulated 
+    });
     
-    console.log('Commission calculation:', {
-      category,
+    if (!companyRates?.active) {
+      console.log('No active rates found for pension company:', company);
+      return getEmptyCalculation(amount);
+    }
+
+    const annualContribution = amount * (Number(insuranceType) || 0.2083) * 12;
+    
+    // Calculate scope commission based on annual contribution (e.g. 8%)
+    const scopeCommissionFromContribution = companyRates.scope_rate * annualContribution;
+    
+    // Calculate accumulation commission based on total accumulated amount (e.g. 11,000 per million)
+    const accumulationCommission = totalAccumulated 
+      ? companyRates.scope_rate_per_million * (totalAccumulated / 1000000)
+      : 0;
+    
+    console.log('Pension calculation details:', {
+      salary: amount,
+      annualContribution,
+      totalAccumulated,
+      scope_rate: companyRates.scope_rate,
+      scope_rate_per_million: companyRates.scope_rate_per_million,
+      scopeCommissionFromContribution,
+      accumulationCommission,
+      accumulationCalc: totalAccumulated 
+        ? `${companyRates.scope_rate_per_million.toLocaleString()}₪ למיליון × ${(totalAccumulated/1000000).toFixed(2)} מיליון = ${accumulationCommission.toLocaleString()}₪`
+        : 'אין צבירה'
+    });
+
+    const scope_commission = scopeCommissionFromContribution;
+    const monthly_commission = accumulationCommission;  // Changed: accumulation commission goes to monthly_commission
+    const total_commission = scope_commission + monthly_commission;
+
+    console.log('Calculated pension commissions:', {
       amount,
-      millions_in_amount: millionsInAmount,
-      scope_rate_per_million: rates.scope_rate_per_million,
-      monthly_rate: rates.monthly_rate,
+      insuranceType,
+      annualContribution,
+      totalAccumulated,
+      scopeCommissionFromContribution,
+      accumulationCommission,
       scope_commission,
       monthly_commission,
       total_commission,
-      formula: {
-        scope: `${millionsInAmount} מיליון * ${rates.scope_rate_per_million} = ${scope_commission} ש"ח`,
-        monthly: `${amount} * ${rates.monthly_rate} = ${monthly_commission} ש"ח`,
-        total: `${scope_commission} + (${monthly_commission} * 12) = ${total_commission} ש"ח`
-      }
+      rates: companyRates
     });
 
     return {
+      category,
+      amount,
       scope_commission,
       monthly_commission,
-      total_commission
+      total_commission,
+      details: {
+        scope_commission_explanation: 
+          `עמלת היקף: ${(companyRates.scope_rate * 100).toFixed(2)}% × ${annualContribution.toLocaleString()}₪ = ${scope_commission.toLocaleString()}₪`,
+        monthly_commission_explanation: 
+          totalAccumulated 
+            ? `עמלת צבירה: ${companyRates.scope_rate_per_million.toLocaleString()}₪ למיליון × ${(totalAccumulated/1000000).toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪`
+            : 'אין צבירה'
+      }
     };
-  } catch (error) {
-    console.error('Error calculating commissions:', error);
-    return null;
   }
-}; 
+
+  if (category === 'savings_and_study') {
+    const companyRates = agentRates.savings_and_study_companies?.[company];
+    console.log('Financial company rates:', companyRates);
+
+    if (!companyRates?.active) {
+      console.log('No active financial rates found');
+      return getEmptyCalculation(amount);
+    }
+
+    // For financial products:
+    // scope_commission is fixed amount per million
+    // monthly_commission is fixed amount per million per month
+    const millionsInAmount = amount / 1000000;
+    const scope_commission = (companyRates.products?.gemel?.scope_commission || 6000) * millionsInAmount;
+    const monthly_commission = (companyRates.products?.gemel?.monthly_rate || 250) * millionsInAmount;
+    const total_commission = scope_commission + (monthly_commission * 12);
+
+    console.log('Calculated financial commissions:', {
+      millionsInAmount,
+      scope_commission,
+      monthly_commission,
+      total_commission,
+      rates: companyRates
+    });
+
+    return {
+      category,
+      amount,
+      scope_commission,
+      monthly_commission,
+      total_commission,
+      details: {
+        scope_commission_explanation: `${companyRates.products?.gemel?.scope_commission.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${scope_commission.toLocaleString()}₪`,
+        monthly_commission_explanation: `${companyRates.products?.gemel?.monthly_rate.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪ לחודש`
+      }
+    };
+  }
+
+  if (category === 'insurance') {
+    const companyRates = agentRates.insurance_companies?.[company];
+    if (!companyRates?.active || !insuranceType || !companyRates.products?.[insuranceType as InsuranceType]) {
+      return getEmptyCalculation(amount);
+    }
+
+    const rates = companyRates.products[insuranceType as InsuranceType];
+    if (!rates) {
+      return getEmptyCalculation(amount);
+    }
+
+    // For insurance:
+    // one_time_rate is percentage of annual premium
+    // monthly_rate is percentage of monthly premium
+    const annual_premium = amount * 12;
+    const scope_commission = (rates.one_time_rate / 100) * annual_premium;
+    const monthly_commission = (rates.monthly_rate / 100) * amount;
+    const total_commission = scope_commission + (monthly_commission * 12);
+
+    return {
+      category,
+      amount,
+      scope_commission,
+      monthly_commission,
+      total_commission,
+      details: {
+        scope_commission_explanation: `${rates.one_time_rate}% × ${annual_premium.toLocaleString()}₪ (פרמיה שנתית) = ${scope_commission.toLocaleString()}₪`,
+        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לחודש`
+      }
+    };
+  }
+
+  return getEmptyCalculation(amount);
+}
+
+// ... rest of the code ...

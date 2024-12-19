@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabaseClient';
-import { FormData } from './CustomerJourneyTypes';
 import { calculateCommissions } from '../../services/AgentAgreementService';
 
 export const calculatePensionCommissions = async (data: any, company: string) => {
@@ -9,7 +7,15 @@ export const calculatePensionCommissions = async (data: any, company: string) =>
     const contributionRate = Number(data.pensionContribution || 20.83) / 100;
     const annualContribution = salary * 12 * contributionRate;
     
-    const commissions = await calculateCommissions('pension', company, annualContribution, accumulation);
+    const commissions = await calculateCommissions(
+      data.user_id,
+      'pension',
+      company,
+      annualContribution,
+      String(contributionRate),
+      accumulation
+    );
+
     if (!commissions) {
       throw new Error('לא נמצאו נתוני עמלות');
     }
@@ -35,7 +41,14 @@ export const calculateInsuranceCommissions = async (data: any, company: string) 
   try {
     const premium = Number(data.insurancePremium) || 0;
     
-    const commissions = await calculateCommissions('insurance', company, premium);
+    const commissions = await calculateCommissions(
+      data.user_id,
+      'insurance',
+      company,
+      premium,
+      data.insuranceType
+    );
+
     if (!commissions) {
       throw new Error('לא נמצאו נתוני עמלות');
     }
@@ -55,7 +68,14 @@ export const calculateInvestmentCommissions = async (data: any, company: string)
   try {
     const amount = Number(data.investmentAmount) || 0;
     
-    const commissions = await calculateCommissions('savings_and_study', company, amount);
+    const commissions = await calculateCommissions(
+      data.user_id,
+      'savings_and_study',
+      company,
+      amount,
+      data.productType
+    );
+
     if (!commissions) {
       throw new Error('לא נמצאו נתוני עמלות');
     }
@@ -81,7 +101,14 @@ export const calculatePolicyCommissions = async (data: any, company: string) => 
   try {
     const amount = Number(data.policyAmount) || 0;
     
-    const commissions = await calculateCommissions('policy', company, amount);
+    const commissions = await calculateCommissions(
+      data.user_id,
+      'policy',
+      company,
+      amount,
+      data.policyType
+    );
+
     if (!commissions) {
       throw new Error('לא נמצאו נתוני עמלות');
     }

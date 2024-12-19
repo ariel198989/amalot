@@ -33,6 +33,42 @@ interface InvestmentCalcParams {
 // מקדם קבוע לחישוב עמלה מצבירה (0.3% למיליון)
 const ACCUMULATION_RATE = 0.0003;
 
+interface BaseRates {
+  oneTime: number;
+  monthly: number;
+}
+
+interface AgeBasedRates extends BaseRates {
+  age_factor: number;
+}
+
+interface PeriodBasedRates extends BaseRates {
+  period_factor: number;
+}
+
+type ProductRates = AgeBasedRates | PeriodBasedRates;
+
+export function calculateCommission(amount: number, age: number, years: number, rates: ProductRates) {
+  let ageFactor = 1;
+  let periodFactor = 1;
+
+  if ('age_factor' in rates) {
+    ageFactor = 1 + (age - 30) * rates.age_factor;
+  }
+
+  if ('period_factor' in rates) {
+    periodFactor = 1 + years * rates.period_factor;
+  }
+
+  const baseCommission = amount * rates.oneTime;
+  const monthlyCommission = amount * rates.monthly;
+
+  return {
+    oneTime: baseCommission * ageFactor,
+    monthly: monthlyCommission * periodFactor,
+  };
+}
+
 export const calculators = {
   // חישוב עמלות פנסיה
   calculatePensionCommission: (params: PensionCalcParams) => {

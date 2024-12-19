@@ -1,5 +1,23 @@
 import { XMLParser } from 'fast-xml-parser';
 
+// Move all interfaces to the top
+interface FinancialContainer {
+  [key: string]: any;
+}
+
+interface FinancialData {
+  'TOTAL-HAFKADA': number;
+  'SCHUM-HAFRASHA': number;
+  'TOTAL-CHISACHON-MTZBR': number;
+  // ... rest of the fields
+  [key: string]: number;
+}
+
+interface ProductDetails {
+  productType: string;
+  pensionType?: string;
+}
+
 export interface HeshbonOPolisa {
   'MISPAR-POLISA-O-HESHBON': string;
   'SUG-KUPA': string;
@@ -237,11 +255,6 @@ export class XMLFieldExtractor {
     return isValid;
   }
 
-  private isNilValue(value: any): boolean {
-    return value && typeof value === 'object' && 
-           ('@_xmlns:xsi' in value || '@_xsi:nil' in value);
-  }
-
   private extractValue(value: any): string {
     if (!value) return '';
 
@@ -263,8 +276,9 @@ export class XMLFieldExtractor {
     return '';
   }
 
-  private findFinancialDataInProduct(product: any): any[] {
-    const financialContainers = [];
+  // Fix method signatures
+  private findFinancialDataInProduct(product: any): FinancialContainer[] {
+    const financialContainers: FinancialContainer[] = [];
     
     // Recursive function to find financial data containers
     const findContainers = (obj: any, path = '') => {
@@ -312,7 +326,7 @@ export class XMLFieldExtractor {
       const foundFields = financialFields.filter(field => field in obj);
       if (foundFields.length > 0) {
         console.log(`Found financial data at ${path}:`, 
-          foundFields.reduce((acc, field) => {
+          foundFields.reduce((acc: { [key: string]: any }, field: string) => {
             acc[field] = obj[field];
             return acc;
           }, {}));
@@ -331,7 +345,7 @@ export class XMLFieldExtractor {
     return financialContainers;
   }
 
-  private extractFinancialData(product: any): any {
+  private extractFinancialData(product: any): FinancialData {
     console.log('Extracting financial data from product:', product);
     
     // Get all possible financial data containers
@@ -339,37 +353,27 @@ export class XMLFieldExtractor {
     console.log('Found financial data containers:', containers);
 
     // Initialize with default values
-    const financialData = {
-      // סכומים
+    const financialData: FinancialData = {
+      // Initialize all fields with 0
       'TOTAL-HAFKADA': 0,
       'SCHUM-HAFRASHA': 0,
       'TOTAL-CHISACHON-MTZBR': 0,
       'YITRAT-KASPEY-TAGMULIM': 0,
       'KITZVAT-HODSHIT-TZFUYA': 0,
       'SCHUM-KITZVAT-ZIKNA': 0,
-
-      // דמי ניהול
       'SHEUR-DMEI-NIHUL': 0,
       'TOTAL-DMEI-NIHUL-HAFKADA': 0,
       'DMEI-NIHUL-KOLEL': 0,
-
-      // תש��אות
       'TSUA-NETO': 0,
       'TSUA-NOMINALI': 0,
       'TSUA-REALI': 0,
       'TSUA-MEMUZAAT': 0,
       'TSUA-MITZTABERET': 0,
-
-      // ביטוחים
       'ALUT-KISUI': 0,
       'SHEUR-KISUY-NECHUT': 0,
-
-      // אחוזי הפקדה
       'ACHUZ-HAFKADA-OVED': 0,
       'ACHUZ-HAFKADA-MAASIK': 0,
       'ACHUZ-HAFKADA-PITZUIM': 0,
-
-      // רווח והפסד
       'REVACH-HEFSED-BENIKOI-HOZAHOT': 0
     };
 
@@ -409,9 +413,9 @@ export class XMLFieldExtractor {
         const standardKey = mappings[key] || key;
         if (standardKey in financialData) {
           const extractedValue = this.extractNumber(value);
-          if (extractedValue > 0) { // Only update if we found a positive value
+          if (extractedValue > 0) {
             console.log(`Found value for ${standardKey}:`, extractedValue, 'from original key:', key);
-            financialData[standardKey] = extractedValue;
+            financialData[standardKey as keyof FinancialData] = extractedValue;
           }
         }
       }
@@ -616,7 +620,7 @@ export class XMLFieldExtractor {
 
   createMarkdownReport(lakoach: YeshutLakoach, maasik: YeshutMaasik, mutzarim: (HeshbonOPolisa | MutzarPensioni | KupatGemel | PolisatMenahalim)[]): string {
     try {
-      let report = `# דוח מסלקה\n\n## פרטי לקוח
+      let report = `# דוח מסלקה\n\n## פרטי ל��וח
 - שם מלא: ${lakoach['SHEM-PRATI'] || ''} ${lakoach['SHEM-MISHPACHA'] || ''}
 - מספר זהות: ${lakoach['MISPAR-ZIHUY'] || lakoach['MISPAR-ZIHUY-LAKOACH'] || ''}
 - תאריך לידה: ${lakoach['TAARICH-LEYDA'] ? this.formatDate(lakoach['TAARICH-LEYDA']) : 'לא צוין'}
@@ -638,7 +642,7 @@ export class XMLFieldExtractor {
 
           // Basic fields that exist in all products
           report += `
-- סוג מוצר: ${this.getProductTypeText(mutzar['SUG-MUTZAR'])}
+- סג מוצר: ${this.getProductTypeText(mutzar['SUG-MUTZAR'])}
 - שם תכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
 - סטטוס: ${this.getProductStatusText(mutzar['STATUS-POLISA-O-CHESHBON'])}
 - תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] ? this.formatDate(mutzar['TAARICH-TCHILAT-HABITUACH']) : 'לא צוין'}
@@ -716,7 +720,7 @@ export class XMLFieldExtractor {
     const types: Record<string, string> = {
       '1': 'ביטוח מנהלים',
       '2': 'קרן פנסיה',
-      '3': 'קופת גמל',
+      '3': 'קופת גמל להשקעה',
       '4': 'קרן השתלמות',
       '5': 'קופת גמל להשקעה',
       '6': 'ביטוח חיים'
@@ -751,7 +755,11 @@ export class XMLFieldExtractor {
     return statuses[status || ''] || 'לא צוין';
   }
 
-  extractClientData(data: { lakoach: YeshutLakoach; maasik: YeshutMaasik; mutzarim: HeshbonOPolisa[] }) {
+  public extractClientData(data: { 
+    lakoach: YeshutLakoach; 
+    maasik: YeshutMaasik; 
+    mutzarim: HeshbonOPolisa[] 
+  }): any {
     const { lakoach, mutzarim } = data;
     return {
       id: this.extractValue(lakoach['MISPAR-ZIHUY']) || this.extractValue(lakoach['MISPAR-ZIHUY-LAKOACH']),
@@ -776,55 +784,11 @@ export class XMLFieldExtractor {
     };
   }
 
-  private formatProductDetails(mutzar: any): string {
-    return `
-מספר פוליסה/חשבון: ${mutzar['MISPAR-POLISA-O-HESHBON'] || 'לא צוין'}
-סוג קופה: ${mutzar['SUG-KUPA'] || 'לא צוין'}
-סוג מוצר: ${mutzar['SUG-MUTZAR'] || 'לא צוין'}
-סוג תוכנ��ת: ${mutzar['SUG-TOCHNIT-O-CHESHBON'] || 'לא צוין'}
-שם תוכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
-סטטוס: ${mutzar['STATUS-POLISA-O-CHESHBON'] || 'לא צוין'}
-תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] || 'לא צוין'}
-
-נתונים פיננסיים:
-- סכומים:
-  * סה"כ הפקדה חודשית: ${mutzar['TOTAL-HAFKADA'] ? this.formatCurrency(mutzar['TOTAL-HAFKADA']) : 'לא צוין'}
-  * סה"כ חיסכון מצטבר: ${mutzar['TOTAL-CHISACHON-MTZBR'] ? this.formatCurrency(mutzar['TOTAL-CHISACHON-MTZBR']) : 'לא צוין'}
-  * יתרת כספי תגמולים: ${mutzar['YITRAT-KASPEY-TAGMULIM'] ? this.formatCurrency(mutzar['YITRAT-KASPEY-TAGMULIM']) : 'לא צוין'}
-  * קצבה חודשית צפויה: ${mutzar['KITZVAT-HODSHIT-TZFUYA'] ? this.formatCurrency(mutzar['KITZVAT-HODSHIT-TZFUYA']) : 'לא צוין'}
-  * סכום קצבת זקנה: ${mutzar['SCHUM-KITZVAT-ZIKNA'] ? this.formatCurrency(mutzar['SCHUM-KITZVAT-ZIKNA']) : 'לא צוין'}
-
-- דמי ניהול:
-  * דמי ניהול מנכסים: ${mutzar['SHEUR-DMEI-NIHUL'] ? mutzar['SHEUR-DMEI-NIHUL'] + '%' : 'לא צוין'}
-  * דמי ניהול מהפקדה: ${mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] ? mutzar['TOTAL-DMEI-NIHUL-HAFKADA'] + '%' : 'לא צוין'}
-  * דמי ניהול כול: ${mutzar['DMEI-NIHUL-KOLEL'] ? mutzar['DMEI-NIHUL-KOLEL'] + '%' : 'לא צוין'}
-
-- תשואות:
-  * תשואה נטו: ${mutzar['TSUA-NETO'] ? mutzar['TSUA-NETO'] + '%' : 'לא צוין'}
-  * תשואה נומינלית: ${mutzar['TSUA-NOMINALI'] ? mutzar['TSUA-NOMINALI'] + '%' : 'לא צוין'}
-  * תשואה ריאלית: ${mutzar['TSUA-REALI'] ? mutzar['TSUA-REALI'] + '%' : 'לא צוין'}
-  * תשואה ממוצעת: ${mutzar['TSUA-MEMUZAAT'] ? mutzar['TSUA-MEMUZAAT'] + '%' : 'לא צוין'}
-  * תשואה מצטברת: ${mutzar['TSUA-MITZTABERET'] ? mutzar['TSUA-MITZTABERET'] + '%' : 'לא צוין'}
-
-- ביטוחים:
-  * עלות כיסוי ביטוחי: ${mutzar['ALUT-KISUI'] ? this.formatCurrency(mutzar['ALUT-KISUI']) : 'לא צוין'}
-  * שיעור כיסוי נכות: ${mutzar['SHEUR-KISUY-NECHUT'] ? mutzar['SHEUR-KISUY-NECHUT'] + '%' : 'לא צוין'}
-
-- אחוזי הפקדה:
-  * אחוז הפקדת עובד: ${mutzar['ACHUZ-HAFKADA-OVED'] ? mutzar['ACHUZ-HAFKADA-OVED'] + '%' : 'לא צוין'}
-  * אחוז הפקדת מעסיק: ${mutzar['ACHUZ-HAFKADA-MAASIK'] ? mutzar['ACHUZ-HAFKADA-MAASIK'] + '%' : 'לא צוין'}
-  * אחוז הפקדה לפיצויים: ${mutzar['ACHUZ-HAFKADA-PITZUIM'] ? mutzar['ACHUZ-HAFKADA-PITZUIM'] + '%' : 'לא צוין'}
-
-- רווח והפסד:
-  * רווח/הפסד בניכוי הוצאות: ${mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT'] ? this.formatCurrency(mutzar['REVACH-HEFSED-BENIKOI-HOZAHOT']) : 'לא צוין'}
-`;
-  }
-
   private isPensionProduct(product: any): boolean {
     return (
-      product?.SUG_MUTZAR === 2 || // קוד מוצר פנסיה
-      product?.SUG_KEREN_PENSIA || // קיום שדה סוג קרן פנסיה
-      (product?.SHEM_TOCHNIT && /פנסי|קרן|מקיפה/i.test(product.SHEM_TOCHNIT)) || // בדיקת שם התוכנית
+      product?.SUG_MUTZAR === 2 || 
+      product?.SUG_KEREN_PENSIA || 
+      (product?.SHEM_TOCHNIT && /פנסי|קרן|מקיפה/i.test(product.SHEM_TOCHNIT)) || 
       (product?.MaslulBituach?.SHEM_MASLUL_HABITUAH && 
         /פנסי|קרן|מקיפה/i.test(product.MaslulBituach.SHEM_MASLUL_HABITUAH))
     );
@@ -848,11 +812,10 @@ export class XMLFieldExtractor {
       productType: this.isPensionProduct(product) ? 'פנסיה' : this.determineProductType(product),
       pensionType: product?.SUG_KEREN_PENSIA ? 
         (product.SUG_KEREN_PENSIA === 2 ? 'חדשה' : 'ותיקה') : undefined,
-      // ... other fields
     };
   }
 
-  public processXmlContent(content: string) {
+  public processXmlContent(content: string): any {
     const result = this.extractFieldsFromXml(content);
     return {
       client: result.data.lakoach,

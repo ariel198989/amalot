@@ -10,24 +10,27 @@ import { CombinedClient } from '../../types/calculators';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 
+type ProductType = 'pension' | 'insurance' | 'investment' | 'policy';
+type SelectedProducts = Record<ProductType, boolean>;
+
 const CombinedCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<CombinedClient[]>([]);
-  const [selectedProducts, setSelectedProducts] = React.useState({
+  const [selectedProducts, setSelectedProducts] = React.useState<SelectedProducts>({
     pension: false,
     insurance: false,
     investment: false,
     policy: false
   });
-  const { register, handleSubmit, watch, setValue } = useForm();
+  const { register, setValue } = useForm();
 
   const products = [
-    { id: 'pension', label: 'פנסיה', description: 'חישוב עמלות פנסיה' },
-    { id: 'insurance', label: 'ביטוח', description: 'חישוב עמלות ביטוח' },
-    { id: 'investment', label: 'גמל והשתלמות', description: 'חישוב עמלות גמל והשתלמות' },
-    { id: 'policy', label: 'פוליסת חיסכון', description: 'חישוב עמלות פוליסת חיסכון' }
+    { id: 'pension' as const, label: 'פנסיה', description: 'חישוב עמלות פנסיה' },
+    { id: 'insurance' as const, label: 'ביטוח', description: 'חישוב עמלות ביטוח' },
+    { id: 'investment' as const, label: 'גמל והשתלמות', description: 'חישוב עמלות גמל והשתלמות' },
+    { id: 'policy' as const, label: 'פוליסת חיסכון', description: 'חישוב עמלות פוליסת חיסכון' }
   ];
 
-  const handleSubmit = async (data: any) => {
+  const onSubmit = async (data: any) => {
     try {
       // חישוב העמלות
       const calculations = {
@@ -98,108 +101,110 @@ const CombinedCalculator: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* פרטי לקוח */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">פרטי לקוח</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">שם הלקוח</label>
-              <Input {...register('name')} placeholder="הכנס שם לקוח" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">חברה</label>
-              <Select onValueChange={(value) => setValue('company', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="בחר חברה" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="migdal">מגדל</SelectItem>
-                  <SelectItem value="menora">מנורה</SelectItem>
-                  <SelectItem value="clal">כלל</SelectItem>
-                  <SelectItem value="harel">הראל</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* בחירת מוצרים */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">בחר מוצרים לחישוב</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className={`flex items-center space-x-4 space-x-reverse p-4 rounded-lg border-2 transition-colors ${
-                  selectedProducts[product.id]
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Checkbox
-                  checked={selectedProducts[product.id]}
-                  onCheckedChange={(checked) => {
-                    setSelectedProducts(prev => ({
-                      ...prev,
-                      [product.id]: checked === true
-                    }));
-                  }}
-                  className="h-5 w-5"
-                />
-                <div className="flex-1">
-                  <h3 className="font-medium">{product.label}</h3>
-                  <p className="text-sm text-gray-500">{product.description}</p>
-                </div>
+      <form onSubmit={onSubmit}>
+        {/* פרטי לקוח */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">פרטי לקוח</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">שם הלקוח</label>
+                <Input {...register('name')} placeholder="הכנס שם לקוח" />
               </div>
-            ))}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">חברה</label>
+                <Select onValueChange={(value) => setValue('company', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר חברה" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="migdal">מגדל</SelectItem>
+                    <SelectItem value="menora">מנורה</SelectItem>
+                    <SelectItem value="clal">כלל</SelectItem>
+                    <SelectItem value="harel">הראל</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* בחירת מוצרים */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">בחר מוצרים לחישוב</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className={`flex items-center space-x-4 space-x-reverse p-4 rounded-lg border-2 transition-colors ${
+                    selectedProducts[product.id]
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Checkbox
+                    checked={selectedProducts[product.id]}
+                    onCheckedChange={(checked: boolean) => {
+                      setSelectedProducts(prev => ({
+                        ...prev,
+                        [product.id]: checked
+                      }));
+                    }}
+                    className="h-5 w-5"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-medium">{product.label}</h3>
+                    <p className="text-sm text-gray-500">{product.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* טפסים דינמיים */}
+        {Object.entries(selectedProducts).some(([_, value]) => value) && (
+          <div className="space-y-6">
+            {selectedProducts.pension && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">פרטי פנסיה</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* פרטי פנסיה */}
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedProducts.insurance && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">פרטי ביטוח</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* פרטי ביטוח */}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ... וכן הלאה עבור שאר המוצרים ... */}
           </div>
-        </CardContent>
-      </Card>
+        )}
 
-      {/* טפסים דינמיים */}
-      {Object.entries(selectedProducts).some(([_, value]) => value) && (
-        <div className="space-y-6">
-          {selectedProducts.pension && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">פרטי פנסיה</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* פרטי פנסיה */}
-              </CardContent>
-            </Card>
-          )}
-
-          {selectedProducts.insurance && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">פרטי ביטוח</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* פרטי ביטוח */}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ... וכן הלאה עבור שאר המוצרים ... */}
-        </div>
-      )}
-
-      {Object.entries(selectedProducts).some(([_, value]) => value) && (
-        <Button 
-          type="submit" 
-          className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700"
-        >
-          חשב עמלות
-        </Button>
-      )}
+        {Object.entries(selectedProducts).some(([_, value]) => value) && (
+          <Button 
+            type="submit" 
+            className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700"
+          >
+            חשב עמלות
+          </Button>
+        )}
+      </form>
 
       <ResultsTable
         data={clients}

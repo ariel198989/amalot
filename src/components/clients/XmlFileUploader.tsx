@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import { Upload, File, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { XMLFieldExtractor } from '@/lib/XMLFieldExtractor';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';

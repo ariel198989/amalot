@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { Client } from '@/types/client';
+import { Client as ClientType } from '@/types/client';
 
 interface PensionSale {
   user_id: string;
@@ -82,7 +82,7 @@ export function calculatePensionCommission(input: PensionCommissionInput): Pensi
 
 export const clientService = {
   // יצירת לקוח חדש
-  async createClient(data: Partial<Client>): Promise<Client> {
+  async createClient(data: Partial<ClientType>): Promise<ClientType> {
     // וידוא שכל השדות החובה קיימים
     if (!data.first_name || !data.last_name || !data.id_number) {
       throw new Error('חסרים שדות חובה: שם פרטי, שם משפחה או תעודת זהות');
@@ -121,7 +121,7 @@ export const clientService = {
   },
 
   // עדכון לקוח קיים
-  async updateClient(id: string, data: Partial<Client>): Promise<Client> {
+  async updateClient(id: string, data: Partial<ClientType>): Promise<ClientType> {
     // המרת phone ל-mobile_phone אם קיים
     if ('phone' in data) {
       const { phone, ...rest } = data;
@@ -171,7 +171,7 @@ export const clientService = {
   },
 
   // קבלת כל הלקוחות ש סוכן
-  async getClientsByAgent(userId: string): Promise<Client[]> {
+  async getClientsByAgent(userId: string): Promise<ClientType[]> {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
@@ -183,7 +183,7 @@ export const clientService = {
   },
 
   // קבלת לקוח לפי מזהה
-  async getClientById(id: string): Promise<Client> {
+  async getClientById(id: string): Promise<ClientType> {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
@@ -195,7 +195,7 @@ export const clientService = {
   },
 
   // חיפוש לקוח לפי תעודת זהות
-  async findClientByIdNumber(userId: string, idNumber: string): Promise<Client | null> {
+  async findClientByIdNumber(userId: string, idNumber: string): Promise<ClientType | null> {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -219,7 +219,7 @@ export const clientService = {
   },
 
   // עדכון פרטי לקוח מורחב
-  async updateClientDetails(id: string, data: Partial<Client>): Promise<Client> {
+  async updateClientDetails(id: string, data: Partial<ClientType>): Promise<ClientType> {
     const client = await this.updateClient(id, data);
     return client;
   },
@@ -309,7 +309,7 @@ export const clientService = {
         throw new Error('חובה להזין אחוז עמלה ואחוז הפרשה');
       }
 
-      // וידוא שכל המספרים הם מספרים ולא מחרוזות
+      // וידוא שכל המספרים הם מס��רים ולא מחרוזות
       const normalizedData = {
         user_id: saleData.user_id,
         client_id: saleData.client_id,
@@ -452,7 +452,7 @@ export const clientService = {
     }
   },
 
-  async checkExistingClient(idNumber: string, userId: string): Promise<Client | null> {
+  async checkExistingClient(idNumber: string, userId: string): Promise<ClientType | null> {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -475,7 +475,7 @@ export const clientService = {
     }
   },
 
-  async createClient(data: Partial<Client>): Promise<Client> {
+  async createClient(data: Partial<ClientType>): Promise<ClientType> {
     try {
       // המרת phone ל-mobile_phone אם קיים
       if ('phone' in data) {
@@ -507,7 +507,7 @@ export const clientService = {
     }
   },
 
-  async updateClient(clientId: string, updates: Partial<Client>): Promise<Client> {
+  async updateClient(clientId: string, updates: Partial<ClientType>): Promise<ClientType> {
     try {
       // המרת phone ל-mobile_phone אם קיים
       if ('phone' in updates) {

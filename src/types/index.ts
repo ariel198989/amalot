@@ -35,4 +35,5 @@ export interface InvestmentCommission {
 }
 
 // טיפוסים למסע לקוח
-export { CustomerJourney, CommissionDetails } from '../components/calculators/CustomerJourneyTypes';
+export type { CustomerJourney } from '../components/calculators/CustomerJourneyTypes';
+export type { CommissionDetails } from '../components/calculators/CustomerJourneyTypes';

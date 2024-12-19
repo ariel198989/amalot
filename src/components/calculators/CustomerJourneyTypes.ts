@@ -10,6 +10,22 @@ export interface BaseProduct {
   created_at?: string;
   updated_at?: string;
   total_commission: number;
+  scope_commission?: number;
+  monthly_commission?: number;
+}
+
+// Client Info interface
+export interface ClientInfo {
+  fullName: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  occupation?: string;
+  birthday?: string;
+  maritalStatus?: string;
+  numChildren?: number;
+  monthlyIncome?: number;
 }
 
 // Pension specific interfaces
@@ -86,15 +102,18 @@ export interface CustomerJourney {
   date: string;
   client_name: string;
   client_phone?: string;
-  selected_products: Array<{
-    type: 'pension' | 'insurance' | 'investment' | 'policy';
-    company: string;
-    details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
-  }>;
+  selected_products: Array<JourneyProduct>;
   total_commission: number;
+  commissionDetails: CommissionDetails;
   created_at?: string;
   updated_at?: string;
 }
+
+export type JourneyProduct = {
+  type: 'pension' | 'insurance' | 'investment' | 'policy';
+  company: string;
+  details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+};
 
 export interface CommissionDetails {
   pension: {

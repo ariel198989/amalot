@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import CalculatorForm from './CalculatorForm';
 import ResultsTable from './ResultsTable';
 import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
@@ -10,15 +9,11 @@ import {
   Shield,
   Wallet,
   PiggyBank,
-  User,
-  Brain,
   HeartHandshake,
   Coins,
-  Check,
   Download,
   Save,
-  ChevronLeft,
-  ChevronRight
+  Brain
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -28,19 +23,49 @@ import { reportService } from '@/services/reportService';
 import { useNavigate } from 'react-router-dom';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import ClientInfoForm from '../client-info/ClientInfoForm';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormContent, FormDescription, FormMessage } from '@/components/ui/form';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectListbox, SelectItem } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import type { CustomerJourney, PensionProduct as ImportedPensionProduct, InsuranceProduct as ImportedInsuranceProduct, InvestmentProduct as ImportedInvestmentProduct, PolicyProduct as ImportedPolicyProduct, CommissionDetails } from './CustomerJourneyTypes';
 
-interface PensionProduct {
-  salary: number;
-  accumulation: number;
-  provision: number;
+const productTypes = [
+  { type: 'pension' as const, title: 'פנסיה' },
+  { type: 'insurance' as const, title: 'סיכונים' },
+  { type: 'savings_and_study' as const, title: 'פיננסים' },
+  { type: 'policy' as const, title: 'פוליסת חסכון' },
+  { type: 'service' as const, title: 'גולה- שירות' },
+  { type: 'finance' as const, title: 'גולה- פיננסים' }
+] as const;
+
+function isPensionProduct(details: any): details is ImportedPensionProduct {
+  return details && 'salary' in details && 'accumulation' in details && 'provision' in details;
+}
+
+function isInsuranceProduct(details: any): details is ImportedInsuranceProduct {
+  return details && 'premium' in details && 'insurance_type' in details;
+}
+
+function isInvestmentProduct(details: any): details is ImportedInvestmentProduct {
+  return details && 'investment_amount' in details && 'investment_type' in details;
+}
+
+function isPolicyProduct(details: any): details is ImportedPolicyProduct {
+  return details && 'policy_amount' in details && 'policy_type' in details;
+}
+
+interface PensionProduct extends Omit<ImportedPensionProduct, 'activityType' | 'user_id' | 'client_name'> {
+  pensionSalary: number;
+  pensionAccumulation: number;
+  pensionContribution: number;
   scope_commission: number;
   monthly_commission: number;
   total_commission: number;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
+  activityType: 'transfer' | 'new_policy' | 'agent_appointment';
 }
 
-interface InsuranceProduct {
+interface InsuranceProduct extends Omit<ImportedInsuranceProduct, 'user_id' | 'client_name'> {
   premium: number;
   insurance_type: string;
   payment_method: string;
@@ -48,122 +73,52 @@ interface InsuranceProduct {
   scope_commission: number;
   monthly_commission: number;
   total_commission: number;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
 }
 
-interface InvestmentProduct {
+interface InvestmentProduct extends Omit<ImportedInvestmentProduct, 'user_id' | 'client_name'> {
   investment_amount: number;
   investment_period: number;
   investment_type: string;
   scope_commission: number;
   total_commission: number;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
 }
 
-interface PolicyProduct {
+interface PolicyProduct extends Omit<ImportedPolicyProduct, 'user_id' | 'client_name'> {
   policy_amount: number;
   policy_period: number;
   policy_type: string;
   scope_commission: number;
   total_commission: number;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
 }
 
-interface CustomerJourney {
-  id: string;
-  user_id: string;
-  journey_date: string;
-  date: string;
-  client_name: string;
-  selected_products: Array<{
-    type: 'pension' | 'insurance' | 'policy' | 'investment';
-    company: string;
-    details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
-  }>;
-  selected_companies: {
-    pension: string[];
-    insurance: string[];
-    investment: string[];
-    policy: string[];
-  };
-  commission_details: {
-    [key: string]: {
-      companies: {
-        [company: string]: {
-          scopeCommission: number;
-          accumulationCommission: number;
-          oneTimeCommission: number;
-          totalCommission: number;
-          monthlyCommission?: number;
-        };
-      };
-      total: number;
-    };
-  };
-  total_commission: number;
-  created_at: string;
-  updated_at: string;
+interface CustomerJourneyClient {
+  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';
+  scopeCommission: number;
+  monthlyCommission: number;
+  totalCommission: number;
+  details?: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+  pensionType?: 'comprehensive' | 'complementary';
+  productType?: string;
+  date?: string;
+  name?: string;
+  company?: string;
+  insuranceType?: string;
 }
 
 interface ClientInfo {
   fullName: string;
-  idNumber: string;
-  birthDate: string;
-  email: string;
-  address: {
-    street: string;
-    city: string;
-  };
-  employment: {
-    type: 'employed' | 'self-employed';
-    employer?: {
-      name: string;
-      position: string;
-      workplaceAddress: string;
-      employmentStartDate: string;
-    };
-    business?: {
-      name: string;
-      type: string;
-      address: string;
-      startDate: string;
-    };
-  };
-}
-
-interface PensionDetails {
-  pensionSalary: number;
-  pensionAccumulation: number;
-  pensionContribution: number;
-  activityType: 'transfer' | 'new_policy' | 'agent_appointment';
-}
-
-interface CustomerJourneyClient {
-  id: string;
-  date: string;
-  name: string;
-  company: string;
-  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';
-  pensionType?: 'comprehensive' | 'supplementary';
-  insuranceType?: string;
-  productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
-  transactionType?: 'proposal' | 'agent_appointment';
-  details: PensionDetails | any;  // We'll properly type this later
-  scopeCommission: number;
-  monthlyCommission: number;
-  totalCommission: number;
-  clientInfo?: ClientInfo;
-}
-
-interface CategorySummary {
-  scopeCommission: number;
-  monthlyCommission: number;
-  totalCommission: number;
-  count: number;
-}
-
-interface ProductCardProps {
-  title: string;
-  icon: React.ElementType;
-  selected: boolean;
-  onClick: () => void;
 }
 
 const ProductIcon = ({ type, className }: { type: string; className?: string }) => {
@@ -186,57 +141,11 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
   }
 };
 
-const ProductCard: React.FC<ProductCardProps> = ({ title, icon: Icon, selected, onClick }) => {
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        "relative p-6 rounded-xl border-2 transition-all cursor-pointer hover:shadow-lg",
-        "flex flex-col items-center gap-3",
-        selected ? "border-[#4361ee] bg-blue-50" : "border-gray-200 hover:border-[#4361ee]/50"
-      )}
-    >
-      <div className={cn(
-        "p-3 rounded-full",
-        selected ? "bg-[#4361ee] text-white" : "bg-gray-100 text-gray-600"
-      )}>
-        <Icon className="w-6 h-6" />
-      </div>
-      <span className="font-medium text-lg">{title}</span>
-      {selected && (
-        <div className="absolute top-2 right-2">
-          <Check className="w-5 h-5 text-[#4361ee]" />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Add type mapping
-const typeToReportKey = {
-  'pension': 'pension',
-  'insurance': 'insurance',
-  'savings_and_study': 'investment',
-  'policy': 'policy'
-} as const;
-
-interface CompanyRates {
-  scope_rate?: number;
-  scope_rate_per_million: number;
-  monthly_rate?: number;
-  nifraim_rate_per_million?: number;
-  active: boolean;
-}
-
-const insuranceTypeLabels = {
+const insuranceTypeLabels: { [key: string]: string } = {
   personal_accident: 'תאונות אישיות',
   mortgage: 'משכנתא',
   health: 'בריאות',
-  critical_illness: 'מחלות קשות',
-  insurance_umbrella: 'מטריה ביטוחית',
-  risk: 'ריסק',
-  service: 'כתבי שירות',
-  disability: 'אכע'
+  // Add other insurance type labels as needed
 };
 
 const fadeIn = {
@@ -253,20 +162,95 @@ const staggerContainer = {
   }
 };
 
+interface Field {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  className?: string;
+  options?: Array<{ value: string; label: string }>;
+  popoverClassName?: string;
+  optionClassName?: string;
+}
+
+interface CalculatorFormProps {
+  onSubmit: (data: any) => void;
+  fields: Field[];
+  title?: string;
+  className?: string;
+}
+
+const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fields, className }) => {
+  return (
+    <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const data: { [key: string]: string } = {};
+      fields.forEach(field => {
+        const value = formData.get(field.name);
+        if (value) {
+          data[field.name] = value.toString();
+        }
+      });
+      onSubmit(data);
+    }} className={className}>
+      <div className="flex flex-row gap-4 items-start">
+        {fields.map((field, index) => (
+          <div key={index} className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {field.label}
+            </label>
+            {field.type === 'select' ? (
+              <Select name={field.name} required={field.required}>
+                <SelectTrigger className={cn(
+                  "w-full rounded-md border border-gray-300 bg-white",
+                  "text-gray-900 shadow-sm focus:border-[#4361ee] focus:ring-1 focus:ring-[#4361ee]",
+                  field.className
+                )}>
+                  <SelectValue placeholder={`בחר ${field.label}`} />
+                </SelectTrigger>
+                <SelectContent className={field.popoverClassName}>
+                  {field.options?.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className={field.optionClassName}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                type={field.type}
+                name={field.name}
+                className={field.className}
+                required={field.required}
+              />
+            )}
+          </div>
+        ))}
+        <Button 
+          type="submit" 
+          className="mt-6 bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-white"
+        >
+          שמור
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+type ProductType = typeof productTypes[number]['type'];
+
+type SelectedProducts = Record<ProductType, boolean>;
+
 const CustomerJourneyComponent: React.FC = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
-  const [companyRates, setCompanyRates] = useState<{ [key: string]: { [company: string]: CompanyRates } }>({});
   const [clientName, setClientName] = useState<string>('');
-  const [isStarting, setIsStarting] = useState<boolean>(true);
-  const [selectedProducts, setSelectedProducts] = useState<{
-    pension: boolean;
-    insurance: boolean;
-    savings_and_study: boolean;
-    policy: boolean;
-    service: boolean;
-    finance: boolean;
-  }>({
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProducts>({
     pension: false,
     insurance: false,
     savings_and_study: false,
@@ -276,23 +260,115 @@ const CustomerJourneyComponent: React.FC = () => {
   });
   const { updatePerformance } = useSalesTargets();
   const [step, setStep] = useState<'info' | 'journey'>('info');
-  const [clientInfo, setClientInfo] = useState<ClientInfo>();
+
+  const [_clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+
+  const totalSummary = {
+    scopeCommission: clients.reduce((sum, client) => sum + client.scopeCommission, 0),
+    monthlyCommission: clients.reduce((sum, client) => sum + client.monthlyCommission, 0),
+    totalCommission: clients.reduce((sum, client) => sum + client.totalCommission, 0)
+  };
+
+  const handleDownload = () => {
+    if (clients.length === 0) {
+      toast.error('אין נתונים להורדה');
+      return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,סה\"כ\n";
+    
+    clients.forEach((client) => {
+      const row = [
+        client.date,
+        client.name,
+        client.company,
+        client.type,
+        client.scopeCommission,
+        client.monthlyCommission,
+        client.totalCommission
+      ].join(",");
+      csvContent += row + "\n";
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "דוח_לקוח.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleClear = () => {
+    setClients([]);
+    setClientName('');
+    setSelectedProducts({
+      pension: false,
+      insurance: false,
+      savings_and_study: false,
+      policy: false,
+      service: false,
+      finance: false
+    });
+  };
+
+  const columns = [
+    { key: 'date', label: 'תאריך' },
+    { key: 'name', label: 'שם לקוח' },
+    { key: 'company', label: 'יצרן' },
+    { key: 'type', label: 'סוג עסקה', format: (type: string) => {
+      switch (type) {
+        case 'pension': return 'פנסיה';
+        case 'insurance': return 'סיכונים';
+        case 'savings_and_study': return 'פיננסים';
+        case 'policy': return 'פוליסה';
+        case 'service': return 'שירות';
+        default: return type || '-';
+      }
+    }},
+    { 
+      key: 'details', 
+      label: 'סוג מוצר', 
+      format: (_: any, row?: CustomerJourneyClient) => {
+        if (!row) return '-';
+        
+        if (row.type === 'insurance' && row.insuranceType) {
+          return insuranceTypeLabels[row.insuranceType as keyof typeof insuranceTypeLabels] || row.insuranceType;
+        }
+        if (row.type === 'pension' && row.pensionType) {
+          return row.pensionType === 'comprehensive' ? 'מקיפה' : 'משלימה';
+        }
+        if (row.type === 'savings_and_study' && row.productType) {
+          switch (row.productType) {
+            case 'managers': return 'ביטוח מנהלים';
+            case 'gemel': return 'גמל';
+            case 'hishtalmut': return 'השתלמות';
+            case 'investment_gemel': return 'גמל להשקעה';
+            case 'savings_policy': return 'פוליסת חסכון';
+            default: return row.productType;
+          }
+        }
+        return '-';
+      }
+    },
+    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
+    { key: 'monthlyCommission', label: 'עמלה חודשית', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
+    { key: 'totalCommission', label: 'סה"כ', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
+    { key: 'actions', label: 'פעולות' }
+  ];
 
   useEffect(() => {
     loadCompanyRates();
   }, []);
 
-  // טיפול בהודעות שגיאה בנרד מstate updates
   useEffect(() => {
-    // בודק רק אם אנחנו בשלב של בחירת מוצרים
-    if (step === 'products' && !Object.values(selectedProducts).some(Boolean)) {
+    if (step === 'journey' && !Object.values(selectedProducts).some(Boolean)) {
       toast.error('חובה לבחור לפחות מוצר אחד');
     }
   }, [selectedProducts, step]);
 
-  const handleProductSelect = useCallback((
-    productType: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance'
-  ) => {
+  const handleProductSelect = useCallback((productType: ProductType) => {
     setSelectedProducts(prev => {
       const newState = {
         ...prev,
@@ -309,17 +385,20 @@ const CustomerJourneyComponent: React.FC = () => {
   }, []);
 
   const loadCompanyRates = async () => {
-    const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
-    const rates: { [company: string]: any } = {};
-    
-    for (const company of companies) {
-      const companyRate = await getCompanyRates('pension', company);
-      if (companyRate) {
-        rates[company] = companyRate;
+    try {
+      const rates: Record<string, any> = {};
+      const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
+      for (const company of companies) {
+        const companyRate = await getCompanyRates('pension', company);
+        if (companyRate) {
+          rates[company] = companyRate;
+        }
       }
+      console.log('Loaded company rates:', rates);
+    } catch (error) {
+      console.error('Error loading company rates:', error);
+      toast.error('שגיאה בטעינת נתוני החב��ות');
     }
-    
-    setCompanyRates(rates);
   };
 
   const getProductFields = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance') => {
@@ -577,12 +656,12 @@ const CustomerJourneyComponent: React.FC = () => {
               { value: 'retirement', label: 'פרישה' },
               { value: 'organizations', label: 'ארגונים' },
               { value: 'academia', label: 'אקדמיה' },
-              { value: 'monthly_subscription', label: 'מנוי חודשי' }
+              { value: 'monthly_subscription', label: 'מני חודשי' }
             ]
           },
           { 
             name: 'serviceFee',
-            label: 'מחיר',
+            label: 'מיר',
             type: 'number',
             required: true,
             className: 'bg-white text-right'
@@ -601,7 +680,7 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'loans', label: 'הלוואות' },
+              { value: 'loans', label: 'הלואות' },
               { value: 'investments', label: 'השקעות' }
             ]
           },
@@ -618,7 +697,22 @@ const CustomerJourneyComponent: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (type: string, data: any) => {
+  const handleSubmit = async (formData: { 
+    type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';
+    clientName: string;
+    clientPhone?: string;
+    company: string;
+    pensionSalary?: number;
+    pensionAccumulation?: number;
+    pensionContribution?: number;
+    insurancePremium?: number;
+    insuranceType?: string;
+    investmentAmount?: number;
+    policyAmount?: number;
+    pensionType?: 'comprehensive' | 'complementary';
+    transactionType?: string;
+    productType?: string;
+  }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -626,222 +720,45 @@ const CustomerJourneyComponent: React.FC = () => {
         return;
       }
 
-      let amount, insuranceTypeOrContribution, accumulation;
-      
-      if (type === 'pension') {
-        amount = Number(data.pensionSalary);
-        insuranceTypeOrContribution = String(data.pensionContribution);
-        accumulation = Number(data.pensionAccumulation);
-      } else if (type === 'insurance') {
-        amount = Number(data.insurancePremium);
-        insuranceTypeOrContribution = data.transactionType;
-      } else {
-        amount = Number(data.investmentAmount);
-      }
-
       const result = await calculateCommissions(
         user.id,
-        type,
-        data.company,
-        amount,
-        insuranceTypeOrContribution,
-        accumulation
+        formData.type,
+        formData.company,
+        formData.type === 'pension' ? Number(formData.pensionSalary) || 0 : 0,
+        formData.type === 'insurance' ? formData.insuranceType || 'general' : 'general',
+        formData.type === 'pension' ? Number(formData.pensionAccumulation) || 0 : 0
       );
 
       if (result) {
         const newClient: CustomerJourneyClient = {
-          id: crypto.randomUUID(),
+          type: formData.type,
           date: new Date().toISOString(),
-          name: clientName,
-          company: data.company || 'גולה',
-          type,
+          name: formData.clientName,
+          company: formData.company || 'גולה',
           scopeCommission: result.scope_commission || 0,
           monthlyCommission: result.monthly_commission || 0,
-          totalCommission: (result.scope_commission || 0) + (result.monthly_commission || 0),
-          details: {} as any
+          totalCommission: (result.scope_commission || 0) + (result.monthly_commission || 0)
         };
 
-        switch (type) {
-          case 'pension':
-            newClient.pensionType = data.pensionType;
-            newClient.details = {
-              pensionSalary: Number(data.pensionSalary),
-              pensionAccumulation: Number(data.pensionAccumulation),
-              pensionContribution: Number(data.pensionContribution),
-              activityType: data.activityType
-            } as PensionDetails;
-            break;
-          case 'insurance':
-            newClient.insuranceType = data.transactionType;
-            newClient.details = {
-              insurancePremium: Number(data.insurancePremium),
-              insuranceType: data.transactionType
-            };
-            break;
-          case 'savings_and_study':
-            newClient.productType = data.productType;
-            newClient.details = {
-              investmentAmount: Number(data.investmentAmount),
-              productType: data.productType,
-              transactionType: data.transactionType
-            };
-            break;
-          case 'policy':
-            newClient.details = {
-              policyAmount: Number(data.investmentAmount)
-            };
-            break;
-          case 'service':
-            newClient.details = {
-              serviceFee: Number(data.serviceFee)
-            };
-            break;
-          case 'finance':
-            newClient.details = {
-              financeAmount: Number(data.financeAmount)
-            };
-            break;
+        if (formData.type === 'pension') {
+          newClient.pensionType = formData.pensionType;
+        } else if (formData.type === 'insurance') {
+          newClient.insuranceType = formData.transactionType;
+        } else if (formData.type === 'savings_and_study') {
+          newClient.productType = formData.productType;
         }
 
         setClients([...clients, newClient]);
         toast.success('הנתונים נשמרו בהצלחה');
       }
     } catch (error) {
-      console.error('Error submitting data:', error);
-      toast.error('Error calculating commissions');
+      console.error('Error in handleSubmit:', error);
+      toast.error('אירעה שגיאה בשמירת הנתונים');
     }
   };
 
-  const calculateCategorySummary = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy'): CategorySummary => {
-    const categoryClients = clients.filter(client => client.type === type);
-    return {
-      scopeCommission: categoryClients.reduce((sum, client) => sum + client.scopeCommission, 0),
-      monthlyCommission: categoryClients.reduce((sum, client) => sum + client.monthlyCommission, 0),
-      totalCommission: categoryClients.reduce((sum, client) => sum + client.totalCommission, 0),
-      count: categoryClients.length
-    };
-  };
-
-  const tableColumns = [
-    { key: 'date', label: 'תאריך' },
-    { key: 'name', label: 'שם לקוח' },
-    { key: 'company', label: 'יצרן' },
-    { key: 'type', label: 'סוג מסקה', format: (value: string) => {
-      switch (value) {
-        case 'pension': return 'פנסיה';
-        case 'insurance': return 'סיכונים';
-        case 'savings_and_study': return 'פיננסים';
-        case 'policy': return 'פוליסה';
-        case 'service': return 'שירות';
-        default: return value || '-';
-      }
-    }},
-    { 
-      key: 'details', 
-      label: 'סוג מוצר', 
-      format: (value: any, row?: CustomerJourneyClient) => {
-        if (!row) return '-';
-        
-        if (row.type === 'insurance' && row.details?.insuranceType) {
-          return insuranceTypeLabels[row.details.insuranceType as keyof typeof insuranceTypeLabels] || row.details.insuranceType;
-        }
-        if (row.type === 'pension' && row.pensionType) {
-          return row.pensionType === 'comprehensive' ? 'מקיפה' : 'משלימה';
-        }
-        if (row.type === 'savings_and_study' && row.productType) {
-          switch (row.productType) {
-            case 'managers':
-              return 'ביטוח מנהלים';
-            case 'gemel':
-              return 'גמל';
-            case 'hishtalmut':
-              return 'השתלמות';
-            case 'investment_gemel':
-              return 'גמל להשקעה';
-            case 'savings_policy':
-              return 'פוליסת חיסכון';
-            default:
-              return row.productType;
-          }
-        }
-        return '-';
-      }
-    },
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'monthlyCommission', label: 'עמלה חודשית', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'totalCommission', label: 'סה"כ', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'actions', label: 'פעולות' }
-  ];
-
-  const columns = tableColumns;
-
-  const handleDownload = () => {
-    if (clients.length === 0) {
-      toast.error('אין נתונים להרדה');
-      return;
-    }
-
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,ה\"כ\n";
-    
-    clients.forEach((client) => {
-      const row = [
-        client.date,
-        client.name,
-        client.company,
-        client.type,
-        client.scopeCommission,
-        client.monthlyCommission,
-        client.totalCommission
-      ].join(",");
-      csvContent += row + "\n";
-    });
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "דוח_לקוח.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleClear = () => {
-    setClients([]);
-    setClientName('');
-    setIsStarting(true);
-    setSelectedProducts({
-      pension: false,
-      insurance: false,
-      savings_and_study: false,
-      policy: false,
-      service: false,
-      finance: false
-    });
-  };
-
-  const startNewJourney = useCallback(() => {
-    if (!clientName.trim()) {
-      toast.error('נא להזין שם לקוח');
-      return;
-    }
-
-    if (!Object.values(selectedProducts).some(Boolean)) {
-      toast.error('נא לבחור לפחות מוצר אחד');
-      return;
-    }
-
-    setIsStarting(false);
-  }, [clientName, selectedProducts]);
-
-  const totalSummary = {
-    scopeCommission: clients.reduce((sum, client) => sum + client.scopeCommission, 0),
-    monthlyCommission: clients.reduce((sum, client) => sum + client.monthlyCommission, 0),
-    totalCommission: clients.reduce((sum, client) => sum + client.totalCommission, 0)
-  };
-
-  const calculateCommissionDetails = () => {
-    const details: Record<string, { companies: Record<string, any>, total: number }> = {
+  const calculateCommissionDetails = (clients: CustomerJourneyClient[]): CommissionDetails => {
+    const details: CommissionDetails = {
       pension: { companies: {}, total: 0 },
       insurance: { companies: {}, total: 0 },
       investment: { companies: {}, total: 0 },
@@ -850,29 +767,65 @@ const CustomerJourneyComponent: React.FC = () => {
 
     for (const client of clients) {
       const type = client.type === 'savings_and_study' ? 'investment' : client.type;
-      const company = client.company;
+      if (!client.company || !['pension', 'insurance', 'investment', 'policy'].includes(type)) continue;
       
-      if (!details[type].companies[company]) {
-        details[type].companies[company] = {
-          scopeCommission: 0,
-          accumulationCommission: 0,
-          oneTimeCommission: 0,
-          totalCommission: 0,
-          monthlyCommission: 0
-        };
-      }
+      switch (type) {
+        case 'pension':
+          if (!details.pension.companies[client.company]) {
+            details.pension.companies[client.company] = {
+              scopeCommission: 0,
+              monthlyCommission: 0,
+              totalCommission: 0
+            };
+          }
+          details.pension.companies[client.company].scopeCommission += client.scopeCommission;
+          details.pension.companies[client.company].monthlyCommission += client.monthlyCommission;
+          details.pension.companies[client.company].totalCommission += client.totalCommission;
+          details.pension.total += client.totalCommission;
+          break;
 
-      details[type].companies[company].scopeCommission += client.scopeCommission;
-      details[type].companies[company].totalCommission += client.totalCommission;
-      
-      if (type === 'pension') {
-        details[type].companies[company].accumulationCommission += client.monthlyCommission;
-      } else if (type === 'insurance') {
-        details[type].companies[company].oneTimeCommission += client.scopeCommission;
-        details[type].companies[company].monthlyCommission += client.monthlyCommission;
-      }
+        case 'insurance':
+          if (!details.insurance.companies[client.company]) {
+            details.insurance.companies[client.company] = {
+              nifraim: 0,
+              scopeCommission: 0,
+              monthlyCommission: 0,
+              totalCommission: 0
+            };
+          }
+          details.insurance.companies[client.company].scopeCommission += client.scopeCommission;
+          details.insurance.companies[client.company].monthlyCommission += client.monthlyCommission;
+          details.insurance.companies[client.company].nifraim += client.monthlyCommission;
+          details.insurance.companies[client.company].totalCommission += client.totalCommission;
+          details.insurance.total += client.totalCommission;
+          break;
 
-      details[type].total += client.totalCommission;
+        case 'investment':
+          if (!details.investment.companies[client.company]) {
+            details.investment.companies[client.company] = {
+              scope_commission: 0,
+              nifraim: 0,
+              total_commission: 0
+            };
+          }
+          details.investment.companies[client.company].scope_commission += client.scopeCommission;
+          details.investment.companies[client.company].nifraim += client.monthlyCommission;
+          details.investment.companies[client.company].total_commission += client.totalCommission;
+          details.investment.total += client.totalCommission;
+          break;
+
+        case 'policy':
+          if (!details.policy.companies[client.company]) {
+            details.policy.companies[client.company] = {
+              scopeCommission: 0,
+              totalCommission: 0
+            };
+          }
+          details.policy.companies[client.company].scopeCommission += client.scopeCommission;
+          details.policy.companies[client.company].totalCommission += client.totalCommission;
+          details.policy.total += client.totalCommission;
+          break;
+      }
     }
 
     return details;
@@ -883,74 +836,88 @@ const CustomerJourneyComponent: React.FC = () => {
   };
 
   const mapClientToJourneyProduct = (client: CustomerJourneyClient) => {
-    let mappedType: 'pension' | 'insurance' | 'investment' | 'policy';
-    let mappedDetails: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
+    if (!client.company || !client.details) return null;
 
     const baseDetails = {
       user_id: '',  // Will be filled by the service
       client_name: clientName,
       company: client.company,
       date: new Date().toISOString(),
-      total_commission: client.totalCommission
+      total_commission: client.totalCommission,
+      scope_commission: client.scopeCommission,
+      monthly_commission: client.monthlyCommission
     };
 
     switch (client.type) {
       case 'pension':
-        mappedType = 'pension';
-        mappedDetails = {
-          ...baseDetails,
-          pensionSalary: client.details.pensionSalary || 0,
-          pensionAccumulation: client.details.pensionAccumulation || 0,
-          pensionContribution: client.details.pensionContribution || 0,
-          activityType: (client.details.activityType as 'transfer' | 'new_policy' | 'agent_appointment') || 'new_policy'
-        } as PensionProduct;
+        if (isPensionProduct(client.details)) {
+          const mappedDetails: ImportedPensionProduct = {
+            ...baseDetails,
+            pensionSalary: client.details.pensionSalary || 0,
+            pensionAccumulation: client.details.pensionAccumulation || 0,
+            pensionContribution: client.details.pensionContribution || 0,
+            activityType: client.details.activityType || 'new_policy'
+          };
+          return {
+            type: 'pension' as const,
+            company: client.company,
+            details: mappedDetails
+          };
+        }
         break;
 
       case 'insurance':
-        mappedType = 'insurance';
-        mappedDetails = {
-          ...baseDetails,
-          premium: client.details.insurancePremium || 0,
-          insurance_type: client.insuranceType || 'general',
-          payment_method: 'monthly',
-          nifraim: client.monthlyCommission,
-          scope_commission: client.scopeCommission,
-          monthly_commission: client.monthlyCommission
-        } as InsuranceProduct;
+        if (isInsuranceProduct(client.details)) {
+          const mappedDetails: ImportedInsuranceProduct = {
+            ...baseDetails,
+            premium: client.details.premium || 0,
+            insurance_type: client.insuranceType || 'general',
+            payment_method: 'monthly',
+            nifraim: client.monthlyCommission
+          };
+          return {
+            type: 'insurance' as const,
+            company: client.company,
+            details: mappedDetails
+          };
+        }
         break;
 
       case 'savings_and_study':
-        mappedType = 'investment';
-        mappedDetails = {
-          ...baseDetails,
-          investment_amount: client.details.investmentAmount || 0,
-          investment_period: 12,
-          investment_type: client.details.productType || 'general',
-          scope_commission: client.scopeCommission,
-          nifraim: client.monthlyCommission
-        } as InvestmentProduct;
+        if (isInvestmentProduct(client.details)) {
+          const mappedDetails: ImportedInvestmentProduct = {
+            ...baseDetails,
+            investment_amount: client.details.investment_amount || 0,
+            investment_period: 12,
+            investment_type: client.details.investment_type || 'general',
+            nifraim: 0
+          };
+          return {
+            type: 'investment' as const,
+            company: client.company,
+            details: mappedDetails
+          };
+        }
         break;
 
       case 'policy':
-        mappedType = 'policy';
-        mappedDetails = {
-          ...baseDetails,
-          policy_amount: client.details.policyAmount || 0,
-          policy_period: 12,
-          policy_type: 'savings',
-          scope_commission: client.scopeCommission
-        } as PolicyProduct;
+        if (isPolicyProduct(client.details)) {
+          const mappedDetails: ImportedPolicyProduct = {
+            ...baseDetails,
+            policy_amount: client.details.policy_amount || 0,
+            policy_period: 12,
+            policy_type: 'savings'
+          };
+          return {
+            type: 'policy' as const,
+            company: client.company,
+            details: mappedDetails
+          };
+        }
         break;
-
-      default:
-        return null;
     }
 
-    return {
-      type: mappedType,
-      company: client.company,
-      details: mappedDetails
-    };
+    return null;
   };
 
   const handleSave = async () => {
@@ -958,34 +925,42 @@ const CustomerJourneyComponent: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('לא נמצא משתמש מחובר');
 
-      // עדכון ביצועים לפי סוג המוצר
       const currentDate = new Date();
       const date = {
         month: currentDate.getMonth() + 1,
         year: currentDate.getFullYear()
       };
 
-      // קודם נעדכן את היעדים
       for (const client of clients) {
+        if (!client.details) continue;
+
         let amount = 0;
         let category = '';
         
         switch (client.type) {
           case 'pension':
-            amount = client.details.pensionAccumulation || 0;
-            category = client.details.activityType === 'transfer' ? 'pension-transfer' : 'pension-new';
+            if (isPensionProduct(client.details)) {
+              amount = client.details.pensionAccumulation || 0;
+              category = client.details.activityType === 'transfer' ? 'pension-transfer' : 'pension-new';
+            }
             break;
           case 'insurance':
-            amount = client.details.insurancePremium || 0;
-            category = 'insurance-premium';
+            if (isInsuranceProduct(client.details)) {
+              amount = client.details.premium || 0;
+              category = 'insurance-premium';
+            }
             break;
           case 'savings_and_study':
-            amount = client.details.investmentAmount || 0;
-            category = 'investment';
+            if (isInvestmentProduct(client.details)) {
+              amount = client.details.investment_amount || 0;
+              category = 'investment';
+            }
             break;
           case 'policy':
-            amount = client.details.policyAmount || 0;
-            category = 'policy';
+            if (isPolicyProduct(client.details)) {
+              amount = client.details.policy_amount || 0;
+              category = 'policy';
+            }
             break;
         }
         
@@ -995,10 +970,18 @@ const CustomerJourneyComponent: React.FC = () => {
         }
       }
 
-      // אחר כך נשמור את המסע לקוח
       const mappedProducts = clients
         .map(mapClientToJourneyProduct)
-        .filter((product): product is NonNullable<typeof product> => product !== null);
+        .filter((product): product is NonNullable<typeof product> => product !== null)
+        .map(product => ({
+          ...product,
+          details: {
+            ...product.details,
+            user_id: user.id
+          }
+        }));
+
+      const commissionDetails = calculateCommissionDetails(clients);
 
       const journey: CustomerJourney = {
         id: crypto.randomUUID(),
@@ -1007,7 +990,10 @@ const CustomerJourneyComponent: React.FC = () => {
         date: new Date().toISOString(),
         client_name: clientName,
         selected_products: mappedProducts,
-        total_commission: calculateTotalCommission()
+        total_commission: calculateTotalCommission(),
+        commissionDetails,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       console.log('Saving journey:', journey);
@@ -1032,119 +1018,6 @@ const CustomerJourneyComponent: React.FC = () => {
     setClientInfo(clientInfo);
     setClientName(clientInfo.fullName);
     setStep('journey');
-  };
-
-  const getProductTypeLabel = (value: string) => {
-    switch (value) {
-      case 'pension': return 'פנסיה';
-      case 'insurance': return 'סיכונים';
-      case 'savings_and_study': return 'פיננסים';
-      case 'policy': return 'פוליסת חסכון';
-      default: return value;
-    }
-  };
-
-  const productTypes = [
-    { type: 'pension', title: 'פנסיה' },
-    { type: 'insurance', title: 'סיכונים' },
-    { type: 'savings_and_study', title: 'פיננסים' },
-    { type: 'policy', title: 'פוליסת חסכון' },
-    { type: 'service', title: 'גולה- שירות' },
-    { type: 'finance', title: 'גולה- פיננסים' }
-  ];
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'pension': return 'פנסיה';
-      case 'insurance': return 'סיכונים';
-      case 'savings_and_study': return 'פיננסים';
-      case 'policy': return 'פוליסת חסכון';
-      case 'service': return 'גולה- שירות';
-      case 'finance': return 'גולה- פיננסים';
-      default: return type;
-    }
-  };
-
-  const generateReport = (clients: CustomerJourneyClient[]) => {
-    let message = 'דוח מסע לקוח\n\n';
-    
-    clients.forEach((client, index) => {
-      message += `${index + 1}. ${client.name} (${client.company}):\n`;
-      message += `   תאריך: ${new Date(client.date).toLocaleDateString('he-IL')}\n`;
-      
-      switch (client.type) {
-        case 'pension':
-          message += `   סוג מוצר: פנסיה ${client.pensionType === 'comprehensive' ? 'מקיפה' : 'משלימה'}\n`;
-          message += `   שכר: ${Number(client.details.pensionSalary).toLocaleString()}₪\n`;
-          message += `   צבירה: ${Number(client.details.pensionAccumulation).toLocaleString()}₪\n`;
-          break;
-        case 'insurance':
-          message += `   סוג מוצר: ${insuranceTypeLabels[client.details.insuranceType as keyof typeof insuranceTypeLabels]}\n`;
-          message += `   פרמיה חודשית: ${Number(client.details.insurancePremium).toLocaleString()}₪\n`;
-          break;
-        // ... rest of the cases ...
-      }
-      
-      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()}₪\n`;
-      message += `   עמלה חודשית: ${client.monthlyCommission.toLocaleString()}₪\n\n`;
-    });
-
-    return message;
-  };
-
-  const CalculatorForm = ({ onSubmit, fields, title, className }) => {
-    return (
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = {};
-        fields.forEach(field => {
-          data[field.name] = formData.get(field.name);
-        });
-        onSubmit(data);
-      }} className={className}>
-        <div className="flex flex-row gap-4 items-start">
-          {fields.map((field, index) => (
-            <div key={index} className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {field.label}
-              </label>
-              {field.type === 'select' ? (
-                <select
-                  name={field.name}
-                  className={cn(
-                    "w-full rounded-md border border-gray-300 bg-white px-3 py-2",
-                    "text-gray-900 shadow-sm focus:border-[#4361ee] focus:ring-1 focus:ring-[#4361ee]",
-                    field.className
-                  )}
-                  required={field.required}
-                >
-                  <option value="">{`בחר ${field.label}`}</option>
-                  {field.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  type={field.type}
-                  name={field.name}
-                  className={field.className}
-                  required={field.required}
-                />
-              )}
-            </div>
-          ))}
-          <Button 
-            type="submit" 
-            className="mt-6 bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-white"
-          >
-            שמור
-          </Button>
-        </div>
-      </form>
-    );
   };
 
   return (
@@ -1235,8 +1108,8 @@ const CustomerJourneyComponent: React.FC = () => {
                         </div>
                       </CardHeader>
                       <CardContent className="p-6">
-                        <CalculatorForm
-                          onSubmit={(data) => handleSubmit(type, data)}
+                        <CalculatorFormComponent
+                          onSubmit={(data) => handleSubmit(data)}
                           fields={getProductFields(type)}
                           title=""
                           className="w-full"
@@ -1257,7 +1130,7 @@ const CustomerJourneyComponent: React.FC = () => {
               >
                 <Card className="border-0 shadow-lg">
                   <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                    <h3 className="text-xl font-semibold">סיכום עמלות</h3>
+                    <h3 className="text-xl font-semibold">יכום עמלות</h3>
                   </CardHeader>
                   <CardContent className="p-6 space-y-8">
                     {/* פנסיה */}
@@ -1422,11 +1295,8 @@ const CustomerJourneyComponent: React.FC = () => {
             </motion.button>
           </motion.div>
 
-          <style jsx>{`
-            .dir-rtl {
-              direction: rtl;
-            }
-          `}</style>
+          <div className="dir-rtl" />
+
         </motion.div>
       )}
     </motion.div>
