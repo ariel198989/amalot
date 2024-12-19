@@ -4,7 +4,7 @@ import { XmlFileUploader } from '@/components/clients/XmlFileUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { XmlImportService } from '@/services/XmlImportService';
 import { toast } from 'react-hot-toast';
-import { ClientsTable } from '@/components/clients/ClientsTable';
+import ClientsTable from '@/components/clients/ClientsTable';
 import { supabase } from '@/lib/supabase';
 import { Client } from '@/types/clearing-house';
 

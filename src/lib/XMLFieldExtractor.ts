@@ -237,7 +237,7 @@ export class XMLFieldExtractor {
     const month = parseInt(dateStr.substring(4, 6));
     const day = parseInt(dateStr.substring(6, 8));
     
-    // בדוק טווח תאריכים הגיוני
+    // בדוק טווח תארי��ים הגיוני
     if (year < 1900 || year > new Date().getFullYear()) {
       console.log('Invalid year:', year);
       return false;
@@ -620,7 +620,7 @@ export class XMLFieldExtractor {
 
   createMarkdownReport(lakoach: YeshutLakoach, maasik: YeshutMaasik, mutzarim: (HeshbonOPolisa | MutzarPensioni | KupatGemel | PolisatMenahalim)[]): string {
     try {
-      let report = `# דוח מסלקה\n\n## פרטי ל��וח
+      let report = `# דוח מסלקה\n\n## פרטי לוח
 - שם מלא: ${lakoach['SHEM-PRATI'] || ''} ${lakoach['SHEM-MISHPACHA'] || ''}
 - מספר זהות: ${lakoach['MISPAR-ZIHUY'] || lakoach['MISPAR-ZIHUY-LAKOACH'] || ''}
 - תאריך לידה: ${lakoach['TAARICH-LEYDA'] ? this.formatDate(lakoach['TAARICH-LEYDA']) : 'לא צוין'}
@@ -644,7 +644,7 @@ export class XMLFieldExtractor {
           report += `
 - סג מוצר: ${this.getProductTypeText(mutzar['SUG-MUTZAR'])}
 - שם תכנית: ${mutzar['SHEM-TOCHNIT'] || 'לא צוין'}
-- סטטוס: ${this.getProductStatusText(mutzar['STATUS-POLISA-O-CHESHBON'])}
+- ��טטוס: ${this.getProductStatusText(mutzar['STATUS-POLISA-O-CHESHBON'])}
 - תאריך תחילת ביטוח: ${mutzar['TAARICH-TCHILAT-HABITUACH'] ? this.formatDate(mutzar['TAARICH-TCHILAT-HABITUACH']) : 'לא צוין'}
 - סה"כ הפקדה: ${mutzar['TOTAL-HAFKADA'] ? this.formatCurrency(mutzar['TOTAL-HAFKADA']) : 'לא צוין'}
 - סה"כ חיסכון מצטבר: ${mutzar['TOTAL-CHISACHON-MTZBR'] ? this.formatCurrency(mutzar['TOTAL-CHISACHON-MTZBR']) : 'לא צוין'}
@@ -723,7 +723,7 @@ export class XMLFieldExtractor {
       '3': 'קופת גמל להשקעה',
       '4': 'קרן השתלמות',
       '5': 'קופת גמל להשקעה',
-      '6': 'ביטוח חיים'
+      '6': 'ביטוח ��יים'
     };
     return types[type || ''] || 'לא צוין';
   }
@@ -805,14 +805,6 @@ export class XMLFieldExtractor {
     };
     
     return typeMap[product?.SUG_MUTZAR] || 'אחר';
-  }
-
-  private extractProductDetails(product: any): ProductDetails {
-    return {
-      productType: this.isPensionProduct(product) ? 'פנסיה' : this.determineProductType(product),
-      pensionType: product?.SUG_KEREN_PENSIA ? 
-        (product.SUG_KEREN_PENSIA === 2 ? 'חדשה' : 'ותיקה') : undefined,
-    };
   }
 
   public processXmlContent(content: string): any {

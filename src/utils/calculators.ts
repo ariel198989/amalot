@@ -17,16 +17,16 @@ interface PensionCalcParams {
 
 interface InsuranceCalcParams {
   premium: number;           // פרמיה חודשית
-  productType: string;       // סוג המוצר (ריסק, בריאות וכו')
-  company: string;          // חברת ביטוח
+  productType: 'ריסק' | 'בריאות' | 'סיעוד';       // סוג המוצר
+  company: 'מגדל' | 'הראל' | 'כלל';          // חברת ביטוח
   years?: number;           // תקופת הביטוח בשנים
   age?: number;             // גיל המבוטח
 }
 
 interface InvestmentCalcParams {
   amount: number;           // סכום השקעה
-  company: string;         // חברת ביטוח
-  investmentType: string;  // סוג ההשקעה
+  company: 'מגדל' | 'הראל' | 'כלל';         // חברת ביטוח
+  investmentType: 'גמל' | 'השתלמות' | 'פיננסים';  // סוג ההשקעה
   period?: number;         // תקופת ההשקעה בשנים
 }
 
@@ -127,19 +127,19 @@ export const calculators = {
         'הראל': { oneTime: 0.65, monthly: 0.32, period_factor: 0.027 },
         'כלל': { oneTime: 0.62, monthly: 0.31, period_factor: 0.026 }
       }
-    };
+    } as const;
 
-    const rates = productRates[productType as keyof typeof productRates]?.[company as keyof typeof productRates['ריסק']];
+    const rates = productRates[productType]?.[company];
     if (!rates) return null;
 
     // חישוב מקדמים נוספים
     let ageFactor = 1;
     let periodFactor = 1;
 
-    if (productType === 'ריסק') {
-      ageFactor = 1 + (age - 30) * (rates.age_factor || 0);
-    } else {
-      periodFactor = 1 + years * (rates.period_factor || 0);
+    if (productType === 'ריסק' && 'age_factor' in rates) {
+      ageFactor = 1 + (age - 30) * rates.age_factor;
+    } else if ('period_factor' in rates) {
+      periodFactor = 1 + years * rates.period_factor;
     }
 
     const oneTimeCommission = annualPremium * rates.oneTime * ageFactor * periodFactor;
@@ -177,9 +177,9 @@ export const calculators = {
         'הראל': { scope: 0.022, annual: 0.009, period_factor: 0.0022 },
         'כלל': { scope: 0.021, annual: 0.0085, period_factor: 0.0021 }
       }
-    };
+    } as const;
 
-    const rates = investmentRates[investmentType as keyof typeof investmentRates]?.[company as keyof typeof investmentRates['גמל']];
+    const rates = investmentRates[investmentType]?.[company];
     if (!rates) return null;
 
     // חישוב מקדם תקופה

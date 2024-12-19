@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkPlanTable from '../table/work-plan-system';
@@ -12,7 +12,7 @@ const AnnualWorkPlan = () => {
   const { user } = useUser();
   const [activeTab, setActiveTab] = useState('work-plan');
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const selectedYear = currentYear;
 
   if (!user) {
     return (

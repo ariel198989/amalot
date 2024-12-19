@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -9,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Save, FileDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface WorkPlanTableProps {
   agent_id: string;
@@ -78,15 +76,14 @@ interface MonthlySalesData {
 
 const STORAGE_KEY_PREFIX = 'workPlanData_';
 
-const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ agent_id, year }) => {
-  const [selectedYear, setSelectedYear] = useState<string>(year.toString());
+const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
   const [yearlyWorkPlan, setYearlyWorkPlan] = useState<WorkPlanData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout>();
   const tableRef = useRef<HTMLDivElement>(null);
   const [meetingsPerDay, setMeetingsPerDay] = useState<number>(2);
   const [closureRate, setClosureRate] = useState<number>(43);
+  const selectedYear = year.toString();
 
   useEffect(() => {
     const currentYearData = loadYearData(selectedYear);

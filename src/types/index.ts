@@ -1,5 +1,5 @@
 // טיפוסים בסיסיים
-export interface CommissionDetails {
+export interface BaseCommissionDetails {
   pension: {
     companies: Record<string, PensionCommission>;
     total: number;
