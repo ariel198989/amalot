@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
-import debounce from 'lodash/debounce';
 
 interface TableData {
   id: string;
@@ -21,20 +20,6 @@ interface TabData {
   tables: TableData[];
 }
 
-interface MonthlyTarget {
-  month: string;
-  workDays: string;
-  potentialMeetings: string;
-  actualMeetings: string;
-  closureRate: string;
-}
-
-interface YearlyTargets {
-  year: string;
-  monthlyTargets: MonthlyTarget[];
-  lastModified: string;
-}
-
 const SalesTargetsSystem: React.FC = () => {
   const { 
     closingRate, 
@@ -47,25 +32,7 @@ const SalesTargetsSystem: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'investments' | 'services'>('investments');
   const [tablesData, setTablesData] = useState<TabData[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const [yearlyTargets, setYearlyTargets] = useState<YearlyTargets | null>(null);
   const currentYear = new Date().getFullYear();
-
-  const debouncedSave = debounce(async (targets: YearlyTargets) => {
-    try {
-      const { error } = await supabase
-        .from('yearly_targets')
-        .upsert({ 
-          year: targets.year,
-          monthly_targets: targets.monthlyTargets,
-          last_modified: targets.lastModified
-        });
-
-      if (error) throw error;
-      console.log('Targets saved successfully');
-    } catch (error) {
-      console.error('Error saving targets:', error);
-    }
-  }, 1000);
 
   // פונקציה לחישוב יעד חודשי
   const calculateMonthlyTarget = (baseAmount: number, percentage: number = 100) => {
@@ -108,7 +75,7 @@ const SalesTargetsSystem: React.FC = () => {
         performancesByCategory[category] = Array(12).fill(0);
       });
 
-      // מילוי הנתונים מהדאטאבייס
+      // מלוי הנתונים מהדאטאבייס
       data?.forEach(row => {
         if (performancesByCategory[row.category]) {
           performancesByCategory[row.category][row.month - 1] = row.performance;
@@ -282,7 +249,7 @@ const SalesTargetsSystem: React.FC = () => {
               {month}
             </th>
           ))}
-          <th className="text-center px-4 py-2 bg-blue-800 text-white border-r">סיכום שנתי</th>
+          <th className="text-center px-4 py-2 bg-blue-800 text-white border-r">סיכום שתי</th>
         </tr>
       </thead>
       <tbody>
@@ -408,7 +375,7 @@ const SalesTargetsSystem: React.FC = () => {
     }
   };
 
-  // פונקציה לחישו�� אחוז העמלה לפי קטגוריה
+  // פונקציה לחישוב אחוז העמלה לפי קטגוריה
   const calculateCommission = (categoryId: string): number => {
     const commissionRates: { [key: string]: number } = {
       'risks': 30,
@@ -420,33 +387,12 @@ const SalesTargetsSystem: React.FC = () => {
     return commissionRates[categoryId] || 20; // ברירת מחדל 20%
   };
 
-  // שמור לשימוש עתידי - פונקציה לעדכון יעדים חודשיים
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleTargetChange = (monthIndex: number, field: keyof MonthlyTarget, value: string) => {
-    if (!yearlyTargets) return;
-
-    const newMonthlyTargets = [...yearlyTargets.monthlyTargets];
-    newMonthlyTargets[monthIndex] = {
-      ...newMonthlyTargets[monthIndex],
-      [field]: value
-    };
-
-    const updatedTargets = {
-      ...yearlyTargets,
-      monthlyTargets: newMonthlyTargets,
-      lastModified: new Date().toISOString()
-    };
-
-    setYearlyTargets(updatedTargets);
-    debouncedSave(updatedTargets);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4 p-4 bg-gray-100 rounded">
         <div>
           <p>אחוז סגירה נוכחי: {closingRate}%</p>
-          <p>פגישות בחודש: {monthlyMeetings}</p>
+          <p>פגישות חודש: {monthlyMeetings}</p>
         </div>
         <div className="flex items-center gap-4">
           {isDirty && (
