@@ -235,7 +235,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     debouncedSave(updatedWorkPlan);
   };
 
-  const monthlyTargetsLength = yearlyWorkPlan?.monthlyTargets?.length || 0;
+  const hasMoreMonths = yearlyWorkPlan?.monthlyTargets?.length > 0;
 
   return (
     <div className="space-y-6">

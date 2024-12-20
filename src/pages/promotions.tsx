@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Percent, Calendar, Building2, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Card } from "@/components/ui/card";
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { cn } from "@/lib/utils";
 
 interface Promotion {
   id: string;
@@ -53,20 +50,32 @@ const PromotionsPage = () => {
     }
   };
 
-  const getDaysLeft = (endDate: string) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
   return (
     <div className="container mx-auto py-10">
       <Card>
         <div className="p-6">
           <h1 className="text-2xl font-semibold mb-4">מבצעים</h1>
-          <p>תוכן המבצעים יופיע כאן בקרוב...</p>
+          {isLoading ? (
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : promotions.length > 0 ? (
+            <div className="grid gap-4">
+              {promotions.map(promotion => (
+                <div key={promotion.id} className="border rounded-lg p-4">
+                  <h2 className="text-xl font-medium">{promotion.title}</h2>
+                  <p className="text-gray-600">{promotion.description}</p>
+                  <div className="mt-2 text-sm text-gray-500">
+                    <span>חברה: {promotion.company}</span>
+                    <span className="mx-2">|</span>
+                    <span>תאריך סיום: {new Date(promotion.end_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>אין מבצעים פעילים כרגע</p>
+          )}
         </div>
       </Card>
     </div>

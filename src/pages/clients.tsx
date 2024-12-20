@@ -15,7 +15,7 @@ export default function ClientsPage() {
   const handleXmlFilesExtracted = (files: XMLFile[]) => {
     setXmlFiles(files)
     const extractor = new XMLFieldExtractor()
-    const parsedResults = files.map(file => extractor.extractFields(file.content))
+    const parsedResults = files.map(file => extractor.processXmlContent(file.content))
     setParsedData(parsedResults)
   }
 
@@ -49,7 +49,7 @@ export default function ClientsPage() {
             <CardHeader>
               <h2 className="text-xl font-semibold">ייבוא קבצי XML</h2>
               <p className="text-sm text-gray-500">
-                העלה קובץ ZIP המכיל קבצי XML לייבוא נתוני לקוחות
+                העלה קובץ ZIP המכיל קבצי XML לייבוא נתוני לק��חות
               </p>
             </CardHeader>
             <CardContent>
