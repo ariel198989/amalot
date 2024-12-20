@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import { supabase } from '@/lib/supabase';
 import html2pdf from 'html2pdf.js';
+import debounce from 'lodash/debounce';
 
 interface TableData {
   id: string;
@@ -20,6 +21,20 @@ interface TabData {
   tables: TableData[];
 }
 
+interface MonthlyTarget {
+  month: string;
+  workDays: string;
+  potentialMeetings: string;
+  actualMeetings: string;
+  closureRate: string;
+}
+
+interface YearlyTargets {
+  year: string;
+  monthlyTargets: MonthlyTarget[];
+  lastModified: string;
+}
+
 const SalesTargetsSystem: React.FC = () => {
   const { 
     closingRate, 
@@ -32,6 +47,25 @@ const SalesTargetsSystem: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'investments' | 'services'>('investments');
   const [tablesData, setTablesData] = useState<TabData[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [yearlyTargets, setYearlyTargets] = useState<YearlyTargets | null>(null);
+  const currentYear = new Date().getFullYear();
+
+  const debouncedSave = debounce(async (targets: YearlyTargets) => {
+    try {
+      const { error } = await supabase
+        .from('yearly_targets')
+        .upsert({ 
+          year: targets.year,
+          monthly_targets: targets.monthlyTargets,
+          last_modified: targets.lastModified
+        });
+
+      if (error) throw error;
+      console.log('Targets saved successfully');
+    } catch (error) {
+      console.error('Error saving targets:', error);
+    }
+  }, 1000);
 
   // פונקציה לחישוב יעד חודשי
   const calculateMonthlyTarget = (baseAmount: number, percentage: number = 100) => {
@@ -49,7 +83,6 @@ const SalesTargetsSystem: React.FC = () => {
   useEffect(() => {
     const loadPerformances = async () => {
       console.log('Loading performances...');
-      const currentYear = new Date().getFullYear();
       const { data, error } = await supabase
         .from('sales_targets')
         .select('*')
@@ -90,12 +123,7 @@ const SalesTargetsSystem: React.FC = () => {
     loadPerformances();
   }, [lastUpdate]); // תלות בעדכון האחרון
 
-  // פונקציה לרענון הנתונים
-  const refreshData = () => {
-    setLastUpdate(Date.now());
-  };
-
-  // רענון כל 5 שניות
+  // פענון כל 5 שניות
   useEffect(() => {
     console.log('Setting up refresh interval');
     const interval = setInterval(() => {
@@ -327,7 +355,7 @@ const SalesTargetsSystem: React.FC = () => {
                 .find(t => t.id === activeTab)
                 ?.tables.map(table => {
                   const yearlyTarget = table.yearlyTotal;
-                  const commission = calculateCommission(table.id, yearlyTarget);
+                  const commission = calculateCommission(table.id);
                   const commissionAmount = (yearlyTarget * commission) / 100;
                   return `
                     <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -346,7 +374,7 @@ const SalesTargetsSystem: React.FC = () => {
               סה"כ עמלות שנתי: ₪${tablesData
                 .find(t => t.id === activeTab)
                 ?.tables.reduce((sum, table) => {
-                  const commission = calculateCommission(table.id, table.yearlyTotal);
+                  const commission = calculateCommission(table.id);
                   return sum + (table.yearlyTotal * commission) / 100;
                 }, 0).toLocaleString()}
             </h3>
@@ -380,17 +408,37 @@ const SalesTargetsSystem: React.FC = () => {
     }
   };
 
-  // פונקציה לחיש��ב אחוז העמלה לפי קטגוריה
-  const calculateCommission = (categoryId: string, amount: number): number => {
+  // פונקציה לחישו�� אחוז העמלה לפי קטגוריה
+  const calculateCommission = (categoryId: string): number => {
     const commissionRates: { [key: string]: number } = {
       'risks': 30,
       'pension': 25,
       'pension-transfer': 20,
       'finance-transfer': 15,
       'financial-planning': 40,
-      // ... הוסף עוד קטגוריות לפי הצורך
     };
     return commissionRates[categoryId] || 20; // ברירת מחדל 20%
+  };
+
+  // שמור לשימוש עתידי - פונקציה לעדכון יעדים חודשיים
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleTargetChange = (monthIndex: number, field: keyof MonthlyTarget, value: string) => {
+    if (!yearlyTargets) return;
+
+    const newMonthlyTargets = [...yearlyTargets.monthlyTargets];
+    newMonthlyTargets[monthIndex] = {
+      ...newMonthlyTargets[monthIndex],
+      [field]: value
+    };
+
+    const updatedTargets = {
+      ...yearlyTargets,
+      monthlyTargets: newMonthlyTargets,
+      lastModified: new Date().toISOString()
+    };
+
+    setYearlyTargets(updatedTargets);
+    debouncedSave(updatedTargets);
   };
 
   return (

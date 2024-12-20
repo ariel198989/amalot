@@ -267,7 +267,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                 <th className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-right font-medium w-48">
                   חודש
                 </th>
-                {yearlyWorkPlan?.monthlyTargets.map(month => (
+                {yearlyWorkPlan?.monthlyTargets?.map(month => (
                   <th key={month.month} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 text-center font-medium min-w-[120px]">
                     {month.month}
                   </th>
@@ -277,7 +277,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
             <tbody className="divide-y divide-gray-200">
               {/* יותרת משנה - נתוני פגישות */}
               <tr>
-                <td colSpan={monthlyTargetsLength + 1} 
+                <td colSpan={yearlyWorkPlan?.monthlyTargets?.length ? yearlyWorkPlan.monthlyTargets.length + 1 : 1} 
                     className="bg-gradient-to-r from-gray-100 to-gray-50 p-3 font-semibold text-gray-800 border-y border-gray-200">
                   נתוני פגישות
                 </td>
@@ -286,7 +286,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
               {/* ימי עבודה בחודש */}
               <tr className="hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-700 bg-white">ימי עבודה בחודש</td>
-                {yearlyWorkPlan?.monthlyTargets.map((month, idx) => (
+                {yearlyWorkPlan?.monthlyTargets?.map((month, idx) => (
                   <td key={idx} className="p-4 text-center bg-white">
                     {month.workDays || '0'}
                   </td>
@@ -494,7 +494,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
         {/* טבלה 3 - ממוצע לפגישה מוצרי גולה */}
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 border border-slate-200">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 text-center font-medium rounded-t-lg">
-            ממוצע לפגישה מוצרי גול��
+            ממוצע לפגישה מוצרי גולה
           </div>
           <div className="p-4 bg-white rounded-b-lg">
             <table className="w-full text-sm">
