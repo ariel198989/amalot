@@ -1,37 +1,25 @@
 try {
-  const { data: { user }, error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: email,
     password: password,
     options: {
-      data: {
-        full_name: fullName
-      }
+      emailRedirectTo: `${window.location.origin}/auth/callback`
     }
   })
   
   if (error) {
-    console.error('שגיאת הרשמה:', error.message)
+    console.error('שגיאת הרשמה:', error)
     throw error
   }
 
-  if (user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: user.id,
-          email: user.email,
-          username: user.email?.split('@')[0]
-        }
-      ])
-    
-    if (profileError) {
-      console.error('שגיאה ביצירת פרופיל:', profileError)
-      throw profileError
+  if (data?.user?.identities?.length === 0) {
+    return {
+      user: data.user,
+      message: 'נשלח מייל אימות. אנא בדוק את תיבת הדואר שלך.'
     }
   }
-  
-  return { user }
+
+  return data
   
 } catch (error) {
   console.error('שגיאה:', error)
