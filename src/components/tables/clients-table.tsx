@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUser } from '@/contexts/UserContext';
 import { Client } from '@/types/client';
 
 export function ClientsTable({ clients }: { clients: Client[] }) {

@@ -197,7 +197,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     const newValue = Number(value);
     setMeetingsPerDay(newValue);
     
-    if (!yearlyWorkPlan) return;
+    if (!yearlyWorkPlan?.monthlyTargets) return;
 
     const newMonthlyTargets = yearlyWorkPlan.monthlyTargets.map(target => ({
       ...target,
@@ -218,7 +218,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     const newValue = Number(value);
     setClosureRate(newValue);
     
-    if (!yearlyWorkPlan) return;
+    if (!yearlyWorkPlan?.monthlyTargets) return;
 
     const newMonthlyTargets = yearlyWorkPlan.monthlyTargets.map(target => ({
       ...target,
@@ -234,8 +234,6 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     setYearlyWorkPlan(updatedWorkPlan);
     debouncedSave(updatedWorkPlan);
   };
-
-  const hasMoreMonths = yearlyWorkPlan?.monthlyTargets?.length > 0;
 
   return (
     <div className="space-y-6">
@@ -539,7 +537,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 text-slate-700 font-medium">ייעוץ עסקי ארגוני</td>
+                  <td className="py-2.5 text-slate-700 font-medium">ייעוץ עסקי ��רגוני</td>
                   <td className="py-2">
                     <Input
                       type="number"

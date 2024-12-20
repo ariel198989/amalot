@@ -17,6 +17,17 @@ export default function ClientsPage() {
     const extractor = new XMLFieldExtractor()
     const parsedResults = files.map(file => extractor.processXmlContent(file.content))
     setParsedData(parsedResults)
+    
+    // Update clients list with the parsed data
+    const newClients = parsedResults.map(result => ({
+      id: result.client.id,
+      first_name: result.client.firstName,
+      last_name: result.client.lastName,
+      email: result.client.email,
+      phone: result.client.phone,
+      // Add other required client fields
+    }))
+    setClients(prevClients => [...prevClients, ...newClients])
   }
 
   return (
@@ -49,7 +60,7 @@ export default function ClientsPage() {
             <CardHeader>
               <h2 className="text-xl font-semibold">ייבוא קבצי XML</h2>
               <p className="text-sm text-gray-500">
-                העלה קובץ ZIP המכיל קבצי XML לייבוא נתוני לק��חות
+                העלה קובץ ZIP המכיל קבצי XML לייבוא נתוני לקוחות
               </p>
             </CardHeader>
             <CardContent>
