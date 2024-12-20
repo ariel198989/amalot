@@ -7,6 +7,7 @@ export async function signUpUser(email: string, password: string) {
       options: {
         emailRedirectTo: 'http://localhost:5173/auth/callback',
         data: {
+          username: email.split('@')[0],
           email,
           created_at: new Date().toISOString()
         }
@@ -21,7 +22,13 @@ export async function signUpUser(email: string, password: string) {
     if (data?.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert([{ id: data.user.id, email: data.user.email }])
+        .insert([
+          {
+            id: data.user.id,
+            email: data.user.email,
+            username: email.split('@')[0]
+          }
+        ])
 
       if (profileError) {
         console.error('שגיאה ביצירת פרופיל:', profileError)
