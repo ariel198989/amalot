@@ -19,9 +19,9 @@ try {
 // Create and export the typed client
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        persistSession: true,
+        detectSessionInUrl: false
     },
     global: {
         headers: {

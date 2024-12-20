@@ -3,23 +3,22 @@ try {
     email: email,
     password: password,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`
+      emailRedirectTo: 'http://localhost:5173/auth/callback'
     }
   })
   
   if (error) {
+    if (error.message.includes('Email rate limit exceeded')) {
+      throw new Error('נסה שוב בעוד מספר דקות')
+    }
     console.error('שגיאת הרשמה:', error)
     throw error
   }
 
-  if (data?.user?.identities?.length === 0) {
-    return {
-      user: data.user,
-      message: 'נשלח מייל אימות. אנא בדוק את תיבת הדואר שלך.'
-    }
+  return {
+    user: data.user,
+    message: 'ההרשמה הצליחה!'
   }
-
-  return data
   
 } catch (error) {
   console.error('שגיאה:', error)
