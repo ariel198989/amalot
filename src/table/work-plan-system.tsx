@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface WorkPlanTableProps {
   agent_id: string;
@@ -15,8 +14,6 @@ interface MonthlyTarget {
   potentialMeetings: string;
   actualMeetings: string;
   closureRate: string;
-  activityAverages: ActivityAverages;
-  recruitmentSources: RecruitmentSources;
 }
 
 interface WorkPlanData {
@@ -25,32 +22,10 @@ interface WorkPlanData {
   lastModified: string;
 }
 
-interface ActivityAverages {
-  insurance: string;
-  premium: string;
-  pensionTransfer: string;
-  financeTransfer: string;
-  mortgage: string;
-}
-
-interface RecruitmentSources {
-  phonePlanning: string;
-  familyEconomics: string;
-  exhibition: string;
-  digitalMarketing: string;
-  realEstate: string;
-  otherRecruitment: string;
-  mortgage: string;
-  renewals: string;
-  loans: string;
-  others: string;
-}
-
 const STORAGE_KEY_PREFIX = 'workPlanData_';
 
 const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
   const [yearlyWorkPlan, setYearlyWorkPlan] = useState<WorkPlanData | null>(null);
-  const [showSaved, setShowSaved] = useState(false);
   const saveTimeout = useRef<NodeJS.Timeout>();
   const tableRef = useRef<HTMLDivElement>(null);
   const [meetingsPerDay, setMeetingsPerDay] = useState<number>(2);
@@ -84,26 +59,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
         workDays: '',
         potentialMeetings: '',
         actualMeetings: '',
-        closureRate: '43',
-        activityAverages: {
-          insurance: '150',
-          premium: '1500',
-          pensionTransfer: '150000',
-          financeTransfer: '200000',
-          mortgage: '300'
-        },
-        recruitmentSources: {
-          phonePlanning: '35',
-          familyEconomics: '27',
-          exhibition: '10',
-          digitalMarketing: '5',
-          realEstate: '7',
-          otherRecruitment: '15',
-          mortgage: '10',
-          renewals: '20',
-          loans: '20',
-          others: '20'
-        }
+        closureRate: '43'
       })),
       lastModified: new Date().toISOString()
     };
@@ -116,7 +72,6 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     try {
       data.lastModified = new Date().toISOString();
       localStorage.setItem(`${STORAGE_KEY_PREFIX}${data.year}`, JSON.stringify(data));
-      showSaveNotification();
     } catch (error) {
       console.error('Failed to save data:', error);
       alert('שגיאה בשמירת הנתונים');
@@ -130,55 +85,6 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     saveTimeout.current = setTimeout(() => {
       saveYearData(data);
     }, 1000);
-  };
-
-  const showSaveNotification = () => {
-    setShowSaved(true);
-    setTimeout(() => setShowSaved(false), 2000);
-  };
-
-  const handleActivityChange = (monthIndex: number, field: keyof ActivityAverages, value: string) => {
-    if (!yearlyWorkPlan?.monthlyTargets?.[monthIndex]) return;
-
-    const newMonthlyTargets = [...yearlyWorkPlan.monthlyTargets];
-    newMonthlyTargets[monthIndex] = {
-      ...newMonthlyTargets[monthIndex],
-      activityAverages: {
-        ...newMonthlyTargets[monthIndex].activityAverages,
-        [field]: value
-      }
-    };
-
-    const updatedWorkPlan = {
-      ...yearlyWorkPlan,
-      monthlyTargets: newMonthlyTargets,
-      lastModified: new Date().toISOString()
-    };
-
-    setYearlyWorkPlan(updatedWorkPlan);
-    debouncedSave(updatedWorkPlan);
-  };
-
-  const handleRecruitmentChange = (monthIndex: number, field: keyof RecruitmentSources, value: string) => {
-    if (!yearlyWorkPlan?.monthlyTargets?.[monthIndex]) return;
-
-    const newMonthlyTargets = [...yearlyWorkPlan.monthlyTargets];
-    newMonthlyTargets[monthIndex] = {
-      ...newMonthlyTargets[monthIndex],
-      recruitmentSources: {
-        ...newMonthlyTargets[monthIndex].recruitmentSources,
-        [field]: value
-      }
-    };
-
-    const updatedWorkPlan = {
-      ...yearlyWorkPlan,
-      monthlyTargets: newMonthlyTargets,
-      lastModified: new Date().toISOString()
-    };
-
-    setYearlyWorkPlan(updatedWorkPlan);
-    debouncedSave(updatedWorkPlan);
   };
 
   const scrollLeft = () => {
@@ -302,7 +208,9 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                   ))}
                 </tr>
               </thead>
-              {/* Rest of the table content */}
+              <tbody>
+                {/* Table content */}
+              </tbody>
             </table>
           </div>
         </div>
