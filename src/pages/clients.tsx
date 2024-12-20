@@ -19,13 +19,19 @@ export default function ClientsPage() {
     setParsedData(parsedResults)
     
     // Update clients list with the parsed data
-    const newClients = parsedResults.map(result => ({
+    const newClients: Client[] = parsedResults.map(result => ({
       id: result.client.id,
       first_name: result.client.firstName,
       last_name: result.client.lastName,
       email: result.client.email,
       phone: result.client.phone,
-      // Add other required client fields
+      user_id: '', // Set this from your auth context
+      address: result.client.address || '',
+      id_number: result.client.id_number || '',
+      birth_date: result.client.birth_date || '',
+      created_at: new Date().toISOString(),
+      status: 'active',
+      last_contact: new Date().toISOString()
     }))
     setClients(prevClients => [...prevClients, ...newClients])
   }

@@ -160,7 +160,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
   };
 
   const handleRecruitmentChange = (monthIndex: number, field: keyof RecruitmentSources, value: string) => {
-    if (!yearlyWorkPlan) return;
+    if (!yearlyWorkPlan?.monthlyTargets?.[monthIndex]) return;
 
     const newMonthlyTargets = [...yearlyWorkPlan.monthlyTargets];
     newMonthlyTargets[monthIndex] = {
@@ -234,6 +234,9 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
     setYearlyWorkPlan(updatedWorkPlan);
     debouncedSave(updatedWorkPlan);
   };
+
+  const monthlyTargets = yearlyWorkPlan?.monthlyTargets || [];
+  const monthlyTargetsLength = monthlyTargets.length;
 
   return (
     <div className="space-y-6">
@@ -537,7 +540,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
                   </td>
                 </tr>
                 <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 text-slate-700 font-medium">ייעוץ עסקי ��רגוני</td>
+                  <td className="py-2.5 text-slate-700 font-medium">ייעוץ עסקי רגוני</td>
                   <td className="py-2">
                     <Input
                       type="number"
@@ -641,7 +644,7 @@ const WorkPlanTable: React.FC<WorkPlanTableProps> = ({ year }) => {
         <div className="p-4">
           <Tabs defaultValue="insurance" className="w-full">
             <TabsList>
-              <TabsTrigger value="insurance">ביטוח</TabsTrigger>
+              <TabsTrigger value="insurance">בי��וח</TabsTrigger>
               <TabsTrigger value="pension">פנסיה</TabsTrigger>
             </TabsList>
             <TabsContent value="insurance">
