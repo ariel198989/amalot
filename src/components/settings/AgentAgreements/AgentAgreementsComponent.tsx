@@ -276,7 +276,7 @@ const AgentAgreements: React.FC = () => {
                       <h3 className="text-lg font-medium">{company}</h3>
                       <Checkbox
                         checked={companyRates.active}
-                        onCheckedChange={(checked: boolean) => handleRateChange(category, company, 'active', checked)}
+                        onChange={(e) => handleRateChange(category, company, 'active', e.target.checked)}
                         className="border-2"
                       />
                     </div>
@@ -469,7 +469,7 @@ const AgentAgreements: React.FC = () => {
                   <div className="flex items-center gap-2 mb-6">
                     <Checkbox 
                       checked={companyRates.active}
-                      onCheckedChange={(checked: boolean) => {
+                      onChange={(e) => {
                         const updatedRates: AgentRates = {
                           ...agentRates,
                           user_id: agentRates.user_id,
@@ -477,7 +477,7 @@ const AgentAgreements: React.FC = () => {
                             ...agentRates.insurance_companies,
                             [company]: {
                               ...companyRates,
-                              active: checked
+                              active: e.target.checked
                             }
                           }
                         };

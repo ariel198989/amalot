@@ -149,10 +149,10 @@ const CombinedCalculator: React.FC = () => {
                 >
                   <Checkbox
                     checked={selectedProducts[product.id]}
-                    onCheckedChange={(checked: boolean) => {
+                    onChange={(e) => {
                       setSelectedProducts(prev => ({
                         ...prev,
-                        [product.id]: checked
+                        [product.id]: e.target.checked
                       }));
                     }}
                     className="h-5 w-5"

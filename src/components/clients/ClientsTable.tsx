@@ -632,12 +632,9 @@ export default function ClientsTable() {
                     id="employed"
                     type="radio"
                     name="employment_type"
-                    value="employed"
                     checked={newClient.employment_type === 'employed'}
-                    onChange={(e) => setNewClient(prev => ({
-                      ...prev,
-                      employment_type: e.target.value as 'employed' | 'self-employed'
-                    }))}
+                    onChange={() => setNewClient(prev => ({ ...prev, employment_type: 'employed' }))}
+                    className="mr-2"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -646,12 +643,9 @@ export default function ClientsTable() {
                     id="self-employed"
                     type="radio"
                     name="employment_type"
-                    value="self-employed"
                     checked={newClient.employment_type === 'self-employed'}
-                    onChange={(e) => setNewClient(prev => ({
-                      ...prev,
-                      employment_type: e.target.value as 'employed' | 'self-employed'
-                    }))}
+                    onChange={() => setNewClient(prev => ({ ...prev, employment_type: 'self-employed' }))}
+                    className="mr-2"
                   />
                 </div>
               </div>
@@ -839,7 +833,7 @@ export default function ClientsTable() {
                                 '2': 'פנסיה מקיפה',
                                 '3': 'קופת גמל',
                                 '4': 'קרן השתלמות',
-                                '5': 'קופת גמל להשקעה',
+                                '5': 'קופת ��מל להשקעה',
                                 '6': 'ביטוח חיים',
                                 '7': 'קרן פנסיה כללית',
                                 '8': 'קופת גמל מרכזית',
