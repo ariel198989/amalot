@@ -1,49 +1,70 @@
-try {
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-      emailRedirectTo: 'http://localhost:5173/auth/callback',
-      data: {
-        email: email,
-        created_at: new Date().toISOString()
+// הרשמה רגילה למשתמשים
+export async function signUpUser(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: 'http://localhost:5173/auth/callback',
+        data: {
+          email,
+          created_at: new Date().toISOString()
+        }
+      }
+    })
+    
+    if (error) {
+      console.error('שגיאת הרשמה:', error)
+      throw error
+    }
+
+    if (data?.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{ id: data.user.id, email: data.user.email }])
+
+      if (profileError) {
+        console.error('שגיאה ביצירת פרופיל:', profileError)
+        throw profileError
+      }
+
+      return {
+        user: data.user,
+        message: 'ההרשמה הצליחה!'
       }
     }
-  })
-  
-  if (error) {
-    console.error('פרטי השגיאה:', {
-      message: error.message,
-      status: error.status,
-      error
-    })
+
+    throw new Error('שגיאה ביצירת משתמש')
+    
+  } catch (error) {
+    console.error('שגיאה:', error)
     throw error
   }
+}
 
-  if (data?.user) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: data.user.id,
-          email: data.user.email
-        }
-      ])
+// שליחת הזמנה למשתמש
+export async function inviteUser(email: string) {
+  try {
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      redirectTo: 'http://localhost:5173/auth/callback',
+      data: {
+        invited_by: 'admin',
+        created_at: new Date().toISOString()
+      }
+    })
 
-    if (profileError) {
-      console.error('שגיאה ביצירת פרופיל:', profileError)
-      throw profileError
+    if (error) {
+      console.error('שגיאת הזמנה:', error)
+      throw error
     }
 
     return {
-      user: data.user,
-      message: 'ההרשמה הצליחה!'
+      message: 'הזמנה נשלחה בהצלחה!',
+      data
     }
-  }
 
-  throw new Error('שגיאה ביצירת משתמש')
-  
-} catch (error) {
-  console.error('שגיאה:', error)
-  throw error
+  } catch (error) {
+    console.error('שגיאה בשליחת הזמנה:', error)
+    throw error
+  }
 } 
