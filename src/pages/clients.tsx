@@ -30,6 +30,8 @@ export default function ClientsPage() {
       id_number: result.client.id_number || '',
       birth_date: result.client.birth_date || '',
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      xml_data: JSON.stringify(result.client),
       status: 'active',
       last_contact: new Date().toISOString()
     }))
