@@ -3,22 +3,45 @@ try {
     email: email,
     password: password,
     options: {
-      emailRedirectTo: 'http://localhost:5173/auth/callback'
+      emailRedirectTo: 'http://localhost:5173/auth/callback',
+      data: {
+        email: email,
+        created_at: new Date().toISOString()
+      }
     }
   })
   
   if (error) {
-    if (error.message.includes('Email rate limit exceeded')) {
-      throw new Error('נסה שוב בעוד מספר דקות')
-    }
-    console.error('שגיאת הרשמה:', error)
+    console.error('פרטי השגיאה:', {
+      message: error.message,
+      status: error.status,
+      error
+    })
     throw error
   }
 
-  return {
-    user: data.user,
-    message: 'ההרשמה הצליחה!'
+  if (data?.user) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: data.user.id,
+          email: data.user.email
+        }
+      ])
+
+    if (profileError) {
+      console.error('שגיאה ביצירת פרופיל:', profileError)
+      throw profileError
+    }
+
+    return {
+      user: data.user,
+      message: 'ההרשמה הצליחה!'
+    }
   }
+
+  throw new Error('שגיאה ביצירת משתמש')
   
 } catch (error) {
   console.error('שגיאה:', error)
