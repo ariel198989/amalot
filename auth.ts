@@ -1,94 +1,66 @@
 // הרשמה רגילה למשתמשים
 export async function signUpUser(email: string, password: string) {
   try {
-    // לוג לפני הניסיון
     console.log('=== התחלת תהליך הרשמה ===')
-    console.log('נתוני הרשמה:', { 
-      email, 
-      passwordLength: password.length,
-      timestamp: new Date().toISOString()
-    })
     
-    const { data, error } = await supabase.auth.signUp({
+    // בדיקות תקינות בסיסיות
+    if (!email || !password) {
+      throw new Error('חסרים פרטי התחברות')
+    }
+    
+    if (password.length < 6) {
+      throw new Error('הסיסמה חייבת להכיל לפחות 6 תווים')
+    }
+
+    // קודם ניצור את המשתמש
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:5173/auth/callback',
-        data: {
-          email,
-          created_at: new Date().toISOString()
-        }
+        emailRedirectTo: 'http://localhost:5173/auth/callback'
       }
     })
     
-    // לוג של התשובה המלאה
     console.log('=== תשובה מהשרת ===', {
-      hasData: !!data,
-      hasUser: !!data?.user,
-      hasError: !!error,
-      fullResponse: { data, error }
+      hasData: !!authData,
+      hasUser: !!authData?.user,
+      userId: authData?.user?.id
     })
     
-    if (error) {
-      console.error('=== פרטי השגיאה ===', {
-        message: error.message,
-        status: error.status,
-        details: error.details,
-        name: error.name,
-        stack: error.stack,
-        fullError: error
-      })
-      throw error
+    if (authError) {
+      console.error('=== שגיאת הרשמה ===', authError)
+      throw authError
     }
 
-    if (data?.user) {
-      console.log('=== יצירת משתמש הצליחה ===', {
-        userId: data.user.id,
-        userEmail: data.user.email,
-        userMetadata: data.user.user_metadata
+    if (!authData?.user?.id) {
+      throw new Error('לא התקבל ID משתמש')
+    }
+
+    // אחרי שהמשתמש נוצר, ניצור את הפרופיל
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authData.user.id,
+        email: authData.user.email,
+        username: email.split('@')[0],
+        created_at: new Date().toISOString()
       })
+      .select()
 
-      // ניסיון ליצור פרופיל
-      console.log('=== מנסה ליצור פרופיל ===')
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: data.user.id,
-            email: data.user.email,
-            username: email.split('@')[0]
-          }
-        ])
-
-      if (profileError) {
-        console.error('=== שגיאה ביצירת פרופיל ===', {
-          error: profileError,
-          details: profileError.details,
-          message: profileError.message,
-          hint: profileError.hint
-        })
-        throw profileError
-      }
-
+    if (profileError) {
+      console.error('=== שגיאה ביצירת פרופיל ===', profileError)
+      // נמשיך גם אם יצירת הפרופיל נכשלה
+    } else {
       console.log('=== פרופיל נוצר בהצלחה ===')
-      
-      return {
-        user: data.user,
-        message: 'ההרשמה הצליחה!'
-      }
     }
 
-    console.error('=== שגיאה: לא התקבלו פרטי משתמש ===')
-    throw new Error('לא התקבלו פרטי משתמש')
+    return {
+      user: authData.user,
+      message: 'ההרשמה הצליחה!'
+    }
     
   } catch (error) {
-    console.error('=== שגיאה כללית בתהליך ההרשמה ===', {
-      error,
-      type: typeof error,
-      isError: error instanceof Error,
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
+    console.error('=== שגיאה כללית ===', error)
     throw error
   }
 }
