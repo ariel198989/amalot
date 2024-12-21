@@ -4,8 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // Use process.env for environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
     throw new Error('Missing Supabase environment variables');
 }
 
@@ -21,13 +22,23 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
     auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false
+        detectSessionInUrl: true
+    },
+    db: {
+        schema: 'public'
     },
     global: {
         headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Prefer': 'return=representation'
+            'x-my-custom-header': 'my-app-name'
         }
+    }
+});
+
+// קליינט נפרד עם service role key לפעולות אדמין
+export const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
     }
 });

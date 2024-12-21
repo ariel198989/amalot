@@ -2,38 +2,77 @@ import { calculateCommissions } from '../../services/AgentAgreementService';
 
 export const calculatePensionCommissions = async (data: any, company: string) => {
   try {
+    console.log('מתחיל חישוב עמלות פנסיה:', {
+      pensionSalary: data.pensionSalary,
+      pensionAccumulation: data.pensionAccumulation,
+      pensionContribution: data.pensionContribution,
+      company,
+      userId: data.user_id
+    });
+
     const salary = Number(data.pensionSalary);
     const accumulation = Number(data.pensionAccumulation);
-    const contributionRate = Number(data.pensionContribution || 20.83) / 100;
-    const annualContribution = salary * 12 * contributionRate;
+    const provision_rate = Number(data.pensionContribution || 20.83);
     
+    if (!salary) {
+      console.error('לא התקבל שכר תקין:', data.pensionSalary);
+      throw new Error('נדרש שכר תקין לחישוב');
+    }
+
+    if (!company) {
+      console.error('לא התקבלה חברה');
+      throw new Error('נדרשת חברת ביטוח לחישוב');
+    }
+
+    if (!data.user_id) {
+      console.error('לא התקבל מזהה משתמש');
+      throw new Error('נדרש מזהה משתמש לחישוב');
+    }
+    
+    if (provision_rate < 18.5 || provision_rate > 23) {
+      console.error('אחוז הפרשה לא תקין:', provision_rate);
+      throw new Error('אחוז הפרשה חייב להיות בין 18.5 ל-23');
+    }
+    
+    console.log('שולח נתונים לחישוב:', {
+      userId: data.user_id,
+      category: 'pension',
+      company,
+      salary,
+      provision_rate,
+      accumulation
+    });
+
     const commissions = await calculateCommissions(
       data.user_id,
       'pension',
       company,
-      annualContribution,
-      String(contributionRate),
+      salary,
+      String(provision_rate),
       accumulation
     );
 
     if (!commissions) {
+      console.error('לא התקבלו נתוני עמלות מהחישוב');
       throw new Error('לא נמצאו נתוני עמלות');
     }
+
+    console.log('התקבלו תוצאות חישוב:', {
+      scope_commission: commissions.scope_commission,
+      monthly_commission: commissions.monthly_commission,
+      total_commission: commissions.total_commission,
+      details: commissions.details
+    });
 
     return {
       scopeCommission: commissions.scope_commission,
       accumulationCommission: commissions.monthly_commission,
-      totalCommission: commissions.scope_commission + commissions.monthly_commission,
-      contributionRate: contributionRate * 100
+      totalCommission: commissions.total_commission,
+      contributionRate: provision_rate
     };
   } catch (error) {
-    console.error('Error:', error);
-    return { 
-      scopeCommission: 0, 
-      accumulationCommission: 0, 
-      totalCommission: 0,
-      contributionRate: 20.83
-    };
+    console.error('שגיאה בחישוב עמלות פנסיה:', error);
+    throw error;
   }
 };
 

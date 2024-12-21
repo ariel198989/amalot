@@ -1,3 +1,17 @@
+import { createClient } from '@supabase/supabase-js'
+
+const serviceSupabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
+)
+
 // הרשמה רגילה למשתמשים
 export async function signUpUser(email: string, password: string) {
   try {
@@ -12,13 +26,11 @@ export async function signUpUser(email: string, password: string) {
       throw new Error('הסיסמה חייבת להכיל לפחות 6 תווים')
     }
 
-    // קודם ניצור את המשתמש
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // קימוש ב-service role key
+    const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo: 'http://localhost:5173/auth/callback'
-      }
+      email_confirm: true  // אוטומטית מאשר את המייל
     })
     
     console.log('=== תשובה מהשרת ===', {
@@ -37,7 +49,7 @@ export async function signUpUser(email: string, password: string) {
     }
 
     // אחרי שהמשתמש נוצר, ניצור את הפרופיל
-    const { error: profileError } = await supabase
+    const { error: profileError } = await serviceSupabase
       .from('profiles')
       .insert({
         id: authData.user.id,
@@ -68,7 +80,7 @@ export async function signUpUser(email: string, password: string) {
 // שליחת הזמנה למשתמש
 export async function inviteUser(email: string) {
   try {
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    const { data, error } = await serviceSupabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: 'http://localhost:5173/auth/callback',
       data: {
         invited_by: 'admin',

@@ -22,23 +22,38 @@ interface CommissionCalculation {
 
 export async function getAgentAgreement(userId: string): Promise<AgentRates | null> {
   try {
-    console.log('Fetching agent agreement for user:', userId);
+    console.log('מתחיל לחפש הסכם סוכן עבור:', userId);
     
+    if (!userId) {
+      console.error('לא התקבל מזהה משתמש');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('agent_commission_rates')
-      .select()
+      .select('*')
       .eq('user_id', userId)
       .single();
 
     if (error) {
-      console.error('Error fetching agent agreement:', error);
+      console.error('שגיאה בקבלת הסכם סוכן:', error.message);
       return null;
     }
 
-    console.log('Retrieved agent agreement:', data);
+    if (!data) {
+      console.error('לא נמצאו נתוני הסכם סוכן');
+      return null;
+    }
+
+    console.log('נמצא הסכם סוכן:', {
+      userId: data.user_id,
+      pensionCompanies: Object.keys(data.pension_companies || {}),
+      insuranceCompanies: Object.keys(data.insurance_companies || {})
+    });
+    
     return data;
   } catch (error) {
-    console.error('Error in getAgentAgreement:', error);
+    console.error('שגיאה לא צפויה בקבלת הסכם סוכן:', error);
     return null;
   }
 }
@@ -99,67 +114,68 @@ export async function calculateCommissions(
   insuranceType?: string,
   totalAccumulated?: number
 ): Promise<CommissionCalculation> {
-  console.log('Starting commission calculation:', { userId, category, company, amount, insuranceType, totalAccumulated });
+  console.log('מתחיל חישוב עמלות:', { 
+    userId, 
+    category, 
+    company, 
+    amount, 
+    insuranceType, 
+    totalAccumulated 
+  });
 
   const agentRates = await getAgentAgreement(userId);
   if (!agentRates) {
-    console.log('No agent rates found');
+    console.error('לא נמצאו נתוני הסכם סוכן');
     return getEmptyCalculation(amount);
   }
 
   if (category === 'pension') {
     const companyRates = agentRates.pension_companies?.[company] as PensionCompanyRates;
-    console.log('Pension company rates:', { 
+    console.log('נתוני חברת פנסיה:', { 
       company, 
-      companyRates, 
-      allRates: agentRates.pension_companies,
-      totalAccumulated 
+      rates: companyRates,
+      allCompanies: Object.keys(agentRates.pension_companies || {})
     });
     
     if (!companyRates?.active) {
-      console.log('No active rates found for pension company:', company);
+      console.error('לא נמצאו נתונים פעילים לחברת הפנסיה:', company);
       return getEmptyCalculation(amount);
     }
 
-    const annualContribution = amount * (Number(insuranceType) || 0.2083) * 12;
+    const provision_rate = Number(insuranceType) || 20.83;
+    if (provision_rate < 18.5 || provision_rate > 23) {
+      throw new Error('אחוז הפרשה חייב להיות בין 18.5 ל-23');
+    }
+
+    const commission_rate = companyRates?.scope_rate * 100;
+    if (commission_rate < 6 || commission_rate > 8) {
+      throw new Error('אחוז עמלה חייב להיות בין 6 ל-8');
+    }
+
+    const annualContribution = amount * 12 * (provision_rate / 100);
+    const scopeCommissionFromContribution = Math.round(
+      annualContribution * (commission_rate / 100)
+    );
     
-    // Calculate scope commission based on annual contribution
-    const scopeCommissionFromContribution = companyRates.scope_rate * annualContribution;
-    
-    // Calculate accumulation commission based on total accumulated amount
+    const millionsInAccumulation = totalAccumulated ? totalAccumulated / 1000000 : 0;
     const accumulationCommission = totalAccumulated 
-      ? companyRates.scope_rate_per_million * (totalAccumulated / 1000000)
+      ? Math.round(companyRates.scope_rate_per_million * millionsInAccumulation)
       : 0;
-    
-    console.log('Pension calculation details:', {
+
+    console.log('פרטי חישוב פנסיה:', {
       salary: amount,
+      provision_rate,
+      commission_rate,
       annualContribution,
       totalAccumulated,
-      scope_rate: companyRates.scope_rate,
-      scope_rate_per_million: companyRates.scope_rate_per_million,
+      millionsInAccumulation,
       scopeCommissionFromContribution,
-      accumulationCommission,
-      accumulationCalc: totalAccumulated 
-        ? `${companyRates.scope_rate_per_million.toLocaleString()}₪ למיליון × ${(totalAccumulated/1000000).toFixed(2)} מיליון = ${accumulationCommission.toLocaleString()}₪`
-        : 'אין צבירה'
+      accumulationCommission
     });
 
     const scope_commission = scopeCommissionFromContribution;
-    const monthly_commission = accumulationCommission;  // Changed: accumulation commission goes to monthly_commission
+    const monthly_commission = accumulationCommission;
     const total_commission = scope_commission + monthly_commission;
-
-    console.log('Calculated pension commissions:', {
-      amount,
-      insuranceType,
-      annualContribution,
-      totalAccumulated,
-      scopeCommissionFromContribution,
-      accumulationCommission,
-      scope_commission,
-      monthly_commission,
-      total_commission,
-      rates: companyRates
-    });
 
     return {
       category,
@@ -169,10 +185,10 @@ export async function calculateCommissions(
       total_commission,
       details: {
         scope_commission_explanation: 
-          `עמלת היקף: ${(companyRates.scope_rate * 100).toFixed(2)}% × ${annualContribution.toLocaleString()}₪ = ${scope_commission.toLocaleString()}₪`,
+          `עמלת היקף: ${commission_rate.toFixed(2)}% × ${annualContribution.toLocaleString()}₪ = ${scope_commission.toLocaleString()}₪`,
         monthly_commission_explanation: 
           totalAccumulated 
-            ? `עמלת צבירה: ${companyRates.scope_rate_per_million.toLocaleString()}₪ למיליון × ${(totalAccumulated/1000000).toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪`
+            ? `עמלת צבירה: ${companyRates.scope_rate_per_million.toLocaleString()}₪ × ${millionsInAccumulation.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪`
             : 'אין צבירה'
       }
     };
@@ -234,7 +250,7 @@ export async function calculateCommissions(
       total_commission,
       details: {
         scope_commission_explanation: `${rates.one_time_rate}% × ${annual_premium.toLocaleString()}₪ (פרמיה שנתית) = ${scope_commission.toLocaleString()}₪`,
-        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לחודש`
+        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לח��דש`
       }
     };
   }

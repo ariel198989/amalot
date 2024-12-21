@@ -397,7 +397,7 @@ const CustomerJourneyComponent: React.FC = () => {
       console.log('Loaded company rates:', rates);
     } catch (error) {
       console.error('Error loading company rates:', error);
-      toast.error('שגיאה בטעינת נתוני החב��ות');
+      toast.error('שגיאה בטעינת נתוני החברות');
     }
   };
 
@@ -482,17 +482,19 @@ const CustomerJourneyComponent: React.FC = () => {
           },
           { 
             name: 'pensionSalary', 
-            label: 'שכר', 
+            label: 'שכר חודשי', 
             type: 'number', 
             required: true,
-            className: 'bg-white text-right'
+            className: 'bg-white text-right',
+            defaultValue: '0'
           },
           { 
             name: 'pensionAccumulation', 
-            label: 'צה', 
+            label: 'צבירה', 
             type: 'number', 
             required: true,
-            className: 'bg-white text-right'
+            className: 'bg-white text-right',
+            defaultValue: '0'
           },
           { 
             name: 'pensionContribution', 
@@ -505,12 +507,14 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: '0.2283', label: '22.83%' },
-              { value: '0.2183', label: '21.83%' },
-              { value: '0.2083', label: '20.83%' },
-              { value: '0.1950', label: '19.50%' },
-              { value: '0.1850', label: '18.50%' }
-            ]
+              { value: '18.5', label: '18.5%' },
+              { value: '19', label: '19%' },
+              { value: '20.83', label: '20.83%' },
+              { value: '21', label: '21%' },
+              { value: '22', label: '22%' },
+              { value: '23', label: '23%' }
+            ],
+            defaultValue: '20.83'
           },
           { 
             name: 'activityType',
@@ -574,7 +578,7 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'מגדל', label: 'מגדל' },
+              { value: 'מגדל', label: 'מגד��' },
               { value: 'מנורה', label: 'מנורה' },
               { value: 'כלל', label: 'כלל' },
               { value: 'הראל', label: 'הראל' },
