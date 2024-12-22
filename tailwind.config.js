@@ -1,4 +1,5 @@
-import forms from '@tailwindcss/forms';
+const animate = require("tailwindcss-animate");
+const forms = require('@tailwindcss/forms');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -119,5 +120,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require('@tailwindcss/forms')],
+  plugins: [animate, forms],
 }
