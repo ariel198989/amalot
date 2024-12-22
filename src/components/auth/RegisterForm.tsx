@@ -17,7 +17,6 @@ const RegisterForm: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Sign up the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -38,54 +37,6 @@ const RegisterForm: React.FC = () => {
       }
 
       if (data?.user) {
-        // 2. Wait for the user to be fully created in auth
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 3. Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              full_name: email.split('@')[0]
-            }
-          ])
-          .select()
-          .single();
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          toast.error('אירעה שגיאה ביצירת הפרופיל');
-          return;
-        }
-
-        // 4. Wait for the user profile to be fully created
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 5. Create default sales settings
-        const { error: settingsError } = await supabase
-          .from('sales_settings')
-          .insert([
-            {
-              user_id: data.user.id,
-              pension_target: 0,
-              insurance_target: 0,
-              investment_target: 0,
-              policy_target: 0,
-              closing_rate: 0,
-              monthly_meetings: 0
-            }
-          ])
-          .select()
-          .single();
-
-        if (settingsError) {
-          console.error('Error creating sales settings:', settingsError);
-          toast.error('נוצר חשבון אך הייתה שגיאה ביצירת הגדרות המכירות');
-          return;
-        }
-
         toast.success('נרשמת בהצלחה! אנא אשר את האימייל שלך');
         navigate('/auth/verify');
       }

@@ -10,6 +10,18 @@ export interface FinancialProductRates {
   one_time_rate?: never;
 }
 
+export interface PensionCompanyRates {
+  active: boolean;
+  scope_rate: number;
+  scope_rate_per_million: number;
+}
+
+export interface InsuranceCompanyRates extends CompanyRates {
+  products: {
+    [key: string]: InsuranceProductRates;
+  };
+}
+
 export interface CompanyRates {
   active: boolean;
   products: {
@@ -20,18 +32,10 @@ export interface CompanyRates {
 export interface AgentRates {
   user_id: string;
   pension_companies: {
-    [key: string]: {
-      active: boolean;
-      scope_rate: number;
-      scope_rate_per_million: number;
-    };
+    [key: string]: PensionCompanyRates;
   };
   insurance_companies: {
-    [key: string]: CompanyRates & {
-      products: {
-        [key: string]: InsuranceProductRates;
-      };
-    };
+    [key: string]: InsuranceCompanyRates;
   };
   savings_and_study_companies: {
     [key: string]: CompanyRates & {

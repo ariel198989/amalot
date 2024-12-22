@@ -55,7 +55,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const AppRoutes = () => {
   return (
-    <Routes future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Routes>
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
