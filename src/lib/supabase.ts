@@ -17,20 +17,12 @@ try {
     throw new Error('Invalid VITE_SUPABASE_URL format');
 }
 
-// Create and export the typed client
+// Create a single instance of the Supabase client
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        autoRefreshToken: true,
         persistSession: true,
+        autoRefreshToken: true,
         detectSessionInUrl: true
-    },
-    db: {
-        schema: 'public'
-    },
-    global: {
-        headers: {
-            'x-my-custom-header': 'my-app-name'
-        }
     }
 });
 
@@ -42,3 +34,67 @@ export const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
         detectSessionInUrl: true
     }
 });
+
+// Helper function to get the current user or return dummy user
+export const getCurrentUser = async () => {
+    try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (!session) {
+            return {
+                data: {
+                    user: {
+                        id: '00000000-0000-0000-0000-000000000000',
+                        email: 'dummy@example.com'
+                    }
+                }
+            };
+        }
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+
+        return { data: { user } };
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        return {
+            data: {
+                user: {
+                    id: '00000000-0000-0000-0000-000000000000',
+                    email: 'dummy@example.com'
+                }
+            }
+        };
+    }
+};
+
+// Helper function to handle email verification
+export const handleEmailVerification = async () => {
+    try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        // אם אין session, ננסה לאמת את המייל מה-URL
+        if (!session) {
+            const params = new URLSearchParams(window.location.search);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+                const { data, error: setSessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                });
+                
+                if (setSessionError) throw setSessionError;
+                return { session: data.session };
+            }
+        }
+
+        return { session };
+    } catch (error) {
+        console.error('Error in email verification:', error);
+        throw error;
+    }
+};

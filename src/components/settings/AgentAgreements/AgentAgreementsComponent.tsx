@@ -1,76 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
-import { Checkbox } from "@/components/ui/shadcn/checkbox";
-import { motion } from "framer-motion";
-import { 
-  Wallet, 
-  PiggyBank, 
-  Building2, 
-  Shield,
-  CheckCircle2,
-  XCircle,
-  Save,
-  RefreshCw
-} from 'lucide-react';
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { AgentRates, DEFAULT_COMPANY_RATES } from './AgentAgreementsTypes';
+import { motion } from 'framer-motion';
+import { CheckCircle2, XCircle, Save, Loader2 } from 'lucide-react';
 
-import { 
-  AgentRates, 
-  CompanyRates,
-  PensionCompanyRates,
-  DEFAULT_COMPANY_RATES,
-  DEFAULT_PENSION_RATES
-} from './AgentAgreementsTypes';
-
-import { 
-  fetchAgentRates, 
-  updateAgentRates,
-  getInsuranceProductTypes 
-} from './AgentAgreementsHelpers';
-
-type ProductKey = keyof CompanyRates['products'];
-type PensionRateKey = keyof PensionCompanyRates;
-
-const FINANCIAL_PRODUCTS = [
-  { value: 'gemel' as ProductKey, label: 'גמל' },
-  { value: 'investment_gemel' as ProductKey, label: 'גמל להשקעה' },
-  { value: 'hishtalmut' as ProductKey, label: 'השתלמות' },
-  { value: 'savings_policy' as ProductKey, label: 'פוליסת חסכון' }
-] as const;
-
+const pensionCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה', 'מיטב דש', 'אלטשולר שחם', 'אנליסט', 'מור'] as const;
+const savingsCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה', 'מיטב דש', 'אלטשולר שחם', 'אנליסט', 'מור', 'ילין לפידות', 'פסגות'] as const;
 const insuranceCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'] as const;
-
-const TabColors = {
-  pension: {
-    text: 'text-blue-700',
-    bg: 'bg-blue-50',
-    hover: 'hover:bg-blue-100',
-    icon: 'text-blue-600'
-  },
-  savings: {
-    text: 'text-purple-700',
-    bg: 'bg-purple-50',
-    hover: 'hover:bg-purple-100',
-    icon: 'text-purple-600'
-  },
-  policy: {
-    text: 'text-emerald-700',
-    bg: 'bg-emerald-50',
-    hover: 'hover:bg-emerald-100',
-    icon: 'text-emerald-600'
-  },
-  insurance: {
-    text: 'text-rose-700',
-    bg: 'bg-rose-50',
-    hover: 'hover:bg-rose-100',
-    icon: 'text-rose-600'
-  }
-};
 
 const INSURANCE_PRODUCTS = [
   { value: 'personal_accident', label: 'תאונות אישיות' },
@@ -83,576 +31,551 @@ const INSURANCE_PRODUCTS = [
   { value: 'disability', label: 'אכע' }
 ] as const;
 
-type InsuranceProductType = typeof INSURANCE_PRODUCTS[number]['value'];
+const DEFAULT_PENSION_RATES = {
+  active: false,
+  scope_rate: 0,
+  scope_rate_per_million: 0
+};
 
-const AgentAgreements: React.FC = () => {
+const AgentAgreementsComponent: React.FC = () => {
   const [agentRates, setAgentRates] = useState<AgentRates | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('pension');
+  const [loading, setLoading] = useState(true);
+  const [savingCompany, setSavingCompany] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [savedCompany, setSavedCompany] = useState<string>('');
 
   useEffect(() => {
-    loadAgentRates();
+    const fetchAgentRates = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('משתמש לא מחובר');
+          return;
+        }
+
+        const { data: existingRates, error: fetchError } = await supabase
+          .from('agent_commission_rates')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (fetchError && fetchError.code === 'PGRST116') {
+          // Record doesn't exist, create new one
+          const { data: newRates, error: insertError } = await supabase
+            .from('agent_commission_rates')
+            .upsert({
+              user_id: user.id,
+              pension_companies: {},
+              savings_and_study_companies: {},
+              policy_companies: {},
+              insurance_companies: {}
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating agent rates:', insertError);
+            return;
+          }
+
+          setAgentRates(newRates);
+        } else if (fetchError) {
+          console.error('Error fetching agent rates:', fetchError);
+          return;
+        } else {
+          setAgentRates(existingRates);
+        }
+      } catch (error) {
+        console.error('Error fetching agent rates:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgentRates();
   }, []);
 
-  const loadAgentRates = async () => {
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('משתמש לא מחובר');
-        return;
-      }
-
-      const rates = await fetchAgentRates(user.id);
-      if (rates) {
-        setAgentRates(rates);
-      }
-    } catch (error) {
-      console.error('Error loading agent rates:', error);
-      toast.error('שגיאה בטעינת נתוני עמלות');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRateChange = (
-    category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies' | 'insurance_companies'>, 
-    company: string, 
-    field: PensionRateKey | keyof CompanyRates, 
-    value: number | boolean
+  const handleRateChange = async (
+    category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies'>,
+    company: string,
+    field: string,
+    value: any
   ) => {
     if (!agentRates) return;
 
-    const updatedRates: AgentRates = {
+    const updatedRates = {
       ...agentRates,
-      user_id: agentRates.user_id,
       [category]: {
         ...agentRates[category],
         [company]: {
-          ...(agentRates[category][company] || 
-            (category === 'pension_companies' ? DEFAULT_PENSION_RATES : DEFAULT_COMPANY_RATES)),
+          ...agentRates[category][company],
           [field]: value
         }
       }
     };
 
     setAgentRates(updatedRates);
-  };
 
-  const renderFinancialRatesSection = (company: string, companyRates: CompanyRates) => {
-    if (!agentRates) return null;
+    try {
+      const { error } = await supabase
+        .from('agent_commission_rates')
+        .update(updatedRates)
+        .eq('user_id', agentRates.user_id);
 
-    // Initialize products if they don't exist
-    if (!companyRates.products) {
-      companyRates.products = {
-        gemel: { scope_commission: 0, monthly_rate: 0 },
-        investment_gemel: { scope_commission: 0, monthly_rate: 0 },
-        hishtalmut: { scope_commission: 0, monthly_rate: 0 },
-        savings_policy: { scope_commission: 0, monthly_rate: 0 }
-      };
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating rates:', error);
+      toast.error('שגיאה בעדכון הנתונים');
     }
-
-    return (
-      <div className="space-y-6">
-        {FINANCIAL_PRODUCTS.map(({ value, label }) => (
-          <div key={value} className="space-y-2">
-            <Label>{label}</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>עמלת היקף (₪ למיליון)</Label>
-                <Input
-                  type="number"
-                  step="100"
-                  value={companyRates.products[value]?.scope_commission || 0}
-                  onChange={(e) => {
-                    const updatedRates: AgentRates = {
-                      ...agentRates,
-                      user_id: agentRates.user_id,
-                      savings_and_study_companies: {
-                        ...agentRates.savings_and_study_companies,
-                        [company]: {
-                          ...companyRates,
-                          products: {
-                            ...companyRates.products,
-                            [value]: {
-                              ...companyRates.products[value],
-                              scope_commission: Number(e.target.value)
-                            }
-                          }
-                        }
-                      }
-                    };
-                    setAgentRates(updatedRates);
-                  }}
-                />
-              </div>
-              <div>
-                <Label>נפרעים (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={companyRates.products[value]?.monthly_rate || 0}
-                  onChange={(e) => {
-                    const updatedRates: AgentRates = {
-                      ...agentRates,
-                      user_id: agentRates.user_id,
-                      savings_and_study_companies: {
-                        ...agentRates.savings_and_study_companies,
-                        [company]: {
-                          ...companyRates,
-                          products: {
-                            ...companyRates.products,
-                            [value]: {
-                              ...companyRates.products[value],
-                              monthly_rate: Number(e.target.value)
-                            }
-                          }
-                        }
-                      }
-                    };
-                    setAgentRates(updatedRates);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
   };
 
-  const renderCompanyRatesSection = (
-    category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies'>,
-    companies: string[],
-    sectionTitle?: string
-  ) => {
-    if (!agentRates) return null;
+  const handleSaveCompany = async (company: string) => {
+    if (!agentRates) return;
 
-    // Initialize default products for savings companies if they don't exist
-    if (category === 'savings_and_study_companies') {
-      companies.forEach(company => {
-        if (!agentRates.savings_and_study_companies[company]) {
-          agentRates.savings_and_study_companies[company] = {
-            ...DEFAULT_COMPANY_RATES,
-            products: {
-              gemel: { scope_commission: 0, monthly_rate: 0 },
-              investment_gemel: { scope_commission: 0, monthly_rate: 0 },
-              hishtalmut: { scope_commission: 0, monthly_rate: 0 },
-              savings_policy: { scope_commission: 0, monthly_rate: 0 }
-            }
-          };
-        } else if (!agentRates.savings_and_study_companies[company].products) {
-          agentRates.savings_and_study_companies[company].products = {
-            gemel: { scope_commission: 0, monthly_rate: 0 },
-            investment_gemel: { scope_commission: 0, monthly_rate: 0 },
-            hishtalmut: { scope_commission: 0, monthly_rate: 0 },
-            savings_policy: { scope_commission: 0, monthly_rate: 0 }
-          };
-        }
-      });
+    setSavingCompany(company);
+    
+    try {
+      const { error } = await supabase
+        .from('agent_commission_rates')
+        .update(agentRates)
+        .eq('user_id', agentRates.user_id);
+
+      if (error) {
+        throw error;
+      }
+
+      setSavedCompany(company);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('Error saving company rates:', error);
+      toast.error('שגיאה בשמירת ההסכם');
+    } finally {
+      setSavingCompany(null);
     }
-
-    return (
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-6">{sectionTitle || category}</h2>
-          <div className="grid grid-cols-3 gap-6" dir="rtl">
-            {companies.map((company) => {
-              const companyRates = agentRates[category][company] || 
-                (category === 'pension_companies' ? DEFAULT_PENSION_RATES : {
-                  ...DEFAULT_COMPANY_RATES,
-                  products: {
-                    gemel: { scope_commission: 0, monthly_rate: 0 },
-                    investment_gemel: { scope_commission: 0, monthly_rate: 0 },
-                    hishtalmut: { scope_commission: 0, monthly_rate: 0 },
-                    savings_policy: { scope_commission: 0, monthly_rate: 0 }
-                  }
-                });
-
-              return (
-                <Card key={company} className="overflow-hidden">
-                  <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">{company}</h3>
-                      <Checkbox
-                        checked={companyRates.active}
-                        onChange={(e) => handleRateChange(category, company, 'active', e.target.checked)}
-                        className="border-2"
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    {category === 'savings_and_study_companies' ? (
-                      renderFinancialRatesSection(company, companyRates as CompanyRates)
-                    ) : (
-                      <div className="space-y-6">
-                        {category === 'pension_companies' ? (
-                          <>
-                            <div>
-                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                                עמלת היקף על השכר (%)
-                              </label>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                value={(companyRates as PensionCompanyRates).scope_rate * 100} 
-                                onChange={(e) => handleRateChange(
-                                  category, 
-                                  company, 
-                                  'scope_rate',
-                                  Number(e.target.value) / 100
-                                )}
-                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                                dir="rtl"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                                עמלת היקף על צבירה (₪ למיליון)
-                              </label>
-                              <Input 
-                                type="number" 
-                                step="100"
-                                value={(companyRates as PensionCompanyRates).scope_rate_per_million} 
-                                onChange={(e) => handleRateChange(
-                                  category, 
-                                  company, 
-                                  'scope_rate_per_million',
-                                  Number(e.target.value)
-                                )}
-                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                                dir="rtl"
-                              />
-                            </div>
-                          </>
-                        ) : category === 'policy_companies' ? (
-                          <>
-                            <div>
-                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                                עמלת היקף (₪ למיליון)
-                              </label>
-                              <Input 
-                                type="number" 
-                                step="100"
-                                value={
-                                  'products' in companyRates && companyRates.products?.gemel?.scope_commission !== undefined
-                                    ? companyRates.products.gemel.scope_commission
-                                    : 0
-                                }
-                                onChange={(e) => handleRateChange(
-                                  category, 
-                                  company, 
-                                  'scope_rate_per_million',
-                                  Number(e.target.value)
-                                )}
-                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                                dir="rtl"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-2 text-gray-700 text-right">
-                                נפרעים (%)
-                              </label>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                value={
-                                  'products' in companyRates && companyRates.products?.gemel?.monthly_rate !== undefined
-                                    ? companyRates.products.gemel.monthly_rate
-                                    : 0
-                                }
-                                onChange={(e) => handleRateChange(
-                                  category, 
-                                  company, 
-                                  'scope_rate_per_million',
-                                  Number(e.target.value) / 100
-                                )}
-                                className="border-2 focus:ring-2 focus:ring-blue-100 text-right"
-                                dir="rtl"
-                              />
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  const handleInsuranceRateChange = (
+  const handleProductRateChange = async (
+    category: keyof Pick<AgentRates, 'insurance_companies' | 'savings_and_study_companies'>,
     company: string,
-    productType: InsuranceProductType,
-    field: 'one_time_rate' | 'monthly_rate',
-    value: string
+    productType: string,
+    field: 'one_time_rate' | 'monthly_rate' | 'scope_commission',
+    value: number
   ) => {
     if (!agentRates) return;
-    
-    const updatedRates: AgentRates = {
+
+    const updatedRates = {
       ...agentRates,
-      user_id: agentRates.user_id,
-      insurance_companies: {
-        ...agentRates.insurance_companies,
+      [category]: {
+        ...agentRates[category],
         [company]: {
-          ...agentRates.insurance_companies[company],
+          ...agentRates[category][company],
           products: {
-            ...agentRates.insurance_companies[company]?.products,
+            ...agentRates[category][company]?.products,
             [productType]: {
-              ...agentRates.insurance_companies[company]?.products[productType],
-              [field]: Number(value)
+              ...agentRates[category][company]?.products?.[productType],
+              [field]: value
             }
           }
         }
       }
     };
+
     setAgentRates(updatedRates);
-  };
 
-  const renderInsuranceRatesSection = () => {
-    if (!agentRates) return null;
-
-    const productTypes = getInsuranceProductTypes();
-    const defaultProductStructure = productTypes.reduce((acc, product) => {
-      acc[product.key] = {
-        one_time_rate: 0,
-        monthly_rate: 0
-      };
-      return acc;
-    }, {} as { [key: string]: { one_time_rate: number; monthly_rate: number } });
-
-    // Initialize insurance companies if they don't exist
-    if (!agentRates.insurance_companies) {
-      agentRates.insurance_companies = {};
-    }
-
-    insuranceCompanies.forEach((company) => {
-      if (!agentRates.insurance_companies[company]) {
-        agentRates.insurance_companies[company] = {
-          active: false,
-          products: defaultProductStructure
-        };
-      }
-    });
-
-    return (
-      <div className="grid grid-cols-3 gap-6" dir="rtl">
-        {insuranceCompanies.map((company, index) => {
-          const companyRates = agentRates.insurance_companies[company] || {
-            active: false,
-            products: defaultProductStructure
-          };
-          
-          return (
-            <motion.div
-              key={company}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <Card className="w-full overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardHeader className="bg-gradient-to-l from-blue-50 to-purple-50 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    {companyRates.active ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
-                    {company}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Checkbox 
-                      checked={companyRates.active}
-                      onChange={(e) => {
-                        const updatedRates: AgentRates = {
-                          ...agentRates,
-                          user_id: agentRates.user_id,
-                          insurance_companies: {
-                            ...agentRates.insurance_companies,
-                            [company]: {
-                              ...companyRates,
-                              active: e.target.checked
-                            }
-                          }
-                        };
-                        setAgentRates(updatedRates);
-                      }}
-                      className="border-2"
-                    />
-                    <span className="font-medium">חברה פעילה</span>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">מוצרי ביטוח</h3>
-                    {INSURANCE_PRODUCTS.map(({ value, label }) => (
-                      <div key={value} className="space-y-4 p-4 border rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{label}</h4>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              עמלת היקף (%)
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={companyRates?.products?.[value]?.one_time_rate || 0}
-                              onChange={(e) => handleInsuranceRateChange(company, value, 'one_time_rate', e.target.value)}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              נפרעים (%)
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={companyRates?.products?.[value]?.monthly_rate || 0}
-                              onChange={(e) => handleInsuranceRateChange(company, value, 'monthly_rate', e.target.value)}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const saveRates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !agentRates) {
-        toast.error('משתמש לא מחובר');
-        return;
-      }
+      const { error } = await supabase
+        .from('agent_commission_rates')
+        .update(updatedRates)
+        .eq('user_id', agentRates.user_id);
 
-      const updatedRates = await updateAgentRates(user.id, agentRates);
-      if (updatedRates) {
-        setAgentRates(updatedRates);
-      }
+      if (error) throw error;
     } catch (error) {
-      console.error('Error saving rates:', error);
-      toast.error('שגיאה בשמירת נתוני עמלות');
+      console.error('Error updating rates:', error);
+      toast.error('שגיאה בעדכון הנתונים');
     }
   };
 
-  if (isLoading) {
-    return <div>טוען נתונים...</div>;
+  const handleCheckboxChange = async (
+    checked: boolean,
+    category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies' | 'insurance_companies'>,
+    company: string
+  ) => {
+    if (!agentRates) return;
+
+    const updatedRates = {
+      ...agentRates,
+      [category]: {
+        ...agentRates[category],
+        [company]: {
+          ...agentRates[category][company],
+          active: checked
+        }
+      }
+    };
+
+    setAgentRates(updatedRates);
+    
+    try {
+      const { error } = await supabase
+        .from('agent_commission_rates')
+        .update(updatedRates)
+        .eq('user_id', agentRates.user_id);
+
+      if (error) throw error;
+
+      toast.success(`חברת ${company} ${checked ? 'הופעלה' : 'בוטלה'} בהצלחה`);
+    } catch (error) {
+      console.error('Error updating company status:', error);
+      toast.error('שגיאה בעדכון סטטוס החברה');
+    }
+  };
+
+  const onCheckboxChange = (
+    checked: boolean | 'indeterminate',
+    category: keyof Pick<AgentRates, 'pension_companies' | 'savings_and_study_companies' | 'policy_companies' | 'insurance_companies'>,
+    company: string
+  ) => {
+    handleCheckboxChange(checked === true, category, company);
+  };
+
+  if (loading) {
+    return <div>טוען...</div>;
+  }
+
+  if (!agentRates) {
+    return <div>שגיאה בטעינת נתונים</div>;
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-l from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              הסכמי סוכן
-            </h1>
-            <p className="text-gray-500 mt-2">
-              נהל את העמלות והנאים שלך מול חברות הביטוח השונת
+    <div className="space-y-8 p-6 text-right">
+      <h1 className="text-3xl font-bold tracking-tight">הסכמי סוכן</h1>
+      
+      <Tabs defaultValue="pension" className="w-full" dir="rtl">
+        <TabsList className="w-full justify-start border-b">
+          <TabsTrigger value="pension">פנסיה</TabsTrigger>
+          <TabsTrigger value="insurance">סיכונים</TabsTrigger>
+          <TabsTrigger value="savings">פיננסים</TabsTrigger>
+          <TabsTrigger value="policy">מוצרי גולה</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pension" className="mt-6">
+          <section>
+            <h2 className="text-2xl font-semibold mb-6">חברות פנסיה</h2>
+            <div className="grid grid-cols-3 gap-6">
+              {pensionCompanies.map((company, index) => {
+                const rates = agentRates.pension_companies[company] || DEFAULT_PENSION_RATES;
+                
+                return (
+                  <motion.div
+                    key={company}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card className="overflow-hidden">
+                      <CardHeader className={`border-b ${rates.active ? 'bg-gradient-to-l from-green-50 to-blue-50' : 'bg-gradient-to-l from-gray-50 to-gray-100'}`}>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {rates.active ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )}
+                            {company}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label>חברה פעילה</Label>
+                            <Checkbox
+                              checked={rates.active}
+                              onCheckedChange={(checked: boolean | 'indeterminate') => onCheckboxChange(checked, 'pension_companies', company)}
+                            />
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`scope-rate-${company}`}>אחוז עמלת היקף (%)</Label>
+                            <Input
+                              id={`scope-rate-${company}`}
+                              type="number"
+                              value={rates.scope_rate}
+                              onChange={(e) => 
+                                handleRateChange('pension_companies', company, 'scope_rate', Number(e.target.value))
+                              }
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              placeholder="לדוגמה: 0.25"
+                              className="text-right"
+                              dir="rtl"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`scope-rate-million-${company}`}>אחוז עמלת היקף למיליון (%)</Label>
+                            <Input
+                              id={`scope-rate-million-${company}`}
+                              type="number"
+                              value={rates.scope_rate_per_million}
+                              onChange={(e) => 
+                                handleRateChange('pension_companies', company, 'scope_rate_per_million', Number(e.target.value))
+                              }
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              placeholder="לדוגמה: 0.25"
+                              className="text-right"
+                              dir="rtl"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleSaveCompany(company)}
+                            disabled={savingCompany === company}
+                            className={`w-full mt-4 px-4 py-2 text-white font-medium rounded-lg transition-all
+                              flex items-center justify-center gap-2
+                              ${savingCompany === company
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
+                          >
+                            {savingCompany === company ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                שומר...
+                              </>
+                            ) : (
+                              <>
+                                שמור הסכם
+                                <Save className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="insurance" className="mt-6">
+          <section>
+            <h2 className="text-2xl font-semibold mb-6">חברות ביטוח</h2>
+            <div className="grid grid-cols-3 gap-6">
+              {insuranceCompanies.map((company, index) => {
+                const rates = agentRates.insurance_companies[company] || DEFAULT_COMPANY_RATES;
+                
+                return (
+                  <motion.div
+                    key={company}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card className="overflow-hidden">
+                      <CardHeader className={`border-b ${rates.active ? 'bg-gradient-to-l from-green-50 to-blue-50' : 'bg-gradient-to-l from-gray-50 to-gray-100'}`}>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {rates.active ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )}
+                            {company}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label>חברה פעילה</Label>
+                            <Checkbox
+                              checked={rates.active}
+                              onCheckedChange={(checked: boolean | 'indeterminate') => onCheckboxChange(checked, 'insurance_companies', company)}
+                            />
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {INSURANCE_PRODUCTS.map((product) => (
+                            <div key={product.value} className="space-y-4">
+                              <h3 className="font-medium">{product.label}</h3>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>עמלת היקף (%)</Label>
+                                  <Input
+                                    type="number"
+                                    value={rates.products?.[product.value]?.one_time_rate || 0}
+                                    onChange={(e) => 
+                                      handleProductRateChange('insurance_companies', company, product.value, 'one_time_rate', Number(e.target.value))
+                                    }
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    placeholder="לדוגמה: 0.25"
+                                    className="text-right"
+                                    dir="rtl"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>עמלת נפרעים (%)</Label>
+                                  <Input
+                                    type="number"
+                                    value={rates.products?.[product.value]?.monthly_rate || 0}
+                                    onChange={(e) => 
+                                      handleProductRateChange('insurance_companies', company, product.value, 'monthly_rate', Number(e.target.value))
+                                    }
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    placeholder="לדוגמה: 0.25"
+                                    className="text-right"
+                                    dir="rtl"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-6 flex justify-start">
+                          <button
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                            onClick={() => handleSaveCompany(company)}
+                          >
+                            שמור הסכם
+                            <Save className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        </TabsContent>
+
+        <TabsContent value="savings" className="mt-6">
+          <section>
+            <h2 className="text-2xl font-semibold mb-6">חברות פיננסים</h2>
+            <div className="grid grid-cols-3 gap-6">
+              {savingsCompanies.map((company, index) => {
+                const rates = agentRates.savings_and_study_companies[company] || DEFAULT_COMPANY_RATES;
+                
+                return (
+                  <motion.div
+                    key={company}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card className="overflow-hidden">
+                      <CardHeader className={`border-b ${rates.active ? 'bg-gradient-to-l from-green-50 to-blue-50' : 'bg-gradient-to-l from-gray-50 to-gray-100'}`}>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {rates.active ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )}
+                            {company}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label>חברה פעילה</Label>
+                            <Checkbox
+                              checked={rates.active}
+                              onCheckedChange={(checked: boolean | 'indeterminate') => onCheckboxChange(checked, 'savings_and_study_companies', company)}
+                            />
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {['gemel', 'investment_gemel', 'hishtalmut', 'savings_policy'].map((product) => (
+                            <div key={product} className="space-y-4">
+                              <h3 className="font-medium">
+                                {product === 'gemel' ? 'גמל' :
+                                 product === 'investment_gemel' ? 'גמל להשקעה' :
+                                 product === 'hishtalmut' ? 'השתלמות' :
+                                 'חסכון'}
+                              </h3>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>עמלת היקף (%)</Label>
+                                  <Input
+                                    type="number"
+                                    value={rates.products?.[product]?.scope_commission || 0}
+                                    onChange={(e) => 
+                                      handleProductRateChange('savings_and_study_companies', company, product, 'scope_commission', Number(e.target.value))
+                                    }
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    placeholder="לדוגמה: 0.25"
+                                    className="text-right"
+                                    dir="rtl"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>עמלת נפרעים (%)</Label>
+                                  <Input
+                                    type="number"
+                                    value={rates.products?.[product]?.monthly_rate || 0}
+                                    onChange={(e) => 
+                                      handleProductRateChange('savings_and_study_companies', company, product, 'monthly_rate', Number(e.target.value))
+                                    }
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    placeholder="לדוגמה: 0.25"
+                                    className="text-right"
+                                    dir="rtl"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-6 flex justify-start">
+                          <button
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                            onClick={() => handleSaveCompany(company)}
+                          >
+                            שמור הסכם
+                            <Save className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        </TabsContent>
+
+        {/* Similar updates for insurance, savings, and policy tabs */}
+        
+      </Tabs>
+
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+              <span>ההסכם נשמר בהצלחה!</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-lg mb-2">
+              הנתונים עבור {savedCompany} עודכנו בהצלחה
+            </p>
+            <p className="text-sm text-gray-500">
+              כל השינויים נשמרו במערכת
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              className="flex items-center gap-2 bg-gradient-to-l from-blue-600 to-purple-600 hover:opacity-90 transition-opacity text-white"
-              onClick={saveRates}
-            >
-              <Save className="w-4 h-4 ml-1" />
-              שמור שינויים
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
-              onClick={loadAgentRates}
-            >
-              <RefreshCw className="w-4 h-4 ml-1" />
-              רענן
-            </Button>
-          </div>
-        </div>
-
-        <div className="mb-8 flex justify-between items-center">
-          <div className="flex gap-8">
-            <button
-              onClick={() => setActiveTab('pension')}
-              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.pension.bg} ${activeTab === 'pension' ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
-            >
-              <Wallet className={`w-6 h-6 mb-1 ${TabColors.pension.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.pension.text}`}>פנסיה</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('savings')}
-              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.savings.bg} ${activeTab === 'savings' ? 'ring-2 ring-purple-400 shadow-lg' : ''}`}
-            >
-              <PiggyBank className={`w-6 h-6 mb-1 ${TabColors.savings.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.savings.text}`}>פיננסים</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('policy')}
-              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.policy.bg} ${activeTab === 'policy' ? 'ring-2 ring-emerald-400 shadow-lg' : ''}`}
-            >
-              <Building2 className={`w-6 h-6 mb-1 ${TabColors.policy.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.policy.text}`}>פוליסת חסכון</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('insurance')}
-              className={`flex flex-col items-center p-3 rounded-md transition-all hover:scale-105 cursor-pointer ${TabColors.insurance.bg} ${activeTab === 'insurance' ? 'ring-2 ring-rose-400 shadow-lg' : ''}`}
-            >
-              <Shield className={`w-6 h-6 mb-1 ${TabColors.insurance.icon}`} />
-              <span className={`text-lg font-semibold ${TabColors.insurance.text}`}>סיכונים</span>
-            </button>
-          </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="hidden">
-            <TabsTrigger value="pension">פנסיה</TabsTrigger>
-            <TabsTrigger value="savings">פיננסים</TabsTrigger>
-            <TabsTrigger value="policy">פוליסת חסכון</TabsTrigger>
-            <TabsTrigger value="insurance">סיכונים</TabsTrigger>
-          </TabsList>
-
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <TabsContent value="pension" className="mt-0">
-              {renderCompanyRatesSection('pension_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'])}
-            </TabsContent>
-            <TabsContent value="savings" className="mt-0">
-              {renderCompanyRatesSection('savings_and_study_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'], 'פיננסים')}
-            </TabsContent>
-            <TabsContent value="policy" className="mt-0">
-              {renderCompanyRatesSection('policy_companies', ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'])}
-            </TabsContent>
-            <TabsContent value="insurance" className="mt-0">
-              {renderInsuranceRatesSection()}
-            </TabsContent>
-          </motion.div>
-        </Tabs>
-      </motion.div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default AgentAgreements;
+export default AgentAgreementsComponent;

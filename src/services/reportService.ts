@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, getCurrentUser } from '@/lib/supabase';
 import { 
   CustomerJourney, 
   PensionProduct, 
@@ -83,7 +83,7 @@ export const reportService = {
           }
 
           case 'insurance': {
-            // שמירת מוצר ביטו��
+            // שמירת מוצר ביטוח
             const details = product.details as InsuranceProduct;
             const insuranceData = {
               user_id: user.id,
@@ -167,33 +167,32 @@ export const reportService = {
   },
 
   async fetchAllSales() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getCurrentUser();
     if (!user) throw new Error('משתמש לא מחובר');
 
-    // טעינת כל סוגי המכירות במקביל
-    const [
-      { data: pensionSales },
-      { data: insuranceSales },
-      { data: investmentSales },
-      { data: policySales }
-    ] = await Promise.all([
-      supabase.from('pension_sales').select('*').eq('user_id', user.id),
-      supabase.from('insurance_sales').select('*').eq('user_id', user.id),
-      supabase.from('investment_sales').select('*').eq('user_id', user.id),
-      supabase.from('policy_sales').select('*').eq('user_id', user.id)
-    ]);
+    const { data: sales, error } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    const pensionSales = sales.filter(sale => sale.sale_type === 'pension');
+    const insuranceSales = sales.filter(sale => sale.sale_type === 'insurance');
+    const investmentSales = sales.filter(sale => sale.sale_type === 'investment');
+    const policySales = sales.filter(sale => sale.sale_type === 'policy');
 
     return {
-      pensionSales: pensionSales || [],
-      insuranceSales: insuranceSales || [],
-      investmentSales: investmentSales || [],
-      policySales: policySales || []
+      pensionSales,
+      insuranceSales,
+      investmentSales,
+      policySales
     };
   },
 
   async fetchDashboardStats(): Promise<DashboardStats> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getCurrentUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
       // Get all sales data
@@ -203,10 +202,22 @@ export const reportService = {
         { data: investmentSales },
         { data: policySales }
       ] = await Promise.all([
-        supabase.from('pension_sales').select('*').eq('user_id', user.id),
-        supabase.from('insurance_sales').select('*').eq('user_id', user.id),
-        supabase.from('investment_sales').select('*').eq('user_id', user.id),
-        supabase.from('policy_sales').select('*').eq('user_id', user.id)
+        supabase.from('sales')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('sale_type', 'pension'),
+        supabase.from('sales')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('sale_type', 'insurance'),
+        supabase.from('sales')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('sale_type', 'investment'),
+        supabase.from('sales')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('sale_type', 'policy')
       ]);
 
       // Calculate totals

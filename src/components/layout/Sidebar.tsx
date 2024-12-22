@@ -20,7 +20,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogout: () => void;
 }
 
 const navItems = [
@@ -75,14 +74,9 @@ const navItems = [
   }
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const isActivePath = (path: string) => location.pathname === path;
-
-  const handleLogout = () => {
-    onClose();
-    onLogout();
-  };
 
   return (
     <AnimatePresence mode="wait">
@@ -236,29 +230,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) => {
                     <div className="text-xs text-secondary-500">הגדרות מערכת</div>
                   </div>
                 </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className={cn(
-                    "w-full group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-                    "text-secondary-600 hover:bg-secondary-50 hover:text-secondary-900"
-                  )}
-                >
-                  <motion.div 
-                    className={cn(
-                      "p-2 rounded-lg transition-colors duration-200",
-                      "bg-secondary-100 text-secondary-600 group-hover:bg-secondary-200"
-                    )}
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </motion.div>
-                  <div>
-                    <div className="font-medium">התנתק</div>
-                    <div className="text-xs text-secondary-500">התנתק מהמערכת</div>
-                  </div>
-                </button>
               </motion.div>
             </div>
           </motion.div>

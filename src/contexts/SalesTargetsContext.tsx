@@ -35,37 +35,52 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const loadInitialData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('sales_settings')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('שגיאה בטעינת הגדרות:', error);
+      if (!user) {
+        console.error('משתמש לא מחובר');
         return;
       }
 
-      if (!data || data.length === 0) {
-        const { error: insertError } = await supabase
+      const { data: existingSettings, error: fetchError } = await supabase
+        .from('sales_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code === 'PGRST116') {
+        // Settings don't exist, create new ones
+        const { data: newSettings, error: insertError } = await supabase
           .from('sales_settings')
-          .insert({
+          .upsert({
             user_id: user.id,
-            closing_rate: 30,
-            monthly_meetings: 44
-          });
+            monthly_meetings: 0,
+            monthly_calls: 0,
+            monthly_whatsapp: 0,
+            monthly_pension_sales: 0,
+            monthly_insurance_sales: 0,
+            monthly_investment_sales: 0,
+            closing_rate: 0
+          })
+          .select()
+          .single();
 
         if (insertError) {
           console.error('שגיאה ביצירת הגדרות:', insertError);
           return;
         }
-      } else {
-        setClosingRate(data[0].closing_rate);
-        setMonthlyMeetings(data[0].monthly_meetings);
+
+        if (newSettings) {
+          setClosingRate(newSettings.closing_rate);
+          setMonthlyMeetings(newSettings.monthly_meetings);
+        }
+      } else if (fetchError) {
+        console.error('שגיאה בטעינת הגדרות:', fetchError);
+        return;
+      } else if (existingSettings) {
+        setClosingRate(existingSettings.closing_rate);
+        setMonthlyMeetings(existingSettings.monthly_meetings);
       }
     } catch (error) {
-      console.error('שגיאה בטעינת נתונים:', error);
+      console.error('שגיאה בטעינת הגדרות:', error);
     }
   };
 
