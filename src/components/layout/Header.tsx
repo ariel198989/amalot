@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -21,7 +20,6 @@ import { cn } from '@/lib/utils';
 
 const Header: React.FC = () => {
   const location = useLocation();
-  const { user } = useUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleLogout = async () => {

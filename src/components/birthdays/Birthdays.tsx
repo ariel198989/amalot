@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/all components/shadcn/card";
-import { Button } from "@/components/ui/all components/shadcn/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Gift, Phone, Mail, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -56,7 +56,6 @@ const BirthdaysPage: React.FC = () => {
 
       if (error) throw error;
 
-      // מחשב ימים עד יום ההולדת ומסנן רק את אלה שבחודש הקרוב
       const clientsWithBirthdays = clientsData
         .map(client => ({
           ...client,
@@ -153,4 +152,4 @@ const BirthdaysPage: React.FC = () => {
   );
 };
 
-export default BirthdaysPage; 
+export default BirthdaysPage;
