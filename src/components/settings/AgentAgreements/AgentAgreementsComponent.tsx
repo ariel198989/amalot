@@ -60,16 +60,24 @@ const AgentAgreementsComponent: React.FC = () => {
           .single();
 
         if (fetchError && fetchError.code === 'PGRST116') {
-          // Record doesn't exist, create new one
+          // Record doesn't exist, create new one with default rates for מגדל
+          const defaultRates = {
+            user_id: user.id,
+            pension_companies: {
+              'מגדל': {
+                active: true,
+                scope_rate: 0.08, // 8%
+                scope_rate_per_million: 11000 // 11,000 ₪ למיליון
+              }
+            },
+            savings_and_study_companies: {},
+            policy_companies: {},
+            insurance_companies: {}
+          };
+
           const { data: newRates, error: insertError } = await supabase
             .from('agent_commission_rates')
-            .upsert({
-              user_id: user.id,
-              pension_companies: {},
-              savings_and_study_companies: {},
-              policy_companies: {},
-              insurance_companies: {}
-            })
+            .upsert(defaultRates)
             .select()
             .single();
 

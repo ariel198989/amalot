@@ -578,7 +578,7 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'מגדל', label: 'מגד��' },
+              { value: 'מגדל', label: 'מגדל' },
               { value: 'מנורה', label: 'מנורה' },
               { value: 'כלל', label: 'כלל' },
               { value: 'הראל', label: 'הראל' },
@@ -718,6 +718,7 @@ const CustomerJourneyComponent: React.FC = () => {
     productType?: string;
   }) => {
     try {
+      console.log('Form data received:', formData);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('User not authenticated');
@@ -726,14 +727,22 @@ const CustomerJourneyComponent: React.FC = () => {
 
       const result = await calculateCommissions(
         user.id,
-        formData.type,
-        formData.company,
-        formData.type === 'pension' ? Number(formData.pensionSalary) || 0 : 0,
-        formData.type === 'insurance' ? formData.insuranceType || 'general' : 'general',
-        formData.type === 'pension' ? Number(formData.pensionAccumulation) || 0 : 0
+        'pension',
+        formData.company || 'מגדל',
+        Number(formData.pensionSalary) || 0,
+        formData.pensionContribution?.toString() || '20.83',
+        Number(formData.pensionAccumulation) || 0
       );
 
+      console.log('Calculation result:', result);
+
       if (result) {
+        console.log('Commission details:', {
+          scope_commission: result.scope_commission,
+          monthly_commission: result.monthly_commission,
+          total_commission: result.scope_commission + result.monthly_commission
+        });
+
         const newClient: CustomerJourneyClient = {
           type: formData.type,
           date: new Date().toISOString(),
@@ -1113,7 +1122,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       </CardHeader>
                       <CardContent className="p-6">
                         <CalculatorFormComponent
-                          onSubmit={(data) => handleSubmit(data)}
+                          onSubmit={(data) => handleSubmit({ ...data, type: 'pension' })}
                           fields={getProductFields(type)}
                           title=""
                           className="w-full"
@@ -1175,7 +1184,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       <div>
                         <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
                           <Shield className="w-5 h-5 text-green-500" />
-                          סיכונים
+                          סי��ונים
                         </h4>
                         <div className="grid grid-cols-3 gap-4">
                           <div className="p-4 bg-green-50 rounded-xl border border-green-100">
