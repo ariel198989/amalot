@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 const Header: React.FC = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -64,9 +65,10 @@ const Header: React.FC = () => {
               className="flex items-center"
               whileHover={{ scale: 1.02 }}
             >
+              {/* Desktop Menu Toggle */}
               <motion.button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-full bg-primary-50 text-primary-600 hover:bg-primary-100 focus:outline-none shadow-sm"
+                className="hidden md:flex p-2 rounded-full bg-primary-50 text-primary-600 hover:bg-primary-100 focus:outline-none shadow-sm"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -82,6 +84,27 @@ const Header: React.FC = () => {
                   </motion.div>
                 </AnimatePresence>
               </motion.button>
+
+              {/* Mobile Menu Toggle */}
+              <motion.button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-full bg-primary-50 text-primary-600 hover:bg-primary-100 focus:outline-none shadow-sm"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isMobileMenuOpen ? 'close' : 'open'}
+                    initial={{ rotate: -180, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 180, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </motion.div>
+                </AnimatePresence>
+              </motion.button>
+
               <motion.div 
                 className="flex-shrink-0 flex items-center mr-4"
                 whileHover={{ scale: 1.05 }}
@@ -96,7 +119,7 @@ const Header: React.FC = () => {
                 </div>
               </motion.div>
             </motion.div>
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               {topBarItems.map((item, index) => (
                 <motion.div
                   key={item.path}
@@ -138,11 +161,103 @@ const Header: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Sidebar */}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden fixed top-16 left-0 right-0 bg-white shadow-lg z-30 border-b border-primary-100"
+          >
+            <div className="p-4 space-y-2">
+              {menuItems.map((item, index) => (
+                <motion.div
+                  key={item.path}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+                      location.pathname === item.path
+                        ? "bg-primary-100/50 text-primary-700 shadow-sm border border-primary-200"
+                        : "text-gray-600 hover:bg-primary-50 hover:text-primary-600"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-1 rounded-lg",
+                      location.pathname === item.path
+                        ? "bg-primary-200/50"
+                        : "bg-transparent"
+                    )}>
+                      {item.icon}
+                    </div>
+                    <span>{item.label}</span>
+                  </Link>
+                </motion.div>
+              ))}
+              {topBarItems.map((item, index) => (
+                <motion.div
+                  key={item.path}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: (menuItems.length + index) * 0.1 }}
+                >
+                  <Link
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+                      location.pathname === item.path
+                        ? "bg-primary-100/50 text-primary-700 shadow-sm border border-primary-200"
+                        : "text-gray-600 hover:bg-primary-50 hover:text-primary-600"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-1 rounded-lg",
+                      location.pathname === item.path
+                        ? "bg-primary-200/50"
+                        : "bg-transparent"
+                    )}>
+                      {item.icon}
+                    </div>
+                    <span>{item.label}</span>
+                  </Link>
+                </motion.div>
+              ))}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: (menuItems.length + topBarItems.length) * 0.1 }}
+              >
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all duration-300"
+                >
+                  <div className="p-1 rounded-lg">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <span>התנתק</span>
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop Sidebar */}
       <motion.div 
         className={cn(
           "fixed top-16 right-0 h-full bg-gradient-to-b from-white to-primary-50/30 shadow-lg z-20 overflow-hidden",
-          "backdrop-blur-md border-l border-primary-100"
+          "backdrop-blur-md border-l border-primary-100",
+          "hidden md:block"
         )}
         initial={{ width: isSidebarOpen ? 256 : 0 }}
         animate={{ width: isSidebarOpen ? 256 : 0 }}
@@ -210,7 +325,7 @@ const Header: React.FC = () => {
 
       {/* Main Content */}
       <motion.div
-        className="pt-16 transition-all duration-300"
+        className="pt-16 transition-all duration-300 md:mr-0"
         animate={{ marginRight: isSidebarOpen ? 256 : 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >

@@ -256,106 +256,99 @@ export const reportService = {
       const { data: { user } } = await getCurrentUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // Get all sales data
+      // Fetch all sales data
       const [
-        { data: pensionSales },
-        { data: insuranceSales },
-        { data: investmentSales },
-        { data: policySales }
+        { data: pensionSales, error: pensionError },
+        { data: insuranceSales, error: insuranceError },
+        { data: investmentSales, error: investmentError }
       ] = await Promise.all([
-        supabase.from('sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('sale_type', 'pension'),
-        supabase.from('sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('sale_type', 'insurance'),
-        supabase.from('sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('sale_type', 'investment'),
-        supabase.from('sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('sale_type', 'policy')
+        supabase.from('pension_sales').select('*').eq('user_id', user.id),
+        supabase.from('insurance_sales').select('*').eq('user_id', user.id),
+        supabase.from('investment_sales').select('*').eq('user_id', user.id)
       ]);
 
-      // Calculate totals
-      const calculateTotal = (sales: any[] | null) => {
-        if (!sales) return { count: 0, commission: 0 };
-        return {
-          count: sales.length,
-          commission: sales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0)
-        };
-      };
+      if (pensionError || insuranceError || investmentError) {
+        throw new Error('שגיאה בטעינת נתוני מכירות');
+      }
 
-      // Get current month's data
-      const currentDate = new Date();
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString();
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-      // Get previous month's data
-      const startOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString();
-      const endOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).toISOString();
-
-      const filterByDateRange = (sales: any[] | null, start: string, end: string) => {
-        if (!sales) return [];
+      // Filter sales by month
+      const filterByMonth = (sales: any[], month: number, year: number) => {
         return sales.filter(sale => {
           const saleDate = new Date(sale.date);
-          return saleDate >= new Date(start) && saleDate <= new Date(end);
+          return saleDate.getMonth() === month && saleDate.getFullYear() === year;
         });
       };
 
-      // Calculate stats
-      const pensionStats = calculateTotal(pensionSales);
-      const insuranceStats = calculateTotal(insuranceSales);
-      const investmentStats = calculateTotal(investmentSales);
-      const policyStats = calculateTotal(policySales);
+      // Calculate stats for a set of sales
+      const calculateStats = (sales: any[]) => ({
+        count: sales.length,
+        commission: sales.reduce((sum, sale) => {
+          const scopeCommission = Number(sale.scope_commission) || 0;
+          const nifraim = Number(sale.nifraim) || 0;
+          return sum + scopeCommission + nifraim;
+        }, 0)
+      });
+
+      // Current month sales
+      const currentMonthPensionSales = filterByMonth(pensionSales || [], currentMonth, currentYear);
+      const currentMonthInsuranceSales = filterByMonth(insuranceSales || [], currentMonth, currentYear);
+      const currentMonthInvestmentSales = filterByMonth(investmentSales || [], currentMonth, currentYear);
+
+      // Previous month sales
+      const previousMonthPensionSales = filterByMonth(pensionSales || [], previousMonth, previousYear);
+      const previousMonthInsuranceSales = filterByMonth(insuranceSales || [], previousMonth, previousYear);
+      const previousMonthInvestmentSales = filterByMonth(investmentSales || [], previousMonth, previousYear);
+
+      // Calculate total stats
+      const totalStats = {
+        pension: calculateStats(pensionSales || []),
+        insurance: calculateStats(insuranceSales || []),
+        investment: calculateStats(investmentSales || []),
+        policy: { count: 0, commission: 0 },
+        commission: 0,
+        count: 0
+      };
 
       // Calculate current month stats
-      const currentMonthPensionStats = calculateTotal(filterByDateRange(pensionSales, startOfMonth, endOfMonth));
-      const currentMonthInsuranceStats = calculateTotal(filterByDateRange(insuranceSales, startOfMonth, endOfMonth));
-      const currentMonthInvestmentStats = calculateTotal(filterByDateRange(investmentSales, startOfMonth, endOfMonth));
-      const currentMonthPolicyStats = calculateTotal(filterByDateRange(policySales, startOfMonth, endOfMonth));
+      const currentMonthStats = {
+        pension: calculateStats(currentMonthPensionSales),
+        insurance: calculateStats(currentMonthInsuranceSales),
+        investment: calculateStats(currentMonthInvestmentSales),
+        policy: { count: 0, commission: 0 },
+        commission: 0,
+        count: 0
+      };
 
       // Calculate previous month stats
-      const prevMonthPensionStats = calculateTotal(filterByDateRange(pensionSales, startOfPrevMonth, endOfPrevMonth));
-      const prevMonthInsuranceStats = calculateTotal(filterByDateRange(insuranceSales, startOfPrevMonth, endOfPrevMonth));
-      const prevMonthInvestmentStats = calculateTotal(filterByDateRange(investmentSales, startOfPrevMonth, endOfPrevMonth));
-      const prevMonthPolicyStats = calculateTotal(filterByDateRange(policySales, startOfPrevMonth, endOfPrevMonth));
+      const previousMonthStats = {
+        pension: calculateStats(previousMonthPensionSales),
+        insurance: calculateStats(previousMonthInsuranceSales),
+        investment: calculateStats(previousMonthInvestmentSales),
+        policy: { count: 0, commission: 0 },
+        commission: 0,
+        count: 0
+      };
+
+      // Calculate totals
+      totalStats.commission = totalStats.pension.commission + totalStats.insurance.commission + totalStats.investment.commission;
+      totalStats.count = totalStats.pension.count + totalStats.insurance.count + totalStats.investment.count;
+
+      currentMonthStats.commission = currentMonthStats.pension.commission + currentMonthStats.insurance.commission + currentMonthStats.investment.commission;
+      currentMonthStats.count = currentMonthStats.pension.count + currentMonthStats.insurance.count + currentMonthStats.investment.count;
+
+      previousMonthStats.commission = previousMonthStats.pension.commission + previousMonthStats.insurance.commission + previousMonthStats.investment.commission;
+      previousMonthStats.count = previousMonthStats.pension.count + previousMonthStats.insurance.count + previousMonthStats.investment.count;
 
       return {
-        total: {
-          pension: pensionStats,
-          insurance: insuranceStats,
-          investment: investmentStats,
-          policy: policyStats,
-          commission: pensionStats.commission + insuranceStats.commission + 
-                     investmentStats.commission + policyStats.commission,
-          count: pensionStats.count + insuranceStats.count + 
-                 investmentStats.count + policyStats.count
-        },
-        currentMonth: {
-          pension: currentMonthPensionStats,
-          insurance: currentMonthInsuranceStats,
-          investment: currentMonthInvestmentStats,
-          policy: currentMonthPolicyStats,
-          commission: currentMonthPensionStats.commission + currentMonthInsuranceStats.commission + 
-                     currentMonthInvestmentStats.commission + currentMonthPolicyStats.commission,
-          count: currentMonthPensionStats.count + currentMonthInsuranceStats.count + 
-                 currentMonthInvestmentStats.count + currentMonthPolicyStats.count
-        },
-        previousMonth: {
-          pension: prevMonthPensionStats,
-          insurance: prevMonthInsuranceStats,
-          investment: prevMonthInvestmentStats,
-          policy: prevMonthPolicyStats,
-          commission: prevMonthPensionStats.commission + prevMonthInsuranceStats.commission + 
-                     prevMonthInvestmentStats.commission + prevMonthPolicyStats.commission,
-          count: prevMonthPensionStats.count + prevMonthInsuranceStats.count + 
-                 prevMonthInvestmentStats.count + prevMonthPolicyStats.count
-        }
+        total: totalStats,
+        currentMonth: currentMonthStats,
+        previousMonth: previousMonthStats
       };
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

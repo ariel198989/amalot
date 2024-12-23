@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ResultsTable from './ResultsTable';
 import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
@@ -950,7 +950,7 @@ export const CustomerJourneyComponent = () => {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6"
+      className="container space-y-6"
       initial="initial"
       animate="animate"
       exit="exit"
@@ -962,31 +962,27 @@ export const CustomerJourneyComponent = () => {
       {step === 'journey' && (
         <motion.div variants={staggerContainer}>
           <motion.div 
-            className="flex items-center gap-3 mb-8"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4"
             variants={fadeIn}
           >
-            <div className="p-4 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
-              <Brain className="w-12 h-12 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-transparent bg-clip-text">
-                סע לקוח חכם
-              </h1>
-              <p className="text-gray-500 mt-1">נ��ל את המוצרים והעלות שלך בצורה חכמה ויעילה</p>
-            </div>
+            <h1 className="text-2xl font-semibold">מסע לקוח</h1>
+            <p className="text-muted-foreground">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
           </motion.div>
 
           <motion.div 
-            className="space-y-8"
+            className="space-y-8 mt-6"
             variants={fadeIn}
           >
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                <h2 className="text-xl font-semibold">בחירת מוצרים</h2>
-                <p className="text-sm opacity-90">בחר את המוצרים הרלוונטיים</p>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-end gap-2">
+                  <CardTitle className="text-xl">בחירת מוצרים</CardTitle>
+                  <Brain className="h-5 w-5" />
+                </div>
+                <p className="text-muted-foreground text-right">בחר את המוצרים הרלוונטיים</p>
               </CardHeader>
-              <CardContent className="p-8">
-                <div className="grid grid-cols-3 gap-4">
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {productTypes.map(({ type, title }) => (
                     <motion.div
                       key={type}
@@ -996,17 +992,15 @@ export const CustomerJourneyComponent = () => {
                       <div
                         className={cn(
                           "p-4 rounded-xl cursor-pointer transition-all",
-                          "border-2 hover:shadow-lg",
+                          "border hover:shadow-md",
                           "flex items-center gap-3",
                           selectedProducts[type] 
-                            ? "border-[#4361ee] bg-blue-50" 
-                            : "border-gray-200 hover:border-[#4361ee]/50"
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
                         )}
                         onClick={() => handleProductSelect(type)}
                       >
-                        <div className="p-2 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
-                          <ProductIcon type={type} className="w-6 h-6 text-white" />
-                        </div>
+                        <ProductIcon type={type} className="w-5 h-5" />
                         <span className="font-medium">{title}</span>
                       </div>
                     </motion.div>
@@ -1015,7 +1009,7 @@ export const CustomerJourneyComponent = () => {
               </CardContent>
             </Card>
 
-            {/* הצגת טפי הנתונים למוצרים שנבחרו */}
+            {/* הצגת טפסי הנתונים למוצרים שנבחרו */}
             <div className="space-y-6">
               {productTypes.map(({ type, title }) => (
                 selectedProducts[type] && (
@@ -1026,16 +1020,14 @@ export const CustomerJourneyComponent = () => {
                     exit={{ opacity: 0, y: -20 }}
                     className="w-full"
                   >
-                    <Card className="border rounded-lg shadow-lg hover:shadow-xl transition-all">
-                      <CardHeader className="border-b bg-gradient-to-l from-gray-50 to-white">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-gradient-to-br from-[#4361ee] to-[#3651d4]">
-                            <ProductIcon type={type} className="w-6 h-6 text-white" />
-                          </div>
-                          <h3 className="font-medium text-lg">{title}</h3>
+                    <Card className="border-0 shadow-none">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <CardTitle className="text-xl">{title}</CardTitle>
+                          <ProductIcon type={type} className="h-5 w-5" />
                         </div>
                       </CardHeader>
-                      <CardContent className="p-6">
+                      <CardContent className="p-0">
                         <CalculatorFormComponent
                           onSubmit={(data) => calculateRates(data)}
                           fields={getProductFields(type)}
@@ -1056,40 +1048,52 @@ export const CustomerJourneyComponent = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                    <h3 className="text-xl font-semibold">יכום עמלות</h3>
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl">סיכום עמלות</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 space-y-8">
+                  <CardContent className="p-0 space-y-8">
                     {/* פנסיה */}
                     {clients.some(client => client.type === 'pension') && (
                       <div>
-                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
-                          <Building2 className="w-5 h-5 text-blue-500" />
+                        <h4 className="font-medium mb-4 flex items-center gap-2">
+                          <Building2 className="w-5 h-5" />
                           פנסיה
                         </h4>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'scope')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'pension')
-                              .reduce((sum, client) => sum + client.scopeCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('pension', 'monthly')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'pension')
-                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
-                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
-                            <p className="text-xl font-bold">₪{clients
-                              .filter(client => client.type === 'pension')
-                              .reduce((sum, client) => sum + client.totalCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('pension', 'scope')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'pension')
+                                .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('pension', 'monthly')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'pension')
+                                .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-primary text-primary-foreground">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">סה"כ</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'pension')
+                                .reduce((sum, client) => sum + client.totalCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
                         </div>
                       </div>
                     )}
@@ -1097,32 +1101,44 @@ export const CustomerJourneyComponent = () => {
                     {/* סיכונים */}
                     {clients.some(client => client.type === 'insurance') && (
                       <div>
-                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
-                          <Shield className="w-5 h-5 text-green-500" />
+                        <h4 className="font-medium mb-4 flex items-center gap-2">
+                          <Shield className="w-5 h-5" />
                           סיכונים
                         </h4>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('insurance', 'scope')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'insurance')
-                              .reduce((sum, client) => sum + client.scopeCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('insurance', 'monthly')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'insurance')
-                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
-                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
-                            <p className="text-xl font-bold">₪{clients
-                              .filter(client => client.type === 'insurance')
-                              .reduce((sum, client) => sum + client.totalCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('insurance', 'scope')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'insurance')
+                                .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('insurance', 'monthly')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'insurance')
+                                .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-primary text-primary-foreground">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">סה"כ</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'insurance')
+                                .reduce((sum, client) => sum + client.totalCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
                         </div>
                       </div>
                     )}
@@ -1130,32 +1146,44 @@ export const CustomerJourneyComponent = () => {
                     {/* פיננסים */}
                     {clients.some(client => client.type === 'savings_and_study') && (
                       <div>
-                        <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
-                          <Coins className="w-5 h-5 text-purple-500" />
+                        <h4 className="font-medium mb-4 flex items-center gap-2">
+                          <Coins className="w-5 h-5" />
                           פיננסים
                         </h4>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('savings_and_study', 'scope')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'savings_and_study')
-                              .reduce((sum, client) => sum + client.scopeCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                            <p className="text-sm text-gray-600 mb-1">{getCommissionLabel('savings_and_study', 'monthly')}</p>
-                            <p className="text-xl font-bold text-gray-900">₪{clients
-                              .filter(client => client.type === 'savings_and_study')
-                              .reduce((sum, client) => sum + client.monthlyCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
-                          <div className="p-4 bg-[#4361ee] rounded-xl text-white">
-                            <p className="text-sm opacity-90 mb-1">סה"כ</p>
-                            <p className="text-xl font-bold">₪{clients
-                              .filter(client => client.type === 'savings_and_study')
-                              .reduce((sum, client) => sum + client.totalCommission, 0)
-                              .toLocaleString()}</p>
-                          </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('savings_and_study', 'scope')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'savings_and_study')
+                                .reduce((sum, client) => sum + client.scopeCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">{getCommissionLabel('savings_and_study', 'monthly')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'savings_and_study')
+                                .reduce((sum, client) => sum + client.monthlyCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-primary text-primary-foreground">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm font-medium">סה"כ</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">₪{clients
+                                .filter(client => client.type === 'savings_and_study')
+                                .reduce((sum, client) => sum + client.totalCommission, 0)
+                                .toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
                         </div>
                       </div>
                     )}
@@ -1163,29 +1191,41 @@ export const CustomerJourneyComponent = () => {
                     {/* סה"כ כללי */}
                     <div className="mt-8 pt-6 border-t">
                       <h4 className="font-medium mb-4">סה"כ כללי</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
-                          <p className="text-sm text-gray-600">סה"כ עמלות היקף</p>
-                          <p className="text-xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</p>
-                        </div>
-                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
-                          <p className="text-sm text-gray-600">סה"כ עמלות חודשיות</p>
-                          <p className="text-xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</p>
-                        </div>
-                        <div className="p-4 bg-[#4361ee] bg-opacity-5 rounded-xl">
-                          <p className="text-sm text-gray-600">סה"כ</p>
-                          <p className="text-xl font-bold text-[#4361ee]">₪{totalSummary.totalCommission.toLocaleString()}</p>
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium">סה"כ עמלות היקף</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">₪{totalSummary.scopeCommission.toLocaleString()}</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium">סה"כ עמלות חודשיות</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">₪{totalSummary.monthlyCommission.toLocaleString()}</div>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-primary text-primary-foreground">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium">סה"כ</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">₪{totalSummary.totalCommission.toLocaleString()}</div>
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="border-b bg-gradient-to-l from-[#4361ee] to-[#3651d4] text-white rounded-t-xl">
-                    <h3 className="text-xl font-semibold">פירוט מוצרים</h3>
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl">פירוט מוצרים</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent className="p-0">
                     <ResultsTable
                       data={clients}
                       columns={columns}
@@ -1203,24 +1243,21 @@ export const CustomerJourneyComponent = () => {
             className="mt-8 flex justify-end gap-4"
             variants={fadeIn}
           >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-2 rounded-lg bg-white border-2 border-gray-200 text-gray-700 font-medium flex items-center gap-2"
+            <Button
+              variant="outline"
               onClick={handleDownload}
+              className="gap-2"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4" />
               הורד דוח
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-white font-medium flex items-center gap-2"
+            </Button>
+            <Button
               onClick={handleSave}
+              className="gap-2"
             >
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4" />
               שלח לדוחות
-            </motion.button>
+            </Button>
           </motion.div>
 
           <div className="dir-rtl" />

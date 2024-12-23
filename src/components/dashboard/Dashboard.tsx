@@ -130,7 +130,7 @@ export default function ModernAnalyticsDashboard() {
       value: formatCurrency(stats.total.commission || 0),
       icon: BadgeDollarSign,
       color: 'bg-green-500',
-      description: 'הכנסות מכל המוצרים'
+      description: 'סה"כ עמלות היקף ונפרעים'
     },
     {
       title: 'סה"כ מכירות',
@@ -151,16 +151,15 @@ export default function ModernAnalyticsDashboard() {
       value: stats.currentMonth?.count || 0,
       icon: BarChart4,
       color: 'bg-purple-500',
-      description: 'מכירות בחודש הנוכחי'
+      description: `שינוי מהחודש הקודם: ${((((stats.currentMonth?.count || 0) - (stats.previousMonth?.count || 0)) / (stats.previousMonth?.count || 1)) * 100).toFixed(1)}%`
     }
   ];
 
   const pieData = [
     { name: 'פנסיה', value: stats.total.pension.count || 0 },
-    { name: 'ביטוח', value: stats.total.insurance.count || 0 },
-    { name: 'השקעות', value: stats.total.investment.count || 0 },
-    { name: 'פוליסות', value: stats.total.policy.count || 0 }
-  ];
+    { name: 'סיכונים', value: stats.total.insurance.count || 0 },
+    { name: 'פיננסים', value: stats.total.investment.count || 0 }
+  ].filter(item => item.value > 0);
 
   const getTrendIcon = (value: number) => {
     if (value > 0) return <ArrowUpIcon className="w-4 h-4 text-green-500" />;
@@ -173,25 +172,22 @@ export default function ModernAnalyticsDashboard() {
       title: 'פנסיה',
       current: stats.currentMonth?.pension?.count || 0,
       previous: stats.previousMonth?.pension?.count || 0,
-      change: ((stats.currentMonth?.pension?.count || 0) - (stats.previousMonth?.pension?.count || 0)) / (stats.previousMonth?.pension?.count || 1) * 100
+      change: ((stats.currentMonth?.pension?.count || 0) - (stats.previousMonth?.pension?.count || 0)) / (stats.previousMonth?.pension?.count || 1) * 100,
+      commission: stats.currentMonth?.pension?.commission || 0
     },
     {
-      title: 'ביטוח',
+      title: 'סיכונים',
       current: stats.currentMonth?.insurance?.count || 0,
       previous: stats.previousMonth?.insurance?.count || 0,
-      change: ((stats.currentMonth?.insurance?.count || 0) - (stats.previousMonth?.insurance?.count || 0)) / (stats.previousMonth?.insurance?.count || 1) * 100
+      change: ((stats.currentMonth?.insurance?.count || 0) - (stats.previousMonth?.insurance?.count || 0)) / (stats.previousMonth?.insurance?.count || 1) * 100,
+      commission: stats.currentMonth?.insurance?.commission || 0
     },
     {
-      title: 'השקעות',
+      title: 'פיננסים',
       current: stats.currentMonth?.investment?.count || 0,
       previous: stats.previousMonth?.investment?.count || 0,
-      change: ((stats.currentMonth?.investment?.count || 0) - (stats.previousMonth?.investment?.count || 0)) / (stats.previousMonth?.investment?.count || 1) * 100
-    },
-    {
-      title: 'פוליסות',
-      current: stats.currentMonth?.policy?.count || 0,
-      previous: stats.previousMonth?.policy?.count || 0,
-      change: ((stats.currentMonth?.policy?.count || 0) - (stats.previousMonth?.policy?.count || 0)) / (stats.previousMonth?.policy?.count || 1) * 100
+      change: ((stats.currentMonth?.investment?.count || 0) - (stats.previousMonth?.investment?.count || 0)) / (stats.previousMonth?.investment?.count || 1) * 100,
+      commission: stats.currentMonth?.investment?.commission || 0
     }
   ];
 
