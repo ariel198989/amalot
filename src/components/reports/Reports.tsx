@@ -50,7 +50,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
 
       <div className="print-content">
         <div className="print-header">
-          <h1>דוח מכירות חודש��</h1>
+          <h1>דוח מכירות חודש</h1>
           <p>{new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</p>
         </div>
 
@@ -351,12 +351,12 @@ const Reports: React.FC = () => {
             ) : (
               filteredSales.map((sale) => (
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium">{formatCurrency(sale.total_commission)} ₪</td>
-                  <td className="p-3">{formatCurrency(sale.scope_commission)} ₪</td>
-                  <td className="p-3">{formatCurrency(sale.monthly_commission)} ₪</td>
+                  <td className="p-3 font-medium">{formatCurrency(sale.total_commission)}</td>
+                  <td className="p-3">{formatCurrency(sale.scope_commission)}</td>
+                  <td className="p-3">{formatCurrency(sale.monthly_commission)}</td>
                   <td className="p-3">{formatPercentage(sale.pensionContribution)}</td>
-                  <td className="p-3">{formatCurrency(sale.pensionAccumulation)} ₪</td>
-                  <td className="p-3">{formatCurrency(sale.pensionSalary)} ₪</td>
+                  <td className="p-3">{formatCurrency(sale.pensionAccumulation)}</td>
+                  <td className="p-3">{formatCurrency(sale.pensionSalary)}</td>
                   <td className="p-3">{sale.company}</td>
                   <td className="p-3">{sale.client_name}</td>
                   <td className="p-3">{formatDate(sale.date)}</td>
@@ -370,6 +370,9 @@ const Reports: React.FC = () => {
   };
 
   const renderInsuranceTable = (sales: InsuranceProduct[]) => {
+    // Debug log
+    console.log('Insurance sales data:', JSON.stringify(sales, null, 2));
+    
     const filteredSales = sales.filter(sale => 
       sale.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.company.toLowerCase().includes(searchTerm.toLowerCase())
@@ -385,7 +388,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium">נפרעים</th>
               <th className="p-3 text-right font-medium">סרמיה</th>
               <th className="p-3 text-right font-medium">סוג ביטוח</th>
-              <th className="p-3 text-right font-medium">אופן תשלום</th>
+              <th className="p-3 text-right font-medium">אופן ת��לום</th>
               <th className="p-3 text-right font-medium">חברה</th>
               <th className="p-3 text-right font-medium">שם לקוח</th>
               <th className="p-3 text-right font-medium">תאריך</th>
@@ -403,7 +406,7 @@ const Reports: React.FC = () => {
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
                   <td className="p-3 font-medium">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3">{formatCurrency(sale.scope_commission)}</td>
-                  <td className="p-3">{formatCurrency(sale.nifraim)}</td>
+                  <td className="p-3">{formatCurrency(sale.monthly_commission * 12)}</td>
                   <td className="p-3">{formatCurrency(sale.premium)}</td>
                   <td className="p-3">{sale.insurance_type}</td>
                   <td className="p-3">{sale.payment_method}</td>
@@ -630,7 +633,7 @@ const Reports: React.FC = () => {
         <TabsContent value="pension">
           <Card>
             <CardHeader>
-              <CardTitle>מכרות פנסיה</CardTitle>
+              <CardTitle>מכרות פנסי��</CardTitle>
               <CardDescription>כל מכירות הפנסיה שלך במקום אחד</CardDescription>
             </CardHeader>
             <CardContent>
@@ -756,7 +759,7 @@ const groupByCompany = (sales: any[]) => {
     }
     acc[company].count++;
     acc[company].commission += sale.total_commission || 0;
-    acc[company].nifraim += sale.nifraim || 0;
+    acc[company].nifraim += (sale.monthly_commission || 0) * 12;
     acc[company].total_amount += sale.investment_amount || sale.premium || 0;
     return acc;
   }, {});

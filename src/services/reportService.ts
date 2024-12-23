@@ -64,14 +64,16 @@ export const reportService = {
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
-              date: journey.date,
+              date: new Date(journey.date).toISOString(),
               salary: (product.details as PensionProduct).pensionSalary || 0,
               accumulation: (product.details as PensionProduct).pensionAccumulation || 0,
               provision: (product.details as PensionProduct).pensionContribution || 0,
               scope_commission: product.details.scope_commission || 0,
               monthly_commission: product.details.monthly_commission || 0,
-              total_commission: product.details.total_commission || 0,
-              journey_id: journey.id
+              journey_id: journey.id,
+              provision_rate: (product.details as PensionProduct).pensionContribution || 0,
+              commission_rate: 0,
+              status: 'active'
             };
 
             const { error: pensionError } = await supabase
@@ -90,14 +92,14 @@ export const reportService = {
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
-              date: journey.date,
-              premium: details.premium,
+              date: new Date(journey.date).toISOString(),
+              premium: details.premium || 0,
               insurance_type: details.insurance_type,
               payment_method: details.payment_method,
-              nifraim: details.nifraim,
-              scope_commission: details.scope_commission,
-              monthly_commission: details.monthly_commission,
-              total_commission: details.total_commission,
+              nifraim: (details.monthly_commission || 0) * 12,
+              scope_commission: details.scope_commission || 0,
+              monthly_commission: details.monthly_commission || 0,
+              total_commission: details.total_commission || 0,
               journey_id: journey.id
             };
 
@@ -117,12 +119,12 @@ export const reportService = {
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
-              date: journey.date,
-              investment_amount: details.investment_amount,
-              investment_period: details.investment_period,
+              date: new Date(journey.date).toISOString(),
+              investment_amount: details.investment_amount || 0,
+              investment_period: details.investment_period || 0,
               investment_type: details.investment_type,
-              scope_commission: details.scope_commission,
-              total_commission: details.total_commission,
+              scope_commission: details.scope_commission || 0,
+              total_commission: details.total_commission || 0,
               journey_id: journey.id
             };
 

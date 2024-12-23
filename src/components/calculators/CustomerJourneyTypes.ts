@@ -169,10 +169,20 @@ export interface CustomerJourneyClient {
   scopeCommission: number;
   monthlyCommission: number;
   totalCommission: number;
+  
+  // Pension fields
   pensionType?: string;
-  insuranceType?: string;
-  productType?: string;
   pensionContribution?: string;
+  salary?: number;
+  totalAccumulated?: number;
+  
+  // Insurance fields
+  insuranceType?: string;
+  insurancePremium?: number;
+  
+  // Investment fields
+  productType?: string;
+  investmentAmount?: number;
+  
   clientInfo?: ClientInfo;
-  details?: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
 }
