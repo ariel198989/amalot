@@ -196,23 +196,35 @@ export async function calculateCommissions(
 
   if (category === 'savings_and_study') {
     const companyRates = agentRates.savings_and_study_companies?.[company];
-    console.log('Financial company rates:', companyRates);
+    console.log('Savings company rates:', { company, companyRates, productType: insuranceType });
 
     if (!companyRates?.active) {
-      console.log('No active financial rates found');
+      console.log('No active savings rates found');
       return getEmptyCalculation(amount);
     }
 
-    // For financial products, use the product rates
-    const productRates = companyRates.products.investment_gemel || companyRates.products.hishtalmut;
+    // For savings products, use the product rates based on the product type
+    const productType = insuranceType || 'investment_gemel';  // Default to investment_gemel if not specified
+    const productRates = companyRates.products[productType];
     if (!productRates) {
+      console.log('No rates found for savings product type:', productType);
       return getEmptyCalculation(amount);
     }
 
     const millionsInAmount = amount / 1000000;
-    const scope_commission = productRates.scope_commission * millionsInAmount;
-    const monthly_commission = productRates.monthly_rate * millionsInAmount;
+    const scope_commission = Math.round(productRates.scope_commission * millionsInAmount);
+    const monthly_commission = Math.round(productRates.monthly_rate * millionsInAmount);
     const total_commission = scope_commission + (monthly_commission * 12);
+
+    console.log('Savings calculation details:', {
+      amount,
+      millionsInAmount,
+      productType,
+      productRates,
+      scope_commission,
+      monthly_commission,
+      total_commission
+    });
 
     return {
       category,
@@ -229,18 +241,35 @@ export async function calculateCommissions(
 
   if (category === 'insurance') {
     const companyRates = agentRates.insurance_companies?.[company];
+    console.log('Insurance company rates:', { company, companyRates, insuranceType });
+    
     if (!companyRates?.active || !insuranceType || !companyRates.products?.[insuranceType as InsuranceType]) {
+      console.log('No active rates found for insurance company or product:', { company, insuranceType });
       return getEmptyCalculation(amount);
     }
 
     const rates = companyRates.products[insuranceType as InsuranceType];
+    if (!rates) {
+      console.log('No rates found for insurance type:', insuranceType);
+      return getEmptyCalculation(amount);
+    }
+
     // For insurance:
     // one_time_rate is percentage of annual premium
     // monthly_rate is percentage of monthly premium
     const annual_premium = amount * 12;
-    const scope_commission = (rates.one_time_rate / 100) * annual_premium;
-    const monthly_commission = (rates.monthly_rate / 100) * amount;
+    const scope_commission = Math.round((rates.one_time_rate / 100) * annual_premium);
+    const monthly_commission = Math.round((rates.monthly_rate / 100) * amount);
     const total_commission = scope_commission + (monthly_commission * 12);
+
+    console.log('Insurance calculation details:', {
+      amount,
+      annual_premium,
+      rates,
+      scope_commission,
+      monthly_commission,
+      total_commission
+    });
 
     return {
       category,
@@ -250,7 +279,7 @@ export async function calculateCommissions(
       total_commission,
       details: {
         scope_commission_explanation: `${rates.one_time_rate}% × ${annual_premium.toLocaleString()}₪ (פרמיה שנתית) = ${scope_commission.toLocaleString()}₪`,
-        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לח��דש`
+        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לחודש`
       }
     };
   }

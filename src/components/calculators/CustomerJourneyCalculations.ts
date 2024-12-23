@@ -78,7 +78,42 @@ export const calculatePensionCommissions = async (data: any, company: string) =>
 
 export const calculateInsuranceCommissions = async (data: any, company: string) => {
   try {
-    const premium = Number(data.insurancePremium) || 0;
+    console.log('מתחיל חישוב עמלות ביטוח:', {
+      premium: data.insurancePremium,
+      insuranceType: data.insuranceType,
+      company,
+      userId: data.user_id
+    });
+
+    const premium = Number(data.insurancePremium);
+    
+    if (!premium) {
+      console.error('לא התקבלה פרמיה תקינה:', data.insurancePremium);
+      throw new Error('נדרשת פרמיה תקינה לחישוב');
+    }
+
+    if (!company) {
+      console.error('לא התקבלה חברה');
+      throw new Error('נדרשת חברת ביטוח לחישוב');
+    }
+
+    if (!data.insuranceType) {
+      console.error('לא התקבל סוג ביטוח');
+      throw new Error('נדרש סוג ביטוח לחישוב');
+    }
+
+    if (!data.user_id) {
+      console.error('לא התקבל מזהה משתמש');
+      throw new Error('נדרש מזהה משתמש לחישוב');
+    }
+
+    console.log('שולח נתונים לחישוב:', {
+      userId: data.user_id,
+      category: 'insurance',
+      company,
+      premium,
+      insuranceType: data.insuranceType
+    });
     
     const commissions = await calculateCommissions(
       data.user_id,
@@ -89,17 +124,25 @@ export const calculateInsuranceCommissions = async (data: any, company: string) 
     );
 
     if (!commissions) {
+      console.error('לא התקבלו נתוני עמלות מהחישוב');
       throw new Error('לא נמצאו נתוני עמלות');
     }
+
+    console.log('התקבלו תוצאות חישוב:', {
+      scope_commission: commissions.scope_commission,
+      monthly_commission: commissions.monthly_commission,
+      total_commission: commissions.total_commission,
+      details: commissions.details
+    });
 
     return {
       oneTimeCommission: commissions.scope_commission,
       monthlyCommission: commissions.monthly_commission,
-      totalCommission: commissions.scope_commission + (commissions.monthly_commission * 12)
+      totalCommission: commissions.total_commission
     };
   } catch (error) {
-    console.error('Error calculating insurance commissions:', error);
-    return { oneTimeCommission: 0, monthlyCommission: 0, totalCommission: 0 };
+    console.error('שגיאה בחישוב עמלות ביטוח:', error);
+    throw error;
   }
 };
 

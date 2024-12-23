@@ -162,29 +162,17 @@ export interface Product {
 }
 
 export interface CustomerJourneyClient {
-  id: string;
+  type: 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance' | 'policy';
   date: string;
   name: string;
   company: string;
-  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';  // savings_and_study is kept for backward compatibility
-  pensionType?: 'comprehensive' | 'supplementary';
-  insuranceType?: string;
-  productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
-  transactionType?: 'proposal' | 'agent_appointment';
-  details: {
-    pensionSalary?: number;
-    pensionAccumulation?: number;
-    pensionContribution?: number;
-    insurancePremium?: number;
-    investmentAmount?: number;
-    policyAmount?: number;
-    productType?: 'managers' | 'gemel' | 'hishtalmut' | 'investment_gemel' | 'savings_policy';
-    transactionType?: 'proposal' | 'agent_appointment';
-    serviceFee?: number;
-    financeAmount?: number;
-  };
   scopeCommission: number;
   monthlyCommission: number;
   totalCommission: number;
+  pensionType?: string;
+  insuranceType?: string;
+  productType?: string;
+  pensionContribution?: string;
   clientInfo?: ClientInfo;
+  details?: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
 }

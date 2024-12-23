@@ -8,7 +8,6 @@ import {
   Building2, 
   Shield,
   Wallet,
-  PiggyBank,
   HeartHandshake,
   Coins,
   Download,
@@ -24,13 +23,12 @@ import { useNavigate } from 'react-router-dom';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
 import ClientInfoForm from '../client-info/ClientInfoForm';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import type { CustomerJourney, PensionProduct as ImportedPensionProduct, InsuranceProduct as ImportedInsuranceProduct, InvestmentProduct as ImportedInvestmentProduct, PolicyProduct as ImportedPolicyProduct, CommissionDetails } from './CustomerJourneyTypes';
+import type { CustomerJourney, PensionProduct as ImportedPensionProduct, InsuranceProduct as ImportedInsuranceProduct, InvestmentProduct as ImportedInvestmentProduct, PolicyProduct as ImportedPolicyProduct, CommissionDetails, CustomerJourneyClient } from './CustomerJourneyTypes';
 
 const productTypes = [
   { type: 'pension' as const, title: 'פנסיה' },
   { type: 'insurance' as const, title: 'סיכונים' },
   { type: 'savings_and_study' as const, title: 'פיננסים' },
-  { type: 'policy' as const, title: 'פוליסת חסכון' },
   { type: 'service' as const, title: 'גולה- שירות' },
   { type: 'finance' as const, title: 'גולה- פיננסים' }
 ] as const;
@@ -51,72 +49,6 @@ function isPolicyProduct(details: any): details is ImportedPolicyProduct {
   return details && 'policy_amount' in details && 'policy_type' in details;
 }
 
-interface PensionProduct extends Omit<ImportedPensionProduct, 'activityType' | 'user_id' | 'client_name'> {
-  pensionSalary: number;
-  pensionAccumulation: number;
-  pensionContribution: number;
-  scope_commission: number;
-  monthly_commission: number;
-  total_commission: number;
-  user_id: string;
-  client_name: string;
-  company: string;
-  date: string;
-  activityType: 'transfer' | 'new_policy' | 'agent_appointment';
-}
-
-interface InsuranceProduct extends Omit<ImportedInsuranceProduct, 'user_id' | 'client_name'> {
-  premium: number;
-  insurance_type: string;
-  payment_method: string;
-  nifraim: number;
-  scope_commission: number;
-  monthly_commission: number;
-  total_commission: number;
-  user_id: string;
-  client_name: string;
-  company: string;
-  date: string;
-}
-
-interface InvestmentProduct extends Omit<ImportedInvestmentProduct, 'user_id' | 'client_name'> {
-  investment_amount: number;
-  investment_period: number;
-  investment_type: string;
-  scope_commission: number;
-  total_commission: number;
-  user_id: string;
-  client_name: string;
-  company: string;
-  date: string;
-}
-
-interface PolicyProduct extends Omit<ImportedPolicyProduct, 'user_id' | 'client_name'> {
-  policy_amount: number;
-  policy_period: number;
-  policy_type: string;
-  scope_commission: number;
-  total_commission: number;
-  user_id: string;
-  client_name: string;
-  company: string;
-  date: string;
-}
-
-interface CustomerJourneyClient {
-  type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';
-  scopeCommission: number;
-  monthlyCommission: number;
-  totalCommission: number;
-  details?: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
-  pensionType?: 'comprehensive' | 'complementary';
-  productType?: string;
-  date?: string;
-  name?: string;
-  company?: string;
-  insuranceType?: string;
-}
-
 interface ClientInfo {
   fullName: string;
 }
@@ -129,7 +61,7 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
     case 'insurance':
       return <Shield className={cn(iconClass, "text-green-500")} />;
     case 'savings_and_study':
-      return <PiggyBank className={cn(iconClass, "text-purple-500")} />;
+      return <Coins className={cn(iconClass, "text-purple-500")} />;
     case 'policy':
       return <Wallet className={cn(iconClass, "text-orange-500")} />;
     case 'service':
@@ -176,11 +108,11 @@ interface Field {
 interface CalculatorFormProps {
   onSubmit: (data: any) => void;
   fields: Field[];
-  title?: string;
+  type: ProductType;
   className?: string;
 }
 
-const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fields, className }) => {
+const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fields, type, className }) => {
   return (
     <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -192,7 +124,7 @@ const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fiel
           data[field.name] = value.toString();
         }
       });
-      onSubmit(data);
+      onSubmit({ ...data, type });
     }} className={className}>
       <div className="flex flex-row gap-4 items-start">
         {fields.map((field, index) => (
@@ -242,7 +174,7 @@ const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fiel
   );
 };
 
-type ProductType = typeof productTypes[number]['type'];
+type ProductType = 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance';
 
 type SelectedProducts = Record<ProductType, boolean>;
 
@@ -254,7 +186,6 @@ const CustomerJourneyComponent: React.FC = () => {
     pension: false,
     insurance: false,
     savings_and_study: false,
-    policy: false,
     service: false,
     finance: false
   });
@@ -262,6 +193,7 @@ const CustomerJourneyComponent: React.FC = () => {
   const [step, setStep] = useState<'info' | 'journey'>('info');
 
   const [_clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
+  const [companyRates, setCompanyRates] = useState<Record<string, any>>({});
 
   const totalSummary = {
     scopeCommission: clients.reduce((sum, client) => sum + client.scopeCommission, 0),
@@ -276,7 +208,7 @@ const CustomerJourneyComponent: React.FC = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,סה\"כ\n";
+    csvContent += "ריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,סה\"כ\n";
     
     clients.forEach((client) => {
       const row = [
@@ -307,7 +239,6 @@ const CustomerJourneyComponent: React.FC = () => {
       pension: false,
       insurance: false,
       savings_and_study: false,
-      policy: false,
       service: false,
       finance: false
     });
@@ -322,8 +253,8 @@ const CustomerJourneyComponent: React.FC = () => {
         case 'pension': return 'פנסיה';
         case 'insurance': return 'סיכונים';
         case 'savings_and_study': return 'פיננסים';
-        case 'policy': return 'פוליסה';
         case 'service': return 'שירות';
+        case 'finance': return 'פיננסים';
         default: return type || '-';
       }
     }},
@@ -353,13 +284,15 @@ const CustomerJourneyComponent: React.FC = () => {
       }
     },
     { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'monthlyCommission', label: 'עמלה חודשית', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
+    { key: 'monthlyCommission', label: 'עמלה נפרעים', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
     { key: 'totalCommission', label: 'סה"כ', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
     { key: 'actions', label: 'פעולות' }
   ];
 
   useEffect(() => {
     loadCompanyRates();
+    const subscription = supabase.channel('agent_commission_rates_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'agent_commission_rates' }, () => loadCompanyRates()).subscribe();
+    return () => { subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -376,7 +309,7 @@ const CustomerJourneyComponent: React.FC = () => {
       };
       
       if (!Object.values(newState).some(Boolean)) {
-        toast.error('חובה לבחור לפחות מוצר אחד');
+        toast.error('חוב לבחור לפחות מוצר אחד');
         return prev;
       }
       
@@ -387,14 +320,28 @@ const CustomerJourneyComponent: React.FC = () => {
   const loadCompanyRates = async () => {
     try {
       const rates: Record<string, any> = {};
-      const companies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס'];
-      for (const company of companies) {
-        const companyRate = await getCompanyRates('pension', company);
-        if (companyRate) {
-          rates[company] = companyRate;
+      const pensionCompanies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'מיטב', 'אלטשולר שחם', 'מור'];
+      const insuranceCompanies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'הכשרה'];
+      const financialCompanies = ['מגדל', 'מנורה', 'כלל', 'הראל', 'הפניקס', 'מיטב', 'אלטשולר שחם', 'מור', 'אנליסט'];
+      const categories = ['pension', 'insurance', 'savings_and_study'];
+      
+      for (const category of categories) {
+        rates[category] = {};
+        const companies = category === 'pension' ? pensionCompanies : 
+                         category === 'insurance' ? insuranceCompanies :
+                         category === 'savings_and_study' ? financialCompanies :
+                         pensionCompanies; // default to pension companies for other types
+        
+        for (const company of companies) {
+          const companyRate = await getCompanyRates(category, company);
+          if (companyRate) {
+            rates[category][company] = companyRate;
+          }
         }
       }
+      
       console.log('Loaded company rates:', rates);
+      setCompanyRates(rates);
     } catch (error) {
       console.error('Error loading company rates:', error);
       toast.error('שגיאה בטעינת נתוני החברות');
@@ -402,10 +349,42 @@ const CustomerJourneyComponent: React.FC = () => {
   };
 
   const getProductFields = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance') => {
+    const getPensionCompanies = () => [
+      { value: 'מגדל', label: 'מגדל' },
+      { value: 'מנורה', label: 'מנורה' },
+      { value: 'כלל', label: 'כלל' },
+      { value: 'הראל', label: 'הראל' },
+      { value: 'הפניקס', label: 'הפניקס' },
+      { value: 'מיטב', label: 'מיטב' },
+      { value: 'אלטשולר שחם', label: 'אלטשולר שחם' },
+      { value: 'מור', label: 'מור' }
+    ];
+
+    const getInsuranceCompanies = () => [
+      { value: 'מגדל', label: 'מגדל' },
+      { value: 'מנורה', label: 'מנורה' },
+      { value: 'כלל', label: 'כלל' },
+      { value: 'הראל', label: 'הראל' },
+      { value: 'הפניקס', label: 'הפניקס' },
+      { value: 'הכשרה', label: 'הכשרה' }
+    ];
+
+    const getFinancialCompanies = () => [
+      { value: 'מגדל', label: 'מגדל' },
+      { value: 'מנורה', label: 'מנורה' },
+      { value: 'כלל', label: 'כלל' },
+      { value: 'הראל', label: 'הראל' },
+      { value: 'הפניקס', label: 'הפניקס' },
+      { value: 'מיטב', label: 'מיטב' },
+      { value: 'אלטשולר שחם', label: 'אלטשולר שחם' },
+      { value: 'מור', label: 'מור' },
+      { value: 'אנליסט', label: 'אנליסט' }
+    ];
+
     const baseFields = [
       { 
         name: 'company',
-        label: 'יצרן',
+        label: 'חברה',
         type: 'select',
         required: true,
         className: 'bg-white !important text-right pr-4',
@@ -413,40 +392,34 @@ const CustomerJourneyComponent: React.FC = () => {
         popoverClassName: 'z-[999] bg-white text-right',
         listboxClassName: 'bg-white text-right',
         optionClassName: 'bg-white hover:bg-gray-100 text-right',
-        options: [
-          { value: 'מגדל', label: 'מגדל' },
-          { value: 'מנורה', label: 'מנורה' },
-          { value: 'כלל', label: 'כלל' },
-          { value: 'הראל', label: 'הראל' },
-          { value: 'הפניקס', label: 'הפניקס' },
-          { value: 'מור', label: 'מור' },
-          { value: 'מיטב', label: 'מיטב' },
-          { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
-        ]
+        options: type === 'pension' ? getPensionCompanies() : 
+                type === 'insurance' ? getInsuranceCompanies() :
+                type === 'savings_and_study' ? getFinancialCompanies() :
+                getPensionCompanies() // default to pension companies for other types
       }
     ];
 
     switch (type) {
       case 'pension':
         return [
+          ...baseFields,
           { 
-            name: 'transactionType',
-            label: 'סוג עסקה',
-            type: 'select',
+            name: 'salary',
+            label: 'שכר',
+            type: 'number',
             required: true,
-            className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[997] bg-white select-container',
-            popoverClassName: 'z-[997] bg-white text-right',
-            listboxClassName: 'bg-white text-right',
-            optionClassName: 'bg-white hover:bg-gray-100 text-right',
-            options: [
-              { value: 'proposal', label: 'הצעה' },
-              { value: 'agent_appointment', label: 'מינוי סוכן' }
-            ]
+            className: 'bg-white text-right'
           },
           { 
-            name: 'pensionType',
-            label: 'סוג פנסי',
+            name: 'totalAccumulated',
+            label: 'צבירה',
+            type: 'number',
+            required: false,
+            className: 'bg-white text-right'
+          },
+          { 
+            name: 'pensionContribution',
+            label: 'אחוז הפרשה',
             type: 'select',
             required: true,
             className: 'bg-white !important text-right pr-4',
@@ -455,81 +428,27 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'comprehensive', label: 'מקיפה' },
-              { value: 'supplementary', label: 'משלימה' }
-            ]
-          },
-          { 
-            name: 'company',
-            label: 'יצרן',
-            type: 'select',
-            required: true,
-            className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[999] bg-white select-container',
-            popoverClassName: 'z-[999] bg-white text-right',
-            listboxClassName: 'bg-white text-right',
-            optionClassName: 'bg-white hover:bg-gray-100 text-right',
-            options: [
-              { value: 'מגדל', label: 'מגדל' },
-              { value: 'מנורה', label: 'מנורה' },
-              { value: 'כלל', label: 'כלל' },
-              { value: 'הראל', label: 'הראל' },
-              { value: 'הפניקס', label: 'הפניקס' },
-              { value: 'מור', label: 'מור' },
-              { value: 'מיטב', label: 'מיטב' },
-              { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
-            ]
-          },
-          { 
-            name: 'pensionSalary', 
-            label: 'שכר חודשי', 
-            type: 'number', 
-            required: true,
-            className: 'bg-white text-right',
-            defaultValue: '0'
-          },
-          { 
-            name: 'pensionAccumulation', 
-            label: 'צבירה', 
-            type: 'number', 
-            required: true,
-            className: 'bg-white text-right',
-            defaultValue: '0'
-          },
-          { 
-            name: 'pensionContribution', 
-            label: 'אחוז הפרשה', 
-            type: 'select', 
-            required: true,
-            className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[996] bg-white select-container',
-            popoverClassName: 'z-[996] bg-white text-right',
-            listboxClassName: 'bg-white text-right',
-            optionClassName: 'bg-white hover:bg-gray-100 text-right',
-            options: [
               { value: '18.5', label: '18.5%' },
-              { value: '19', label: '19%' },
+              { value: '19.5', label: '19.5%' },
               { value: '20.83', label: '20.83%' },
-              { value: '21', label: '21%' },
-              { value: '22', label: '22%' },
-              { value: '23', label: '23%' }
+              { value: '21.83', label: '21.83%' },
+              { value: '22.83', label: '22.83%' }
             ],
             defaultValue: '20.83'
           },
           { 
-            name: 'activityType',
-            label: 'סוג פעילות',
+            name: 'pensionType',
+            label: 'סוג פנסיה',
             type: 'select',
             required: true,
             className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[996] bg-white select-container',
-            popoverClassName: 'z-[996] bg-white text-right',
+            containerClassName: 'relative z-[997] bg-white select-container',
+            popoverClassName: 'z-[997] bg-white text-right',
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'transfer', label: 'ניוד' },
-              { value: 'new_policy', label: 'פוליסה חדשה' },
-              { value: 'agent_appointment', label: 'מינוי סוכן' }
+              { value: 'comprehensive', label: 'מקיפה' },
+              { value: 'supplementary', label: 'משלימה' }
             ]
           }
         ];
@@ -553,8 +472,8 @@ const CustomerJourneyComponent: React.FC = () => {
               { value: 'critical_illness', label: 'מחלות קשות' },
               { value: 'insurance_umbrella', label: 'מטריה בטוחית' },
               { value: 'risk', label: 'ריסק' },
-              { value: 'service', label: 'כתבי שירות' },
-              { value: 'disability', label: 'אכע' }
+              { value: 'service', label: 'כתבי שרות' },
+              { value: 'disability', label: 'אכל' }
             ]
           },
           { 
@@ -567,45 +486,10 @@ const CustomerJourneyComponent: React.FC = () => {
         ];
       case 'savings_and_study':
         return [
-          { 
-            name: 'company',
-            label: 'יצרן',
-            type: 'select',
-            required: true,
-            className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[999] bg-white select-container',
-            popoverClassName: 'z-[999] bg-white text-right',
-            listboxClassName: 'bg-white text-right',
-            optionClassName: 'bg-white hover:bg-gray-100 text-right',
-            options: [
-              { value: 'מגדל', label: 'מגדל' },
-              { value: 'מנורה', label: 'מנורה' },
-              { value: 'כלל', label: 'כלל' },
-              { value: 'הראל', label: 'הראל' },
-              { value: 'הפניקס', label: 'הפניקס' },
-              { value: 'מור', label: 'מור' },
-              { value: 'מיטב', label: 'מיטב' },
-              { value: 'אלטשולר שחם', label: 'אלטשולר שחם' }
-            ]
-          },
-          { 
-            name: 'transactionType',
-            label: 'סוג עסקה',
-            type: 'select',
-            required: true,
-            className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[998] bg-white select-container',
-            popoverClassName: 'z-[998] bg-white text-right',
-            listboxClassName: 'bg-white text-right',
-            optionClassName: 'bg-white hover:bg-gray-100 text-right',
-            options: [
-              { value: 'proposal', label: 'הצעה' },
-              { value: 'agent_appointment', label: 'מינוי סוכן' }
-            ]
-          },
+          ...baseFields,
           { 
             name: 'productType',
-            label: 'בחירת מוצר',
+            label: 'סוג מוצר',
             type: 'select',
             required: true,
             className: 'bg-white !important text-right pr-4',
@@ -614,16 +498,16 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'managers', label: 'מנהלים' },
-              { value: 'gemel', label: 'גמל' },
-              { value: 'hishtalmut', label: 'השתלמות' },
-              { value: 'investment_gemel', label: 'גמל להשקעה' },
+              { value: 'hishtalmut', label: 'קרן השתלמות' },
+              { value: 'investment_gemel', label: 'קופת גמל להשקעה' },
+              { value: 'gemel', label: 'קופת גמל' },
+              { value: 'managers', label: 'ביטוח מנהלים' },
               { value: 'savings_policy', label: 'פוליסת חסכון' }
             ]
           },
           { 
             name: 'investmentAmount', 
-            label: 'סכום', 
+            label: 'סכום השקעה', 
             type: 'number', 
             required: true,
             className: 'bg-white text-right'
@@ -653,14 +537,14 @@ const CustomerJourneyComponent: React.FC = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'financial_planning', label: 'כנון פיננסי' },
-              { value: 'family_economics', label: 'כלכלת המשפחה' },
+              { value: 'financial_planning', label: 'כנון פננסי' },
+              { value: 'family_economics', label: 'כלכלת המפחה' },
               { value: 'career', label: 'קריירה' },
               { value: 'business_consulting', label: 'ייעוץ עסקי' },
               { value: 'retirement', label: 'פרישה' },
               { value: 'organizations', label: 'ארגונים' },
               { value: 'academia', label: 'אקדמיה' },
-              { value: 'monthly_subscription', label: 'מני חודשי' }
+              { value: 'monthly_subscription', label: 'מי חודשי' }
             ]
           },
           { 
@@ -701,60 +585,58 @@ const CustomerJourneyComponent: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (formData: { 
-    type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance';
-    clientName: string;
-    clientPhone?: string;
-    company: string;
-    pensionSalary?: number;
-    pensionAccumulation?: number;
-    pensionContribution?: number;
-    insurancePremium?: number;
-    insuranceType?: string;
-    investmentAmount?: number;
-    policyAmount?: number;
-    pensionType?: 'comprehensive' | 'complementary';
-    transactionType?: string;
-    productType?: string;
-  }) => {
+  const handleSubmit = async (formData: any) => {
     try {
-      console.log('Form data received:', formData);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('User not authenticated');
+        toast.error('משתמש לא מחובר');
         return;
       }
 
+      const rates = companyRates[formData.type]?.[formData.company];
+      if (!rates?.active) {
+        toast.error('החברה לא פעילה או לא נמצאו נתונים');
+        return;
+      }
+
+      let amount = 0;
+      if (formData.type === 'pension') {
+        amount = Number(formData.salary) || 0;
+      } else if (formData.type === 'insurance') {
+        amount = Number(formData.insurancePremium) || 0;
+      } else if (formData.type === 'savings_and_study') {
+        amount = Number(formData.investmentAmount) || 0;
+      }
+
+      console.log('Submitting form data:', { ...formData, amount });
+
       const result = await calculateCommissions(
         user.id,
-        'pension',
-        formData.company || 'מגדל',
-        Number(formData.pensionSalary) || 0,
-        formData.pensionContribution?.toString() || '20.83',
-        Number(formData.pensionAccumulation) || 0
+        formData.type,
+        formData.company,
+        amount,
+        formData.type === 'insurance' ? formData.transactionType : 
+        formData.type === 'pension' ? formData.pensionContribution : 
+        formData.type === 'savings_and_study' ? formData.productType : undefined,
+        formData.totalAccumulated ? Number(formData.totalAccumulated) : undefined
       );
 
       console.log('Calculation result:', result);
 
       if (result) {
-        console.log('Commission details:', {
-          scope_commission: result.scope_commission,
-          monthly_commission: result.monthly_commission,
-          total_commission: result.scope_commission + result.monthly_commission
-        });
-
         const newClient: CustomerJourneyClient = {
           type: formData.type,
           date: new Date().toISOString(),
-          name: formData.clientName,
-          company: formData.company || 'גולה',
+          name: clientName,
+          company: formData.company,
           scopeCommission: result.scope_commission || 0,
           monthlyCommission: result.monthly_commission || 0,
-          totalCommission: (result.scope_commission || 0) + (result.monthly_commission || 0)
+          totalCommission: result.total_commission || 0
         };
 
         if (formData.type === 'pension') {
           newClient.pensionType = formData.pensionType;
+          newClient.pensionContribution = formData.pensionContribution;
         } else if (formData.type === 'insurance') {
           newClient.insuranceType = formData.transactionType;
         } else if (formData.type === 'savings_and_study') {
@@ -766,7 +648,7 @@ const CustomerJourneyComponent: React.FC = () => {
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      toast.error('אירעה שגיאה בשמירת הנתונים');
+      toast.error('שגיאה בשמירת הנתונים');
     }
   };
 
@@ -1055,7 +937,7 @@ const CustomerJourneyComponent: React.FC = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-transparent bg-clip-text">
-                מסע לקוח חכם
+                סע לקוח חכם
               </h1>
               <p className="text-gray-500 mt-1">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
             </div>
@@ -1100,7 +982,7 @@ const CustomerJourneyComponent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* הצגת טפסי הזנת נתונים למוצרים שנבחרו */}
+            {/* הצגת טפי הנתונים למוצרים שנבחרו */}
             <div className="space-y-6">
               {productTypes.map(({ type, title }) => (
                 selectedProducts[type] && (
@@ -1122,9 +1004,9 @@ const CustomerJourneyComponent: React.FC = () => {
                       </CardHeader>
                       <CardContent className="p-6">
                         <CalculatorFormComponent
-                          onSubmit={(data) => handleSubmit({ ...data, type: 'pension' })}
+                          onSubmit={(data) => handleSubmit({ ...data, type })}
                           fields={getProductFields(type)}
-                          title=""
+                          type={type}
                           className="w-full"
                         />
                       </CardContent>
@@ -1184,7 +1066,7 @@ const CustomerJourneyComponent: React.FC = () => {
                       <div>
                         <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
                           <Shield className="w-5 h-5 text-green-500" />
-                          סי��ונים
+                          סיכונים
                         </h4>
                         <div className="grid grid-cols-3 gap-4">
                           <div className="p-4 bg-green-50 rounded-xl border border-green-100">
@@ -1216,7 +1098,7 @@ const CustomerJourneyComponent: React.FC = () => {
                     {clients.some(client => client.type === 'savings_and_study') && (
                       <div>
                         <h4 className="font-medium mb-4 flex items-center gap-2 text-gray-900">
-                          <PiggyBank className="w-5 h-5 text-purple-500" />
+                          <Coins className="w-5 h-5 text-purple-500" />
                           פיננסים
                         </h4>
                         <div className="grid grid-cols-3 gap-4">
