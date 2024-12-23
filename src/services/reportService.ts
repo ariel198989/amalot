@@ -59,34 +59,73 @@ export const reportService = {
         switch (product.type) {
           case 'pension': {
             // שמירת מוצר פנסיה
-            const pensionData = {
-              user_id: user.id,
-              client_name: journey.client_name,
-              client_phone: journey.client_phone || '',
-              company: product.company,
-              date: new Date(journey.date).toISOString(),
-              salary: (product.details as PensionProduct).pensionSalary || 0,
-              accumulation: (product.details as PensionProduct).pensionAccumulation || 0,
-              provision: (product.details as PensionProduct).pensionContribution || 0,
-              scope_commission: product.details.scope_commission || 0,
-              monthly_commission: product.details.monthly_commission || 0,
-              journey_id: journey.id,
-              provision_rate: (product.details as PensionProduct).pensionContribution || 0,
-              commission_rate: 0,
-              status: 'active'
-            };
+            console.log('Raw pension product:', product.details);
+            const pensionProduct = product.details as PensionProduct;
+            console.log('Pension product after casting:', pensionProduct);
+            
+            // בדיקה שפורטת של הערכים
+            if ('pensionsalary' in product.details && 'pensionaccumulation' in product.details && 'pensioncontribution' in product.details) {
+              console.log('Detailed pension values:', {
+                rawSalary: product.details.pensionsalary,
+                rawAccumulation: product.details.pensionaccumulation,
+                rawContribution: product.details.pensioncontribution,
+                castedSalary: pensionProduct.pensionsalary,
+                castedAccumulation: pensionProduct.pensionaccumulation,
+                castedContribution: pensionProduct.pensioncontribution,
+                originalClient: journey.selected_products.find(p => p.type === 'pension')?.details
+              });
+              
+              const pensionData = {
+                user_id: user.id,
+                client_name: journey.client_name,
+                client_phone: journey.client_phone || '',
+                company: product.company,
+                date: new Date(journey.date).toISOString(),
+                pensionsalary: Number(pensionProduct.pensionsalary) || 0,
+                pensionaccumulation: Number(pensionProduct.pensionaccumulation) || 0,
+                pensioncontribution: Number(pensionProduct.pensioncontribution) || 0,
+                provision_rate: Number(pensionProduct.pensioncontribution) || 0,
+                commission_rate: (Number(pensionProduct.scope_commission) || 0) / (Number(pensionProduct.pensionsalary) || 1) * 100,
+                scope_commission: Number(pensionProduct.scope_commission) || 0,
+                monthly_commission: Number(pensionProduct.monthly_commission) || 0,
+                journey_id: journey.id,
+                status: 'active'
+              };
 
-            const { error: pensionError } = await supabase
-              .from('pension_sales')
-              .insert([pensionData]);
+              console.log('Final pension data to save:', pensionData);
+              console.log('Pension values:', {
+                salary: pensionData.pensionsalary,
+                accumulation: pensionData.pensionaccumulation,
+                contribution: pensionData.pensioncontribution,
+                provision_rate: pensionData.provision_rate,
+                commission_rate: pensionData.commission_rate,
+                originalValues: {
+                  salary: pensionProduct.pensionsalary,
+                  accumulation: pensionProduct.pensionaccumulation,
+                  contribution: pensionProduct.pensioncontribution
+                }
+              });
 
-            if (pensionError) throw pensionError;
+              const { error: pensionError } = await supabase
+                .from('pension_sales')
+                .insert([pensionData]);
+
+              if (pensionError) {
+                console.error('Pension save error:', pensionError);
+                throw pensionError;
+              }
+            } else {
+              console.error('Missing required pension fields:', product.details);
+              throw new Error('חסרים שדות חובה במוצר פנסיה');
+            }
             break;
           }
 
           case 'insurance': {
             // שמירת מוצר ביטוח
             const details = product.details as InsuranceProduct;
+            console.log('Current user:', user);
+            
             const insuranceData = {
               user_id: user.id,
               client_name: journey.client_name,
@@ -99,15 +138,21 @@ export const reportService = {
               nifraim: (details.monthly_commission || 0) * 12,
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
-              total_commission: details.total_commission || 0,
               journey_id: journey.id
             };
+
+            console.log('Insurance data to save:', insuranceData);
+            console.log('User ID being used:', user.id);
 
             const { error: insuranceError } = await supabase
               .from('insurance_sales')
               .insert([insuranceData]);
 
-            if (insuranceError) throw insuranceError;
+            if (insuranceError) {
+              console.error('Insurance save error:', insuranceError);
+              console.error('Failed insurance data:', insuranceData);
+              throw insuranceError;
+            }
             break;
           }
 

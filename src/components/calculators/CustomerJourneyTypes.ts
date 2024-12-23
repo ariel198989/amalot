@@ -30,9 +30,9 @@ export interface ClientInfo {
 
 // Pension specific interfaces
 export interface PensionProduct extends BaseProduct {
-  pensionSalary: number;
-  pensionAccumulation: number;
-  pensionContribution: number;
+  pensionsalary: number;
+  pensionaccumulation: number;
+  pensioncontribution: number;
   activityType: 'transfer' | 'new_policy' | 'agent_appointment';
 }
 
@@ -50,6 +50,9 @@ export interface InsuranceProduct extends BaseProduct {
   nifraim: number;
   scope_commission: number;
   monthly_commission: number;
+  salary?: number;
+  transfer_amount?: number;
+  contribution_percentage?: number;
 }
 
 export interface InsuranceCommission {

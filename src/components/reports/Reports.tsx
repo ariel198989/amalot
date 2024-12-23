@@ -80,7 +80,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
                 <tr>
                   <th className="p-3 text-right font-medium">סה"כ עמלה</th>
                   <th className="p-3 text-right font-medium">עמלת היקף</th>
-                  <th className="p-3 text-right font-medium">היקף על הפבירה</th>
+                  <th className="p-3 text-right font-medium">עמלת היקף על הצבירה</th>
                   <th className="p-3 text-right font-medium">הפרשה</th>
                   <th className="p-3 text-right font-medium">סכום ניוד</th>
                   <th className="p-3 text-right font-medium">שכר</th>
@@ -320,6 +320,9 @@ const Reports: React.FC = () => {
   };
 
   const renderPensionTable = (sales: PensionProduct[]) => {
+    // Debug log
+    console.log('Pension sales data:', JSON.stringify(sales, null, 2));
+    
     const filteredSales = sales.filter(sale => 
       sale.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.company.toLowerCase().includes(searchTerm.toLowerCase())
@@ -332,7 +335,7 @@ const Reports: React.FC = () => {
             <tr>
               <th className="p-3 text-right font-medium">סה"כ עמלה</th>
               <th className="p-3 text-right font-medium">עמלת היקף</th>
-              <th className="p-3 text-right font-medium">היקף על הפבירה</th>
+              <th className="p-3 text-right font-medium">עמלת היקף על הצבירה</th>
               <th className="p-3 text-right font-medium">הפרשה</th>
               <th className="p-3 text-right font-medium">סכום ניוד</th>
               <th className="p-3 text-right font-medium">שכר</th>
@@ -354,9 +357,9 @@ const Reports: React.FC = () => {
                   <td className="p-3 font-medium">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3">{formatCurrency(sale.scope_commission)}</td>
                   <td className="p-3">{formatCurrency(sale.monthly_commission)}</td>
-                  <td className="p-3">{formatPercentage(sale.pensionContribution)}</td>
-                  <td className="p-3">{formatCurrency(sale.pensionAccumulation)}</td>
-                  <td className="p-3">{formatCurrency(sale.pensionSalary)}</td>
+                  <td className="p-3">{formatPercentage(sale.pensioncontribution)}</td>
+                  <td className="p-3">{formatCurrency(sale.pensionaccumulation)}</td>
+                  <td className="p-3">{formatCurrency(sale.pensionsalary)}</td>
                   <td className="p-3">{sale.company}</td>
                   <td className="p-3">{sale.client_name}</td>
                   <td className="p-3">{formatDate(sale.date)}</td>
@@ -388,7 +391,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium">נפרעים</th>
               <th className="p-3 text-right font-medium">סרמיה</th>
               <th className="p-3 text-right font-medium">סוג ביטוח</th>
-              <th className="p-3 text-right font-medium">אופן ת��לום</th>
+              <th className="p-3 text-right font-medium">אופן תשלום</th>
               <th className="p-3 text-right font-medium">חברה</th>
               <th className="p-3 text-right font-medium">שם לקוח</th>
               <th className="p-3 text-right font-medium">תאריך</th>
@@ -633,7 +636,7 @@ const Reports: React.FC = () => {
         <TabsContent value="pension">
           <Card>
             <CardHeader>
-              <CardTitle>מכרות פנסי��</CardTitle>
+              <CardTitle>מכרות פנסיה</CardTitle>
               <CardDescription>כל מכירות הפנסיה שלך במקום אחד</CardDescription>
             </CardHeader>
             <CardContent>

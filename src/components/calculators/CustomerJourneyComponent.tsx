@@ -577,7 +577,7 @@ export const CustomerJourneyComponent = () => {
               { value: 'business_consulting', label: 'ייעוץ עסקי' },
               { value: 'retirement', label: 'פרישה' },
               { value: 'organizations', label: 'ארגונים' },
-              { value: 'academia', label: 'אקדמיה' },
+              { value: 'academia', label: 'אקדמה' },
               { value: 'monthly_subscription', label: 'מי חודשי' }
             ]
           },
@@ -733,13 +733,36 @@ export const CustomerJourneyComponent = () => {
           
           switch (type) {
             case 'pension':
+              console.log('Creating pension product with:', {
+                salary: client.salary,
+                totalAccumulated: client.totalAccumulated,
+                pensionContribution: client.pensionContribution,
+                rawClient: client
+              });
+              
+              const pensionsalary = Number(client.salary);
+              const pensionaccumulation = Number(client.totalAccumulated);
+              const pensioncontribution = client.pensionContribution ? Number(client.pensionContribution) : 0;
+              
+              if (isNaN(pensionsalary) || isNaN(pensionaccumulation) || isNaN(pensioncontribution)) {
+                console.error('Invalid pension values:', {
+                  salary: client.salary,
+                  totalAccumulated: client.totalAccumulated,
+                  pensionContribution: client.pensionContribution
+                });
+                throw new Error('ערכי פנסיה לא תקינים');
+              }
+              
               details = {
                 ...baseProduct,
-                pensionSalary: client.salary || 0,
-                pensionAccumulation: client.totalAccumulated || 0,
-                pensionContribution: parseFloat(client.pensionContribution || '0'),
+                type: 'pension',
+                pensionsalary,
+                pensionaccumulation,
+                pensioncontribution,
                 activityType: 'new_policy'
               } as PensionProduct;
+              
+              console.log('Created pension details:', details);
               break;
             
             case 'insurance':
@@ -748,7 +771,10 @@ export const CustomerJourneyComponent = () => {
                 premium: client.insurancePremium || 0,
                 insurance_type: client.insuranceType || '',
                 payment_method: 'monthly',
-                nifraim: 0
+                nifraim: 0,
+                salary: client.salary,
+                transfer_amount: client.totalAccumulated,
+                contribution_percentage: client.pensionContribution ? parseFloat(client.pensionContribution) : undefined
               } as InsuranceProduct;
               break;
             

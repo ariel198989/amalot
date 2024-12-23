@@ -4,6 +4,15 @@ export interface BaseProduct {
   type: 'pension' | 'insurance' | 'investment' | 'policy';
   created_at?: string;
   updated_at?: string;
+  user_id?: string;
+  journey_id?: string;
+  client_name: string;
+  client_phone?: string;
+  company: string;
+  date: string;
+  total_commission: number;
+  scope_commission?: number;
+  monthly_commission?: number;
 }
 
 export interface ProductDetails {
@@ -24,17 +33,24 @@ export interface ProductDetails {
 
 export interface PensionProduct extends BaseProduct {
   type: 'pension';
-  details: ProductDetails;
+  pensionSalary: number;
+  pensionAccumulation: number;
+  pensionContribution: number;
+  activityType?: 'transfer' | 'new_policy' | 'agent_appointment';
+  status?: string;
 }
 
 export interface InsuranceProduct extends BaseProduct {
   type: 'insurance';
-  details: ProductDetails & {
-    premium: number;
-    insurance_type: string;
-    payment_method: string;
-    nifraim: boolean;
-  };
+  premium: number;
+  insurance_type: string;
+  payment_method: string;
+  nifraim: number;
+  scope_commission: number;
+  monthly_commission: number;
+  salary?: number;
+  transfer_amount?: number;
+  contribution_percentage?: number;
 }
 
 export interface InvestmentProduct extends BaseProduct {
