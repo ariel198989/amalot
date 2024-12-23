@@ -169,15 +169,19 @@ export const reportService = {
               investment_period: details.investment_period || 0,
               investment_type: details.investment_type,
               scope_commission: details.scope_commission || 0,
-              total_commission: details.total_commission || 0,
               journey_id: journey.id
             };
+
+            console.log('Investment data to save:', investmentData);
 
             const { error: investmentError } = await supabase
               .from('investment_sales')
               .insert([investmentData]);
 
-            if (investmentError) throw investmentError;
+            if (investmentError) {
+              console.error('Investment save error:', investmentError);
+              throw investmentError;
+            }
             break;
           }
 

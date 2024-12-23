@@ -391,7 +391,7 @@ export const CustomerJourneyComponent = () => {
       { value: 'הפניקס', label: 'הפניקס' },
       { value: 'מיטב', label: 'מיטב' },
       { value: 'אלטשולר שחם', label: 'אלטשולר שחם' },
-      { value: 'מור', label: 'מור' }
+      { value: '��ור', label: 'מור' }
     ];
 
     const getInsuranceCompanies = () => [
@@ -779,14 +779,34 @@ export const CustomerJourneyComponent = () => {
               break;
             
             case 'investment':
+              console.log('Creating investment product with:', {
+                investmentAmount: client.investmentAmount,
+                productType: client.productType,
+                scopeCommission: client.scopeCommission,
+                rawClient: client
+              });
+              
+              const investment_amount = Number(client.investmentAmount) || 0;
+              const scope_commission = Number(client.scopeCommission) || 0;
+              
+              if (isNaN(investment_amount) || isNaN(scope_commission)) {
+                console.error('Invalid investment values:', {
+                  investmentAmount: client.investmentAmount,
+                  scopeCommission: client.scopeCommission
+                });
+                throw new Error('ערכי השקעה לא תקינים');
+              }
+              
               details = {
                 ...baseProduct,
-                investment_amount: client.investmentAmount || 0,
+                investment_amount,
                 investment_period: 12,
                 investment_type: client.productType || '',
-                scope_commission: client.scopeCommission,
+                scope_commission,
                 nifraim: 0
               } as InvestmentProduct;
+              
+              console.log('Created investment details:', details);
               break;
             
             case 'policy':

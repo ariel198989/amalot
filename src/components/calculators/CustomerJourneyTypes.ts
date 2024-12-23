@@ -9,7 +9,7 @@ export interface BaseProduct {
   date: string;
   created_at?: string;
   updated_at?: string;
-  total_commission: number;
+  total_commission?: number;
   scope_commission?: number;
   monthly_commission?: number;
 }
@@ -69,6 +69,7 @@ export interface InvestmentProduct extends BaseProduct {
   investment_type: string;
   scope_commission: number;
   nifraim: number;
+  total_commission?: number;
 }
 
 export interface InvestmentCommission {
