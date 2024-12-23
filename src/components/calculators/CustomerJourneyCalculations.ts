@@ -146,9 +146,57 @@ export const calculateInsuranceCommissions = async (data: any, company: string) 
   }
 };
 
-export const calculateInvestmentCommissions = async (data: any, company: string) => {
+export type FinancialProductType = 'gemel' | 'investment_gemel' | 'hishtalmut' | 'savings_policy';
+
+interface InvestmentData {
+  investmentAmount: number;
+  productType: FinancialProductType;
+  user_id: string;
+}
+
+interface InvestmentCommissionResult {
+  scopeCommission: number;
+  monthlyCommission: number;
+  annualCommission: number;
+  totalCommission: number;
+}
+
+export const calculateInvestmentCommissions = async (
+  data: InvestmentData, 
+  company: string
+): Promise<InvestmentCommissionResult> => {
   try {
+    console.log('מתחיל חישוב עמלות השקעות:', {
+      amount: data.investmentAmount,
+      productType: data.productType,
+      company,
+      userId: data.user_id
+    });
+
     const amount = Number(data.investmentAmount) || 0;
+    
+    if (!amount) {
+      console.error('לא התקבל סכום תקין:', data.investmentAmount);
+      throw new Error('נדרש סכום תקין לחישוב');
+    }
+
+    if (!company) {
+      console.error('לא התקבלה חברה');
+      throw new Error('נדרשת חברה לחישוב');
+    }
+
+    if (!data.user_id) {
+      console.error('לא התקבל מזהה משתמש');
+      throw new Error('נדרש מזהה משתמש לחישוב');
+    }
+
+    console.log('שולח נתונים לחישוב:', {
+      userId: data.user_id,
+      category: 'savings_and_study',
+      company,
+      amount,
+      productType: data.productType
+    });
     
     const commissions = await calculateCommissions(
       data.user_id,
@@ -159,23 +207,26 @@ export const calculateInvestmentCommissions = async (data: any, company: string)
     );
 
     if (!commissions) {
+      console.error('לא התקבלו נתוני עמלות מהחישוב');
       throw new Error('לא נמצאו נתוני עמלות');
     }
+
+    console.log('התקבלו תוצאות חישוב:', {
+      scope_commission: commissions.scope_commission,
+      monthly_commission: commissions.monthly_commission,
+      total_commission: commissions.total_commission,
+      details: commissions.details
+    });
 
     return {
       scopeCommission: commissions.scope_commission,
       monthlyCommission: commissions.monthly_commission,
       annualCommission: commissions.monthly_commission * 12,
-      totalCommission: commissions.scope_commission + (commissions.monthly_commission * 12)
+      totalCommission: commissions.total_commission
     };
   } catch (error) {
-    console.error('Error calculating investment commissions:', error);
-    return { 
-      scopeCommission: 0, 
-      monthlyCommission: 0, 
-      annualCommission: 0,
-      totalCommission: 0 
-    };
+    console.error('שגיאה בחישוב עמלות השקעות:', error);
+    throw error;
   }
 };
 

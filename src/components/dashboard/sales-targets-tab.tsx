@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
+import { supabase } from '@/lib/supabase';
+import toast from 'react-hot-toast';
 
 interface CategoryTarget {
   id: string;
@@ -86,6 +88,62 @@ const SalesTargetsTab = () => {
     setIsDirty(true);
   };
 
+  const sendToReports = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('לא נמצא משתמש מחובר');
+        return;
+      }
+
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+
+      // שליחת היעדים לדוחות
+      const promises = categories.map(async (category) => {
+        const target = calculateTarget(category);
+        
+        // מידע נוסף לפי סוג הקטגוריה
+        let additionalData = {};
+        if (category.id === 'pension-transfer' || category.id === 'finance-transfer') {
+          additionalData = {
+            metric_type: 'transfer_amount',
+            unit: 'ILS'
+          };
+        } else if (category.id === 'risks') {
+          additionalData = {
+            metric_type: 'monthly_premium',
+            unit: 'ILS'
+          };
+        }
+
+        const { error } = await supabase
+          .from('sales_targets')
+          .upsert({
+            user_id: user.id,
+            category: category.id,
+            month: currentMonth,
+            year: currentYear,
+            target_amount: target,
+            performance: 0, // מאפס את הביצועים בתחילת החודש
+            ...additionalData
+          });
+
+        if (error) {
+          console.error(`שגיאה בשמירת יעד ${category.title}:`, error);
+          throw error;
+        }
+      });
+
+      await Promise.all(promises);
+      toast.success('היעדים נשלחו לדוחות בהצלחה');
+    } catch (error) {
+      console.error('שגיאה בשליחת היעדים לדוחות:', error);
+      toast.error('שגיאה בשליחת היעדים לדוחות');
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-md border border-slate-200 transition-all duration-300 hover:shadow-lg">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
@@ -153,7 +211,7 @@ const SalesTargetsTab = () => {
           </div>
         </div>
 
-        {/* ממוצע לפגישה מוצרי גולה - מוקטן */}
+        {/* ממוצע לפגישה מוצרי גולה - מוקן */}
         <div className="bg-gradient-to-br from-purple-50 to-white rounded-lg p-4 border border-purple-100 shadow-sm hover:shadow transition-all duration-200">
           <h3 className="text-sm font-semibold text-purple-800 mb-3 flex items-center">
             <span className="bg-purple-100 p-1 rounded-md mr-2">
@@ -187,23 +245,32 @@ const SalesTargetsTab = () => {
         </div>
       </div>
 
-      {/* כפתור שמירה מינימליסטי עם אפקטים */}
-      {isDirty && (
-        <div className="border-t border-slate-200 p-3 bg-gradient-to-b from-white to-slate-50 flex justify-end gap-3">
-          <button
-            onClick={() => window.location.reload()}
-            className="text-sm text-slate-600 hover:text-slate-800 px-3 py-1 rounded-md hover:bg-slate-100 transition-all duration-200"
-          >
-            ביטול
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm rounded-md shadow-sm hover:shadow-md transition-all duration-200"
-          >
-            שמירה
-          </button>
-        </div>
-      )}
+      {/* כפתורי פעולה */}
+      <div className="border-t border-slate-200 p-3 bg-gradient-to-b from-white to-slate-50 flex justify-between gap-3">
+        <button
+          onClick={sendToReports}
+          className="px-4 py-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+        >
+          שלח לדוחות
+        </button>
+        
+        {isDirty && (
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm text-slate-600 hover:text-slate-800 px-3 py-1 rounded-md hover:bg-slate-100 transition-all duration-200"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              שמירה
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

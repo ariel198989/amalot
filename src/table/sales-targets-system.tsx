@@ -31,8 +31,6 @@ const SalesTargetsSystem: React.FC = () => {
   const [openTable, setOpenTable] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'investments' | 'services'>('investments');
   const [tablesData, setTablesData] = useState<TabData[]>([]);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const currentYear = new Date().getFullYear();
 
   // פונקציה לחישוב יעד חודשי
   const calculateMonthlyTarget = (baseAmount: number, percentage: number = 100) => {
@@ -46,57 +44,42 @@ const SalesTargetsSystem: React.FC = () => {
     return monthlyDistribution.map(factor => Math.round(baseTarget * factor));
   };
 
-  // עעינת הביצועים מהדאטאבייס
-  useEffect(() => {
-    const loadPerformances = async () => {
-      console.log('Loading performances...');
-      const { data, error } = await supabase
+  // עונקציה לטעינת הביצועים מהדאטאבייס
+  const loadPerformances = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: performanceData, error } = await supabase
         .from('sales_targets')
         .select('*')
-        .eq('year', currentYear);
+        .match({
+          user_id: user.id,
+          year: new Date().getFullYear()
+        });
 
-      console.log('Loaded data from supabase:', { data, error });
+      if (error) throw error;
 
-      if (error) {
-        console.error('Error loading performances:', error);
-        return;
-      }
-
-      // ארגון הנתונים לפי קטגוריה וחודש
-      const performancesByCategory: Record<string, number[]> = {};
+      // ארגון הנתונים לפי קטגוריות
+      const organizedPerformances: Record<string, number[]> = {};
       
-      // אתחול מערכים ריקים לכל הקטגוריות
-      const categories = ['risks', 'pension', 'pension-transfer', 'finance-transfer', 
-                         'regular-deposit', 'financial-planning', 'family-economics',
-                         'employment', 'organizational-consulting', 'retirement',
-                         'organizational-recruitment', 'loans', 'real-estate', 'mortgage'];
-      
-      categories.forEach(category => {
-        performancesByCategory[category] = Array(12).fill(0);
-      });
-
-      // מלוי הנתונים מהדאטאבייס
-      data?.forEach(row => {
-        if (performancesByCategory[row.category]) {
-          performancesByCategory[row.category][row.month - 1] = row.performance;
-          console.log(`Updated performance for ${row.category} month ${row.month}:`, row.performance);
+      performanceData?.forEach(record => {
+        if (!organizedPerformances[record.category]) {
+          organizedPerformances[record.category] = Array(12).fill(0);
         }
+        organizedPerformances[record.category][record.month - 1] = record.performance || 0;
       });
 
-      console.log('Organized performances by category:', performancesByCategory);
-      setPerformances(performancesByCategory);
-    };
+      setPerformances(organizedPerformances);
+    } catch (error) {
+      console.error('Error loading performances:', error);
+    }
+  };
 
-    loadPerformances();
-  }, [lastUpdate]); // תלות בעדכון האחרון
-
-  // פענון כל 5 שניות
+  // טעינת הביצועים בעת טעינת הקומפוננטה ובכל 5 שניות
   useEffect(() => {
-    console.log('Setting up refresh interval');
-    const interval = setInterval(() => {
-      console.log('Refreshing data...');
-      setLastUpdate(Date.now());
-    }, 5000);
+    loadPerformances();
+    const interval = setInterval(loadPerformances, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -249,7 +232,7 @@ const SalesTargetsSystem: React.FC = () => {
               {month}
             </th>
           ))}
-          <th className="text-center px-4 py-2 bg-blue-800 text-white border-r">סיכום שתי</th>
+          <th className="text-center px-4 py-2 bg-blue-800 text-white border-r">סיכום שנתי</th>
         </tr>
       </thead>
       <tbody>
@@ -266,28 +249,23 @@ const SalesTargetsSystem: React.FC = () => {
         </tr>
         <tr className="border-b border-gray-200">
           <td className="text-right px-4 py-2">ביצוע</td>
-          {(table.performances || Array(12).fill(0)).map((performance, i) => (
-            <td key={i} className="text-center px-4 py-2 border-r border-gray-200">
-              {performance > 1000 ? `₪ ${performance.toLocaleString()}` : performance.toFixed(1)}
-            </td>
-          ))}
-          <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">
-            {(table.performances || []).reduce((a, b) => a + b, 0).toLocaleString()}
-          </td>
-        </tr>
-        <tr>
-          <td className="text-right px-4 py-2">אחוז ביצוע</td>
-          {table.targets.map((target, i) => {
-            const performance = (table.performances || [])[i] || 0;
-            const percentage = target > 0 ? (performance / target) * 100 : 0;
+          {(table.performances || Array(12).fill(0)).map((performance, i) => {
+            const target = table.targets[i];
+            const percentage = target ? (performance / target) * 100 : 0;
+            const bgColor = percentage >= 100 ? 'bg-green-100' : percentage >= 80 ? 'bg-yellow-100' : 'bg-red-50';
+            
             return (
-              <td key={i} className="text-center px-4 py-2 border-r border-gray-200">
-                {percentage.toFixed(1)}%
+              <td key={i} className={`text-center px-4 py-2 border-r border-gray-200 ${bgColor}`}>
+                {performance > 1000 ? `₪ ${performance.toLocaleString()}` : performance.toFixed(1)}
+                <br />
+                <span className="text-xs text-gray-500">
+                  {percentage.toFixed(1)}%
+                </span>
               </td>
             );
           })}
           <td className="text-right px-4 py-2 font-medium bg-gray-50 border-r">
-            {((table.performances || []).reduce((a, b) => a + b, 0) / table.yearlyTotal * 100).toFixed(1)}%
+            {(table.performances || []).reduce((a, b) => a + b, 0).toLocaleString()}
           </td>
         </tr>
       </tbody>
@@ -338,7 +316,7 @@ const SalesTargetsSystem: React.FC = () => {
 
           <div style="text-align: left; margin-top: 20px; padding-top: 10px; border-top: 2px solid #e5e7eb;">
             <h3 style="color: #1e3a8a;">
-              סה"כ עמלות שנתי: ₪${tablesData
+              סה"כ עמ��ות שנתי: ₪${tablesData
                 .find(t => t.id === activeTab)
                 ?.tables.reduce((sum, table) => {
                   const commission = calculateCommission(table.id);

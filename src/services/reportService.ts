@@ -54,7 +54,24 @@ export const reportService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
-      // עבור כל מוצר שנבחר במסע לקוח
+      // עמירת מסע הלקוח
+      const { data: journeyData, error: journeyError } = await supabase
+        .from('customer_journeys')
+        .insert([{
+          user_id: journey.user_id,
+          client_name: journey.client_name,
+          client_phone: journey.client_phone || '',
+          date: journey.date,
+          total_commission: journey.total_commission
+        }])
+        .select()
+        .single();
+
+      if (journeyError) throw journeyError;
+
+      const journey_id = journeyData.id;
+
+      // שמירת המוצרים
       for (const product of journey.selected_products) {
         switch (product.type) {
           case 'pension': {
@@ -157,7 +174,6 @@ export const reportService = {
           }
 
           case 'investment': {
-            // שמירת מוצר השקעות
             const details = product.details as InvestmentProduct;
             console.log('Investment product before saving:', {
               raw_details: details,
@@ -166,7 +182,7 @@ export const reportService = {
             });
             
             const investmentData = {
-              user_id: user.id,
+              user_id: journey.user_id,
               client_name: journey.client_name,
               client_phone: journey.client_phone || '',
               company: product.company,
@@ -176,22 +192,12 @@ export const reportService = {
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
               nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0,
-              total_commission: (details.scope_commission || 0) + (details.monthly_commission ? details.monthly_commission * 12 : 0),
-              journey_id: journey.id
+              journey_id
             };
 
             console.log('Investment data to save:', investmentData);
-
-            const { error: investmentError } = await supabase
-              .from('investment_sales')
-              .insert([investmentData]);
-
-            if (investmentError) {
-              console.error('Investment save error:', investmentError);
-              throw investmentError;
-            }
-            
-            console.log('Investment saved successfully with data:', investmentData);
+            const { error: investmentError } = await this.saveInvestmentProduct(investmentData);
+            if (investmentError) throw investmentError;
             break;
           }
 
@@ -353,6 +359,104 @@ export const reportService = {
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       throw error;
+    }
+  },
+
+  updatePerformanceMetrics: async (saleData: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+
+      // עדכון ביצועים לפי סוג המכירה
+      let updateData = {
+        category: '',
+        performance_value: 0,
+        metric_type: ''
+      };
+
+      if (saleData.type === 'pension') {
+        updateData = {
+          category: 'pension-transfer',
+          performance_value: saleData.pensionaccumulation || 0,
+          metric_type: 'transfer_amount'
+        };
+      } else if (saleData.type === 'finance') {
+        updateData = {
+          category: 'finance-transfer',
+          performance_value: saleData.investment_amount || 0,
+          metric_type: 'transfer_amount'
+        };
+      } else if (saleData.type === 'insurance') {
+        updateData = {
+          category: 'risks',
+          performance_value: saleData.premium || 0,
+          metric_type: 'monthly_premium'
+        };
+      }
+
+      // מציאת הרשומה הקיימת
+      const { data: existingTarget } = await supabase
+        .from('sales_targets')
+        .select('performance')
+        .match({
+          user_id: user.id,
+          category: updateData.category,
+          month: currentMonth,
+          year: currentYear,
+          metric_type: updateData.metric_type
+        })
+        .single();
+
+      // עדכון הביצועים - הוספת הערך החדש לסכום הקיים
+      const newPerformance = (existingTarget?.performance || 0) + updateData.performance_value;
+
+      // שמירת העדכון בדאטאבייס
+      const { error } = await supabase
+        .from('sales_targets')
+        .upsert({
+          user_id: user.id,
+          category: updateData.category,
+          month: currentMonth,
+          year: currentYear,
+          performance: newPerformance,
+          metric_type: updateData.metric_type
+        });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating performance metrics:', error);
+      return { success: false, error };
+    }
+  },
+
+  async saveInvestmentProduct(investmentData: any) {
+    try {
+      console.log('Investment data to save:', investmentData);
+      
+      // הסרת total_commission כי זו עמודה מחושבת בדאטאבייס
+      const { total_commission, ...dataToSave } = investmentData;
+      
+      const { data, error } = await supabase
+        .from('investment_sales')
+        .insert([dataToSave])
+        .select();
+
+      if (error) {
+        console.error('Investment save error:', error);
+        throw error;
+      }
+
+      console.log('Investment saved successfully:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Investment save error:', error);
+      return { data: null, error };
     }
   }
 }; 

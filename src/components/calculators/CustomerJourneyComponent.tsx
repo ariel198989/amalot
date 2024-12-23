@@ -532,27 +532,15 @@ export const CustomerJourneyComponent = () => {
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'savings', label: 'חיסכון' },
-              { value: 'study', label: 'השתלמות' }
+              { value: 'gemel', label: 'גמל' },
+              { value: 'investment_gemel', label: 'גמל להשקעה' },
+              { value: 'hishtalmut', label: 'השתלמות' },
+              { value: 'savings_policy', label: 'פוליסת חסכון' }
             ]
           },
           { 
             name: 'investmentAmount',
             label: 'סכום השקעה',
-            type: 'number',
-            required: true,
-            className: 'bg-white text-right'
-          },
-          { 
-            name: 'scopeCommission',
-            label: 'עמלת היקף',
-            type: 'number',
-            required: true,
-            className: 'bg-white text-right'
-          },
-          { 
-            name: 'monthlyCommission',
-            label: 'עמלה חודשית',
             type: 'number',
             required: true,
             className: 'bg-white text-right'
