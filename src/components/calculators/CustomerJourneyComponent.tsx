@@ -391,7 +391,7 @@ export const CustomerJourneyComponent = () => {
       { value: 'הפניקס', label: 'הפניקס' },
       { value: 'מיטב', label: 'מיטב' },
       { value: 'אלטשולר שחם', label: 'אלטשולר שחם' },
-      { value: '��ור', label: 'מור' }
+      { value: 'מור', label: 'מור' }
     ];
 
     const getInsuranceCompanies = () => [
@@ -527,22 +527,33 @@ export const CustomerJourneyComponent = () => {
             type: 'select',
             required: true,
             className: 'bg-white !important text-right pr-4',
-            containerClassName: 'relative z-[997] bg-white select-container',
-            popoverClassName: 'z-[997] bg-white text-right',
+            containerClassName: 'relative z-[998] bg-white select-container',
+            popoverClassName: 'z-[998] bg-white text-right',
             listboxClassName: 'bg-white text-right',
             optionClassName: 'bg-white hover:bg-gray-100 text-right',
             options: [
-              { value: 'hishtalmut', label: 'קרן השתלמות' },
-              { value: 'investment_gemel', label: 'קופת גמל להשקעה' },
-              { value: 'gemel', label: 'קופת גמל' },
-              { value: 'managers', label: 'ביטוח מנהלים' },
-              { value: 'savings_policy', label: 'פוליסת חסכון' }
+              { value: 'savings', label: 'חיסכון' },
+              { value: 'study', label: 'השתלמות' }
             ]
           },
           { 
-            name: 'investmentAmount', 
-            label: 'סכום השקעה', 
-            type: 'number', 
+            name: 'investmentAmount',
+            label: 'סכום השקעה',
+            type: 'number',
+            required: true,
+            className: 'bg-white text-right'
+          },
+          { 
+            name: 'scopeCommission',
+            label: 'עמלת היקף',
+            type: 'number',
+            required: true,
+            className: 'bg-white text-right'
+          },
+          { 
+            name: 'monthlyCommission',
+            label: 'עמלה חודשית',
+            type: 'number',
             required: true,
             className: 'bg-white text-right'
           }
@@ -779,20 +790,30 @@ export const CustomerJourneyComponent = () => {
               break;
             
             case 'investment':
-              console.log('Creating investment product with:', {
+              console.log('Creating investment product - Raw input:', {
                 investmentAmount: client.investmentAmount,
                 productType: client.productType,
                 scopeCommission: client.scopeCommission,
+                monthlyCommission: client.monthlyCommission,
                 rawClient: client
               });
               
               const investment_amount = Number(client.investmentAmount) || 0;
               const scope_commission = Number(client.scopeCommission) || 0;
+              const monthly_commission = Number(client.monthlyCommission) || 0;
               
-              if (isNaN(investment_amount) || isNaN(scope_commission)) {
+              console.log('Investment values after conversion:', {
+                investment_amount,
+                scope_commission,
+                monthly_commission,
+                calculated_nifraim: monthly_commission * 12
+              });
+              
+              if (isNaN(investment_amount) || isNaN(scope_commission) || isNaN(monthly_commission)) {
                 console.error('Invalid investment values:', {
                   investmentAmount: client.investmentAmount,
-                  scopeCommission: client.scopeCommission
+                  scopeCommission: client.scopeCommission,
+                  monthlyCommission: client.monthlyCommission
                 });
                 throw new Error('ערכי השקעה לא תקינים');
               }
@@ -800,13 +821,14 @@ export const CustomerJourneyComponent = () => {
               details = {
                 ...baseProduct,
                 investment_amount,
-                investment_period: 12,
                 investment_type: client.productType || '',
                 scope_commission,
-                nifraim: 0
+                monthly_commission,
+                nifraim: monthly_commission * 12,
+                total_commission: scope_commission + (monthly_commission * 12)
               } as InvestmentProduct;
               
-              console.log('Created investment details:', details);
+              console.log('Final investment product details:', details);
               break;
             
             case 'policy':
@@ -950,7 +972,7 @@ export const CustomerJourneyComponent = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-[#4361ee] to-[#3651d4] text-transparent bg-clip-text">
                 סע לקוח חכם
               </h1>
-              <p className="text-gray-500 mt-1">נהל את המוצרים והעלות שלך בצורה חכמה ויעילה</p>
+              <p className="text-gray-500 mt-1">נ��ל את המוצרים והעלות שלך בצורה חכמה ויעילה</p>
             </div>
           </motion.div>
 

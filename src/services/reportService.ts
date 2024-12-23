@@ -159,6 +159,12 @@ export const reportService = {
           case 'investment': {
             // שמירת מוצר השקעות
             const details = product.details as InvestmentProduct;
+            console.log('Investment product before saving:', {
+              raw_details: details,
+              monthly_commission: details.monthly_commission,
+              calculated_nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0
+            });
+            
             const investmentData = {
               user_id: user.id,
               client_name: journey.client_name,
@@ -166,9 +172,11 @@ export const reportService = {
               company: product.company,
               date: new Date(journey.date).toISOString(),
               investment_amount: details.investment_amount || 0,
-              investment_period: details.investment_period || 0,
               investment_type: details.investment_type,
               scope_commission: details.scope_commission || 0,
+              monthly_commission: details.monthly_commission || 0,
+              nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0,
+              total_commission: (details.scope_commission || 0) + (details.monthly_commission ? details.monthly_commission * 12 : 0),
               journey_id: journey.id
             };
 
@@ -182,6 +190,8 @@ export const reportService = {
               console.error('Investment save error:', investmentError);
               throw investmentError;
             }
+            
+            console.log('Investment saved successfully with data:', investmentData);
             break;
           }
 

@@ -65,9 +65,9 @@ export interface InsuranceCommission {
 // Investment specific interfaces
 export interface InvestmentProduct extends BaseProduct {
   investment_amount: number;
-  investment_period: number;
   investment_type: string;
   scope_commission: number;
+  monthly_commission?: number;
   nifraim: number;
   total_commission?: number;
 }
