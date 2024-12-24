@@ -11,6 +11,7 @@ interface SalesTargetsContextType {
   saveChanges: () => Promise<void>;
   performances: Record<string, number[]>;
   updatePerformances: (newPerformances: Record<string, number[]>) => void;
+  updatePerformance: (category: string, month: number, value: number) => void;
   workingDays: number[];
   updateWorkingDays: (monthIndex: number, days: number) => void;
 }
@@ -25,6 +26,7 @@ export const SalesTargetsContext = createContext<SalesTargetsContextType>({
   saveChanges: async () => {},
   performances: {},
   updatePerformances: () => {},
+  updatePerformance: () => {},
   workingDays: Array(12).fill(22),
   updateWorkingDays: () => {},
 });
@@ -126,6 +128,37 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setIsDirty(true);
   };
 
+  const updatePerformance = async (category: string, month: number, value: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Update the local state
+      const newPerformances = { ...performances };
+      if (!newPerformances[category]) {
+        newPerformances[category] = Array(12).fill(0);
+      }
+      newPerformances[category][month - 1] = value;
+      setPerformances(newPerformances);
+
+      // Update the database
+      const { error } = await supabase
+        .from('sales_targets')
+        .upsert({
+          user_id: user.id,
+          category,
+          month,
+          year: new Date().getFullYear(),
+          performance: value
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating performance:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -205,6 +238,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         saveChanges,
         performances,
         updatePerformances,
+        updatePerformance,
         workingDays,
         updateWorkingDays
       }}
