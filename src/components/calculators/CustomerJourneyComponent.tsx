@@ -12,7 +12,8 @@ import {
   Coins,
   Download,
   Save,
-  Brain
+  Brain,
+  Menu
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -34,6 +35,7 @@ import type {
   InvestmentCommission,
   PolicyCommission
 } from './CustomerJourneyTypes';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const productTypes = [
   { type: 'pension' as const, title: 'פנסיה' },
@@ -970,7 +972,8 @@ export const CustomerJourneyComponent = () => {
                 <p className="text-muted-foreground text-right">בחר את המוצרים הרלוונטיים</p>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Desktop View */}
+                <div className="hidden md:grid grid-cols-3 gap-4">
                   {productTypes.map(({ type, title }) => (
                     <motion.div
                       key={type}
@@ -993,6 +996,62 @@ export const CustomerJourneyComponent = () => {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" className="w-full flex items-center justify-between">
+                        <span>בחר מוצרים</span>
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-[300px]">
+                      <SheetHeader>
+                        <SheetTitle>בחירת מוצרים</SheetTitle>
+                      </SheetHeader>
+                      <div className="flex flex-col gap-3 mt-4">
+                        {productTypes.map(({ type, title }) => (
+                          <div
+                            key={type}
+                            className={cn(
+                              "p-4 rounded-xl cursor-pointer transition-all",
+                              "border",
+                              "flex items-center gap-3",
+                              selectedProducts[type] 
+                                ? "border-primary bg-primary/5" 
+                                : "border-border"
+                            )}
+                            onClick={() => handleProductSelect(type)}
+                          >
+                            <ProductIcon type={type} className="w-5 h-5" />
+                            <span className="font-medium">{title}</span>
+                            {selectedProducts[type] && (
+                              <div className="mr-auto">
+                                <div className="h-2 w-2 rounded-full bg-primary" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  {/* Selected Products Pills */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {Object.entries(selectedProducts)
+                      .filter(([_, isSelected]) => isSelected)
+                      .map(([type]) => (
+                        <div
+                          key={type}
+                          className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        >
+                          <ProductIcon type={type} className="w-4 h-4" />
+                          <span>{productTypes.find(pt => pt.type === type)?.title}</span>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>

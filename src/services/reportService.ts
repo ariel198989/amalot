@@ -91,7 +91,7 @@ export const reportService = {
                 castedContribution: pensionProduct.pensioncontribution,
                 originalClient: journey.selected_products.find(p => p.type === 'pension')?.details
               });
-              
+
               const pensionData = {
                 user_id: user.id,
                 client_name: journey.client_name,
@@ -109,20 +109,6 @@ export const reportService = {
                 status: 'active'
               };
 
-              console.log('Final pension data to save:', pensionData);
-              console.log('Pension values:', {
-                salary: pensionData.pensionsalary,
-                accumulation: pensionData.pensionaccumulation,
-                contribution: pensionData.pensioncontribution,
-                provision_rate: pensionData.provision_rate,
-                commission_rate: pensionData.commission_rate,
-                originalValues: {
-                  salary: pensionProduct.pensionsalary,
-                  accumulation: pensionProduct.pensionaccumulation,
-                  contribution: pensionProduct.pensioncontribution
-                }
-              });
-
               const { error: pensionError } = await supabase
                 .from('pension_sales')
                 .insert([pensionData]);
@@ -131,6 +117,12 @@ export const reportService = {
                 console.error('Pension save error:', pensionError);
                 throw pensionError;
               }
+
+              // עדכון ביצועים לפנסיה
+              await this.updatePerformanceMetrics({
+                type: 'pension',
+                pensionaccumulation: pensionData.pensionaccumulation
+              });
             } else {
               console.error('Missing required pension fields:', product.details);
               throw new Error('חסרים שדות חובה במוצר פנסיה');
@@ -158,9 +150,6 @@ export const reportService = {
               journey_id: journey.id
             };
 
-            console.log('Insurance data to save:', insuranceData);
-            console.log('User ID being used:', user.id);
-
             const { error: insuranceError } = await supabase
               .from('insurance_sales')
               .insert([insuranceData]);
@@ -170,6 +159,12 @@ export const reportService = {
               console.error('Failed insurance data:', insuranceData);
               throw insuranceError;
             }
+
+            // עדכון ביצועים לביטוח
+            await this.updatePerformanceMetrics({
+              type: 'insurance',
+              premium: insuranceData.premium
+            });
             break;
           }
 
@@ -198,6 +193,14 @@ export const reportService = {
             console.log('Investment data to save:', investmentData);
             const { error: investmentError } = await this.saveInvestmentProduct(investmentData);
             if (investmentError) throw investmentError;
+
+            // עדכון ביצועים להשקעות
+            await this.updatePerformanceMetrics({
+              type: 'savings_and_study',
+              details: {
+                investmentAmount: investmentData.investment_amount
+              }
+            });
             break;
           }
 
@@ -367,6 +370,8 @@ export const reportService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('Updating performance metrics for sale:', saleData);
+
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
@@ -379,29 +384,66 @@ export const reportService = {
       };
 
       if (saleData.type === 'pension') {
+        // פנסיה - מתייחסים רק לצבירה שעוברת
+        const transferAmount = saleData.pensionaccumulation || 
+                             saleData.details?.pensionaccumulation || 
+                             saleData.transfer_amount || 0;
+
+        console.log('Processing pension transfer:', {
+          originalData: saleData,
+          transferAmount
+        });
+
         updateData = {
           category: 'pension-transfer',
-          performance_value: saleData.pensionaccumulation || 0,
+          performance_value: transferAmount,
           metric_type: 'transfer_amount'
         };
-      } else if (saleData.type === 'finance') {
+      } else if (saleData.type === 'finance' || saleData.type === 'savings_and_study') {
+        // מיננסים - מתייחסים רק לצבירה שעוברת
+        const transferAmount = saleData.details?.investmentAmount || 
+                             saleData.investmentAmount || 
+                             saleData.investment_amount || 0;
+        
+        console.log('Processing finance transfer:', {
+          originalData: saleData,
+          transferAmount
+        });
+
         updateData = {
           category: 'finance-transfer',
-          performance_value: saleData.investment_amount || 0,
+          performance_value: transferAmount,
           metric_type: 'transfer_amount'
         };
       } else if (saleData.type === 'insurance') {
+        // סיכונים - מתייחסים רק לפרמיה החודשית
+        const monthlyPremium = saleData.details?.insurancePremium || 
+                             saleData.insurancePremium || 
+                             saleData.premium || 0;
+
+        console.log('Processing insurance premium:', {
+          originalData: saleData,
+          monthlyPremium
+        });
+
         updateData = {
           category: 'risks',
-          performance_value: saleData.premium || 0,
+          performance_value: monthlyPremium,
           metric_type: 'monthly_premium'
         };
       }
 
+      console.log('Update data prepared:', updateData);
+
+      if (!updateData.category || updateData.performance_value === 0) {
+        console.error('Invalid update data:', updateData);
+        return { success: false, error: 'Invalid sale data' };
+      }
+
       // מציאת הרשומה הקיימת
-      const { data: existingTarget } = await supabase
+      const { data: existingTarget, error: fetchError } = await supabase
         .from('sales_targets')
-        .select('performance')
+        .select('performance, target_amount')
         .match({
           user_id: user.id,
           category: updateData.category,
@@ -411,22 +453,59 @@ export const reportService = {
         })
         .single();
 
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching existing target:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('Existing target found:', existingTarget);
+
       // עדכון הביצועים - הוספת הערך החדש לסכום הקיים
       const newPerformance = (existingTarget?.performance || 0) + updateData.performance_value;
 
-      // שמירת העדכון בדאטאבייס
-      const { error } = await supabase
-        .from('sales_targets')
-        .upsert({
-          user_id: user.id,
-          category: updateData.category,
-          month: currentMonth,
-          year: currentYear,
-          performance: newPerformance,
-          metric_type: updateData.metric_type
-        });
+      let updateResult;
+      if (existingTarget) {
+        // אם קיימת רשומה - נעדכן אותה
+        updateResult = await supabase
+          .from('sales_targets')
+          .update({
+            performance: newPerformance,
+            updated_at: new Date().toISOString()
+          })
+          .match({
+            user_id: user.id,
+            category: updateData.category,
+            month: currentMonth,
+            year: currentYear,
+            metric_type: updateData.metric_type
+          });
+      } else {
+        // אם לא קיימת רשומה - ניצור חדשה
+        updateResult = await supabase
+          .from('sales_targets')
+          .insert({
+            user_id: user.id,
+            category: updateData.category,
+            month: currentMonth,
+            year: currentYear,
+            performance: newPerformance,
+            metric_type: updateData.metric_type,
+            target_amount: 0,
+            updated_at: new Date().toISOString()
+          });
+      }
 
-      if (error) throw error;
+      if (updateResult.error) {
+        console.error('Error updating performance metrics:', updateResult.error);
+        throw updateResult.error;
+      }
+
+      console.log('Performance metrics updated successfully:', {
+        category: updateData.category,
+        newPerformance,
+        month: currentMonth,
+        year: currentYear
+      });
 
       return { success: true };
     } catch (error) {
