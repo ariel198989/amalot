@@ -142,19 +142,19 @@ export function CreateJourney() {
       switch (formData.productType) {
         case 'pension':
         case 'pension-transfer':
-          await updatePerformance('pension-transfer', formData.amount, date);
+          await updatePerformance('pension-transfer', date.month, formData.amount);
           break;
         case 'risk':
-          await updatePerformance('risks', formData.amount, date);
+          await updatePerformance('risks', date.month, formData.amount);
           break;
         case 'finance-transfer':
-          await updatePerformance('finance-transfer', formData.amount, date);
+          await updatePerformance('finance-transfer', date.month, formData.amount);
           break;
         case 'regular-deposit':
-          await updatePerformance('regular-deposit', formData.amount, date);
+          await updatePerformance('regular-deposit', date.month, formData.amount);
           break;
         case 'financial-planning':
-          await updatePerformance('financial-planning', formData.amount, date);
+          await updatePerformance('financial-planning', date.month, formData.amount);
           break;
       }
 
