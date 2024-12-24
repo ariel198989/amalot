@@ -1,9 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface SalesTargetsContextType {
-  updatePerformance: (category: string, amount: number, date: { month: number; year: number }) => Promise<void>;
   closingRate: number;
   monthlyMeetings: number;
   isDirty: boolean;
@@ -11,9 +9,25 @@ interface SalesTargetsContextType {
   updateClosingRate: (value: number) => void;
   updateMonthlyMeetings: (value: number) => void;
   saveChanges: () => Promise<void>;
+  performances: Record<string, number[]>;
+  updatePerformances: (newPerformances: Record<string, number[]>) => void;
+  workingDays: number[];
+  updateWorkingDays: (monthIndex: number, days: number) => void;
 }
 
-const SalesTargetsContext = createContext<SalesTargetsContextType | undefined>(undefined);
+export const SalesTargetsContext = createContext<SalesTargetsContextType>({
+  closingRate: 0,
+  monthlyMeetings: 0,
+  isDirty: false,
+  setIsDirty: () => {},
+  updateClosingRate: () => {},
+  updateMonthlyMeetings: () => {},
+  saveChanges: async () => {},
+  performances: {},
+  updatePerformances: () => {},
+  workingDays: Array(12).fill(22),
+  updateWorkingDays: () => {},
+});
 
 export const useSalesTargets = () => {
   const context = useContext(SalesTargetsContext);
@@ -24,186 +38,177 @@ export const useSalesTargets = () => {
 };
 
 export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [closingRate, setClosingRate] = useState<number>(30);
-  const [monthlyMeetings, setMonthlyMeetings] = useState<number>(44);
-  const [isDirty, setIsDirty] = useState<boolean>(false);
-
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('משתמש לא מחובר');
-        return;
-      }
-
-      const { data: existingSettings, error: fetchError } = await supabase
-        .from('sales_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (fetchError && fetchError.code === 'PGRST116') {
-        // Settings don't exist, create new ones
-        const { data: newSettings, error: insertError } = await supabase
-          .from('sales_settings')
-          .upsert({
-            user_id: user.id,
-            monthly_meetings: 0,
-            monthly_calls: 0,
-            monthly_whatsapp: 0,
-            monthly_pension_sales: 0,
-            monthly_insurance_sales: 0,
-            monthly_investment_sales: 0,
-            closing_rate: 0
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('שגיאה ביצירת הגדרות:', insertError);
-          return;
-        }
-
-        if (newSettings) {
-          setClosingRate(newSettings.closing_rate);
-          setMonthlyMeetings(newSettings.monthly_meetings);
-        }
-      } else if (fetchError) {
-        console.error('שגיאה בטעינת הגדרות:', fetchError);
-        return;
-      } else if (existingSettings) {
-        setClosingRate(existingSettings.closing_rate);
-        setMonthlyMeetings(existingSettings.monthly_meetings);
-      }
-    } catch (error) {
-      console.error('שגיאה בטעינת הגדרות:', error);
-    }
-  };
+  const [closingRate, setClosingRate] = useState(0);
+  const [monthlyMeetings, setMonthlyMeetings] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
+  const [performances, setPerformances] = useState<Record<string, number[]>>({});
+  const [workingDays, setWorkingDays] = useState<number[]>(Array(12).fill(22));
 
   const updateClosingRate = (value: number) => {
+    console.log('Updating closing rate to:', value);
     setClosingRate(value);
     setIsDirty(true);
   };
 
   const updateMonthlyMeetings = (value: number) => {
+    console.log('Updating monthly meetings to:', value);
     setMonthlyMeetings(value);
+    setIsDirty(true);
+  };
+
+  const updateWorkingDays = (monthIndex: number, days: number) => {
+    const newWorkingDays = [...workingDays];
+    newWorkingDays[monthIndex] = days;
+    setWorkingDays(newWorkingDays);
     setIsDirty(true);
   };
 
   const saveChanges = async () => {
     try {
+      console.log('Saving changes:', { closingRate, monthlyMeetings, workingDays });
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error('לא נמצא משתמש מחובר');
+        alert('לא נמצא משתמש מחובר');
         return;
       }
 
-      const { error } = await supabase
+      // First check if a record exists
+      const { data: existingData } = await supabase
         .from('sales_settings')
-        .upsert({
-          user_id: user.id,
-          closing_rate: closingRate,
-          monthly_meetings: monthlyMeetings
-        });
-
-      if (error) {
-        console.error('שגיאה בשמירת הגדרות:', error);
-        toast.error('שגיאה בשמירת ההגדרות');
-        return;
-      }
-
-      setIsDirty(false);
-      toast.success('ההגדרות נשמרו בהצלחה');
-    } catch (error) {
-      console.error('שגיאה בשמירת נתונים:', error);
-      toast.error('שגיאה בשמירת ההגדרות');
-    }
-  };
-
-  const updatePerformance = useCallback(async (
-    category: string,
-    amount: number,
-    date: { month: number; year: number }
-  ): Promise<void> => {
-    console.log('מעדכן ביצועים:', { category, amount, date });
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        console.error('לא נמצא משתמש מחובר');
-        return;
-      }
-
-      // עדכון היעדים
-      const { data: existingData, error: fetchError } = await supabase
-        .from('sales_targets')
-        .select('*')
-        .eq('category', category)
-        .eq('month', date.month)
-        .eq('year', date.year)
+        .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('נתונים קיימים:', existingData, 'שגיאה:', fetchError);
-
+      let error;
       if (existingData) {
+        console.log('Updating existing record:', existingData.id);
+        // Update existing record
         const { error: updateError } = await supabase
-          .from('sales_targets')
+          .from('sales_settings')
           .update({
-            performance: existingData.performance + amount
+            closing_rate: closingRate,
+            monthly_meetings: monthlyMeetings,
+            working_days: workingDays,
+            updated_at: new Date().toISOString()
           })
           .eq('id', existingData.id);
-
-        if (updateError) {
-          console.error('שגיאה בעדכון היעדים:', updateError);
-          return;
-        }
+        error = updateError;
       } else {
+        console.log('Creating new record');
+        // Insert new record
         const { error: insertError } = await supabase
-          .from('sales_targets')
+          .from('sales_settings')
           .insert({
-            category,
-            month: date.month,
-            year: date.year,
-            performance: amount,
-            user_id: user.id
+            user_id: user.id,
+            closing_rate: closingRate,
+            monthly_meetings: monthlyMeetings,
+            working_days: workingDays
           });
-
-        if (insertError) {
-          console.error('שגיאה ביצירת יעד חדש:', insertError);
-          return;
-        }
+        error = insertError;
       }
 
-      console.log('היעדים עודכנו בהצלחה');
-
-      // עולח אירוע מכירה חדשה
-      const event = new CustomEvent('newSale', { 
-        detail: { category, amount }
-      });
-      window.dispatchEvent(event);
-
+      if (error) {
+        console.error('Database operation error:', error);
+        throw error;
+      }
+      
+      setIsDirty(false);
+      alert('הנתונים נשמרו בהצלחה');
     } catch (error) {
-      console.error('שגיאה בעדכון ביצועים:', error);
+      console.error('Error saving changes:', error);
+      alert('אירעה שגיאה בשמירת הנתונים. אנא נסה שוב.');
     }
+  };
+
+  const updatePerformances = (newPerformances: Record<string, number[]>) => {
+    setPerformances(newPerformances);
+    setIsDirty(true);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('Fetching data...');
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('No user found');
+          return;
+        }
+
+        // Fetch settings from sales_settings table
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('sales_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (settingsError) {
+          console.error('Settings fetch error:', settingsError);
+          throw settingsError;
+        }
+
+        console.log('Fetched settings:', settingsData);
+
+        // Update settings
+        if (settingsData) {
+          setClosingRate(settingsData.closing_rate || 0);
+          setMonthlyMeetings(settingsData.monthly_meetings || 0);
+          setWorkingDays(settingsData.working_days || Array(12).fill(22));
+        }
+
+        // Fetch performances from sales_targets table
+        const { data: performancesData, error: performancesError } = await supabase
+          .from('sales_targets')
+          .select('category, performance')
+          .eq('user_id', user.id)
+          .eq('year', new Date().getFullYear());
+
+        if (performancesError) {
+          console.error('Performances fetch error:', performancesError);
+          throw performancesError;
+        }
+
+        console.log('Fetched performances:', performancesData);
+
+        // Organize performances by category
+        if (performancesData) {
+          const organizedPerformances: Record<string, number[]> = {};
+          performancesData.forEach(record => {
+            if (!organizedPerformances[record.category]) {
+              organizedPerformances[record.category] = Array(12).fill(0);
+            }
+            if (record.performance) {
+              organizedPerformances[record.category] = record.performance;
+            }
+          });
+          setPerformances(organizedPerformances);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (
-    <SalesTargetsContext.Provider value={{ 
-      updatePerformance,
-      closingRate,
-      monthlyMeetings,
-      isDirty,
-      setIsDirty,
-      updateClosingRate,
-      updateMonthlyMeetings,
-      saveChanges
-    }}>
+    <SalesTargetsContext.Provider 
+      value={{ 
+        closingRate, 
+        monthlyMeetings, 
+        isDirty,
+        setIsDirty,
+        updateClosingRate,
+        updateMonthlyMeetings,
+        saveChanges,
+        performances,
+        updatePerformances,
+        workingDays,
+        updateWorkingDays
+      }}
+    >
       {children}
     </SalesTargetsContext.Provider>
   );

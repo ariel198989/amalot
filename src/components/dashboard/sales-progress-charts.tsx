@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useSalesTargets } from '@/contexts/SalesTargetsContext';
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { supabase } from '@/lib/supabase';
-import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 
 interface CategoryData {
@@ -137,24 +136,9 @@ const CATEGORIES: CategoryData[] = [
   }
 ];
 
-const formatNumber = (num: number | undefined | null): string => {
-  if (num === undefined || num === null) return '0 ₪';
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M ₪`;
-  }
-  return `₪${num.toLocaleString()}`;
-};
-
-const getStatusColor = (percentage: number): string => {
-  if (percentage >= 100) return 'bg-green-500';
-  if (percentage >= 70) return 'bg-yellow-500';
-  return 'bg-red-500';
-};
-
 export const SalesProgressChart: React.FC = () => {
   const { closingRate, monthlyMeetings } = useSalesTargets();
   const [categories, setCategories] = useState<CategoryData[]>(CATEGORIES);
-  const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   // פונקציה לחישוב יעד חודשי
@@ -264,109 +248,144 @@ export const SalesProgressChart: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {categories.map((category, index) => {
-          // מכפיל את הביצועים החודשיים ב-12 להצגה שנתית
-          const currentMonthPerformance = category.performances[currentMonth] || 0;
-          const annualizedPerformance = currentMonthPerformance * 12;
-          const progress = (annualizedPerformance / category.yearlyTarget) * 100;
-          
-          return (
-            <motion.div
-              key={category.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-xl shadow-lg"
-            >
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">{category.title}</h3>
-              <div className="relative mb-4">
-                <div className="flex justify-between mb-2">
-                  <span className="text-3xl font-bold text-slate-900">{progress.toFixed(1)}%</span>
-                  <span className={`px-3 py-1 rounded-full text-white text-sm ${getStatusColor(progress)}`}>
-                    {progress >= 100 ? 'הושג' : 'בתהליך'}
-                  </span>
-                </div>
-                <Progress value={progress} className="h-3 rounded-full" />
-              </div>
-              <div className="text-sm text-slate-600">
-                <div className="flex justify-between mb-1">
-                  <span>יעד שנתי</span>
-                  <span>{formatNumber(category.yearlyTarget)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>ביצוע</span>
-                  <span>{formatNumber(annualizedPerformance)}</span>
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span>פער</span>
-                  <span className={annualizedPerformance >= category.yearlyTarget ? 'text-green-600' : 'text-red-600'}>
-                    {formatNumber(Math.abs(category.yearlyTarget - annualizedPerformance))}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-gradient-to-br from-white to-slate-50 p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300"
+      >
+        <motion.h3 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3"
+        >
+          <span className="bg-blue-500/10 p-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </span>
+          מגמת ביצועים חודשית
+        </motion.h3>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="bg-white p-6 rounded-xl shadow-inner"
+        >
+          <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={Array.from({ length: 12 }, (_, i) => {
+              const monthData = categories.map(cat => ({
+                category: cat.title,
+                target: cat.targets[i] || 0,
+                performance: cat.performances[i] || 0
+              }));
+
+              const totalTarget = monthData.reduce((sum, data) => sum + data.target, 0);
+              const totalPerformance = monthData.reduce((sum, data) => sum + data.performance, 0);
+
+              return {
+                name: ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'][i],
+                'אחוז השלמה': totalTarget > 0 ? (totalPerformance / totalTarget) * 100 : 0,
+                'יעד': 100
+              };
+            })}>
+              <defs>
+                <linearGradient id="colorCompletion" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorTarget" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#64748B"
+                tick={{ fill: '#1E293B', fontSize: 14 }}
+                axisLine={{ stroke: '#CBD5E1' }}
+              />
+              <YAxis 
+                stroke="#64748B"
+                domain={[0, 120]}
+                tickFormatter={(value) => `${value}%`}
+                tick={{ fill: '#1E293B', fontSize: 14 }}
+                axisLine={{ stroke: '#CBD5E1' }}
+              />
+              <Tooltip 
+                formatter={(value: number) => `${value.toFixed(1)}%`}
+                labelStyle={{ color: '#1E293B', fontWeight: 'bold' }}
+                contentStyle={{ 
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  padding: '12px'
+                }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="יעד"
+                stroke="#10B981"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorTarget)"
+                dot={false}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="אחוז השלמה" 
+                stroke="#3B82F6"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorCompletion)"
+                dot={{
+                  fill: '#3B82F6',
+                  stroke: 'white',
+                  strokeWidth: 2,
+                  r: 4
+                }}
+                activeDot={{
+                  fill: '#3B82F6',
+                  stroke: 'white',
+                  strokeWidth: 2,
+                  r: 6,
+                  className: "animate-pulse"
+                }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          <div className="flex justify-center gap-6 mt-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span className="text-sm text-slate-600">ביצוע בפועל</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <span className="text-sm text-slate-600">יעד חודשי</span>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.8 }}
-        className="bg-white p-6 rounded-xl shadow-lg"
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="flex justify-center mt-8"
       >
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">מגמת ביצועים חודשית</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={Array.from({ length: 12 }, (_, i) => {
-            const monthData = categories.map(cat => ({
-              category: cat.title,
-              target: cat.targets[i] || 0,
-              performance: cat.performances[i] || 0
-            }));
-
-            const totalTarget = monthData.reduce((sum, data) => sum + data.target, 0);
-            const totalPerformance = monthData.reduce((sum, data) => sum + data.performance, 0);
-
-            return {
-              name: ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ', 'יול', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'][i],
-              'אחוז השלמה': totalTarget > 0 ? (totalPerformance / totalTarget) * 100 : 0
-            };
-          })}>
-            <defs>
-              <linearGradient id="colorCompletion" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#1E293B" stopOpacity={0.1}/>
-                <stop offset="95%" stopColor="#1E293B" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey="name" stroke="#64748B" />
-            <YAxis stroke="#64748B" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-            <Tooltip 
-              formatter={(value: number) => `${value.toFixed(1)}%`}
-              labelStyle={{ color: '#1E293B' }}
-              contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            />
-            <Area 
-              type="monotone" 
-              dataKey="אחוז השלמה" 
-              stroke="#1E293B" 
-              fillOpacity={1}
-              fill="url(#colorCompletion)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </motion.div>
-
-      <div className="flex justify-center mt-8">
         <Button
           variant="destructive"
           onClick={resetYearlyData}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md"
+          className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
         >
           איפוס נתונים שנתיים
         </Button>
-      </div>
+      </motion.div>
     </div>
   );
 }; 
