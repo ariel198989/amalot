@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+interface CommissionAgreement {
+  category: string;
+  commission_rate: number;
+  monthly_rate?: number;
+}
+
 interface SalesTargetsContextType {
   closingRate: number;
   monthlyMeetings: number;
@@ -9,11 +15,14 @@ interface SalesTargetsContextType {
   updateClosingRate: (value: number) => void;
   updateMonthlyMeetings: (value: number) => void;
   saveChanges: () => Promise<void>;
+  deleteData: () => Promise<void>;
   performances: Record<string, number[]>;
   updatePerformances: (newPerformances: Record<string, number[]>) => void;
   updatePerformance: (category: string, month: number, value: number) => void;
   workingDays: number[];
   updateWorkingDays: (monthIndex: number, days: number) => void;
+  commissionAgreements: CommissionAgreement[];
+  updateCommissionAgreement: (category: string, commissionRate: number, monthlyRate?: number) => Promise<void>;
 }
 
 export const SalesTargetsContext = createContext<SalesTargetsContextType>({
@@ -24,11 +33,14 @@ export const SalesTargetsContext = createContext<SalesTargetsContextType>({
   updateClosingRate: () => {},
   updateMonthlyMeetings: () => {},
   saveChanges: async () => {},
+  deleteData: async () => {},
   performances: {},
   updatePerformances: () => {},
   updatePerformance: () => {},
   workingDays: Array(12).fill(22),
   updateWorkingDays: () => {},
+  commissionAgreements: [],
+  updateCommissionAgreement: async () => {},
 });
 
 export const useSalesTargets = () => {
@@ -45,6 +57,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isDirty, setIsDirty] = useState(false);
   const [performances, setPerformances] = useState<Record<string, number[]>>({});
   const [workingDays, setWorkingDays] = useState<number[]>(Array(12).fill(22));
+  const [commissionAgreements, setCommissionAgreements] = useState<CommissionAgreement[]>([]);
 
   const updateClosingRate = (value: number) => {
     console.log('Updating closing rate to:', value);
@@ -75,6 +88,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
+<<<<<<< HEAD
       // First check if a record exists
       const { data: existingData, error: fetchError } = await supabase
         .from('sales_settings')
@@ -133,6 +147,19 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           });
         error = insertError;
       }
+=======
+      // Use upsert to handle both insert and update cases
+      const { error } = await supabase
+        .from('sales_settings')
+        .upsert({
+          user_id: user.id,
+          year: new Date().getFullYear(),
+          closing_rate: closingRate,
+          monthly_meetings: monthlyMeetings,
+          working_days: workingDays,
+          updated_at: new Date().toISOString()
+        });
+>>>>>>> b93a6b1 (feat: Add personal commission agreements support)
 
       if (error) {
         console.error('Database operation error:', error);
@@ -150,6 +177,55 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error saving changes:', error);
       alert('אירעה שגיאה בשמירת הנתונים. אנא נסה שוב.');
+    }
+  };
+
+  const deleteData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('לא נמצא משתמש מחובר');
+        return;
+      }
+
+      // Delete from sales_settings
+      const { error: settingsError } = await supabase
+        .from('sales_settings')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (settingsError) throw settingsError;
+
+      // Delete from sales_targets
+      const { error: targetsError } = await supabase
+        .from('sales_targets')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (targetsError) throw targetsError;
+
+      // Delete from commission_agreements
+      const { error: agreementsError } = await supabase
+        .from('commission_agreements')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (agreementsError) throw agreementsError;
+
+      // Reset local state
+      setClosingRate(0);
+      setMonthlyMeetings(0);
+      setWorkingDays(Array(12).fill(22));
+      setPerformances({});
+      setIsDirty(false);
+
+      // Reset commission agreements state
+      setCommissionAgreements([]);
+
+      alert('הנתונים נמחקו בהצלחה');
+    } catch (error) {
+      console.error('Error deleting data:', error);
+      alert('אירעה שגיאה במחיקת הנתונים. אנא נסה שוב.');
     }
   };
 
@@ -189,6 +265,42 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const updateCommissionAgreement = async (category: string, commissionRate: number, monthlyRate?: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const agreement = {
+        user_id: user.id,
+        category,
+        commission_rate: commissionRate,
+        monthly_rate: monthlyRate || null,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('commission_agreements')
+        .upsert(agreement);
+
+      if (error) throw error;
+
+      // Update local state
+      setCommissionAgreements(prev => {
+        const newAgreements = [...prev];
+        const index = newAgreements.findIndex(a => a.category === category);
+        if (index >= 0) {
+          newAgreements[index] = { category, commission_rate: commissionRate, monthly_rate: monthlyRate };
+        } else {
+          newAgreements.push({ category, commission_rate: commissionRate, monthly_rate: monthlyRate });
+        }
+        return newAgreements;
+      });
+    } catch (error) {
+      console.error('Error updating commission agreement:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -207,7 +319,11 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false })
           .limit(1)
+<<<<<<< HEAD
           .single();
+=======
+          .maybeSingle();
+>>>>>>> b93a6b1 (feat: Add personal commission agreements support)
 
         if (settingsError) {
           console.error('Settings fetch error:', settingsError);
@@ -230,7 +346,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Fetch performances from sales_targets table
         const { data: performancesData, error: performancesError } = await supabase
           .from('sales_targets')
-          .select('category, performance')
+          .select('category, performance, month')
           .eq('user_id', user.id)
           .eq('year', new Date().getFullYear());
 
@@ -242,6 +358,7 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } else {
           console.log('Fetched performances:', performancesData);
 
+<<<<<<< HEAD
           // Organize performances by category
           if (performancesData) {
             const organizedPerformances: Record<string, number[]> = {};
@@ -255,6 +372,43 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             });
             setPerformances(organizedPerformances);
           }
+=======
+        console.log('Fetched performances:', performancesData);
+
+        // Organize performances by category
+        if (performancesData) {
+          const organizedPerformances: Record<string, number[]> = {};
+          performancesData.forEach(record => {
+            if (!organizedPerformances[record.category]) {
+              organizedPerformances[record.category] = Array(12).fill(0);
+            }
+            if (record.performance !== null && record.month) {
+              // אם יש כבר ערך, נוסיף אליו את הביצוע החדש
+              const currentValue = organizedPerformances[record.category][record.month - 1];
+              organizedPerformances[record.category][record.month - 1] = currentValue + record.performance;
+            }
+          });
+          setPerformances(organizedPerformances);
+>>>>>>> b93a6b1 (feat: Add personal commission agreements support)
+        }
+
+        // Fetch commission agreements
+        const { data: agreementsData, error: agreementsError } = await supabase
+          .from('commission_agreements')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (agreementsError) {
+          console.error('Commission agreements fetch error:', agreementsError);
+          throw agreementsError;
+        }
+
+        if (agreementsData) {
+          setCommissionAgreements(agreementsData.map(agreement => ({
+            category: agreement.category,
+            commission_rate: agreement.commission_rate,
+            monthly_rate: agreement.monthly_rate
+          })));
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -266,7 +420,45 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     };
 
+    // Run fetchData immediately
     fetchData();
+
+    // Set up real-time subscription for sales_targets changes
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const subscription = supabase
+        .channel('sales_targets_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sales_targets',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Real-time update received for current user:', payload);
+            fetchData(); // Reload data when changes occur for this user
+          }
+        )
+        .subscribe();
+
+      return subscription;
+    };
+
+    let subscription: any;
+    setupSubscription().then(sub => {
+      subscription = sub;
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   return (
@@ -279,11 +471,14 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         updateClosingRate,
         updateMonthlyMeetings,
         saveChanges,
+        deleteData,
         performances,
         updatePerformances,
         updatePerformance,
         workingDays,
-        updateWorkingDays
+        updateWorkingDays,
+        commissionAgreements,
+        updateCommissionAgreement
       }}
     >
       {children}

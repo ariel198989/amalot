@@ -338,6 +338,79 @@ export default function ClientsTable() {
     }
   };
 
+  const handleStartJourney = (client: Client) => {
+    console.log('Starting journey with client:', client);
+    
+    // Initialize journey data with client info
+    const journeyData = {
+      productType: '',
+      amount: 0,
+      clientName: `${client.first_name} ${client.last_name}`,
+      clientPhone: client.phone || '',
+      clientEmail: client.email || '',
+      notes: '',
+      id_number: client.id_number || '',
+      address_street: client.address_street || '',
+      address_city: client.address_city || '',
+      zipCode: '',
+      birthDate: '',
+      employment_type: client.employment_type || '',
+      employer_name: client.employer_name || '',
+      employer_position: client.employer_position || '',
+      employer_address: client.employer_address || '',
+      employer_id: '',
+      productName: '',
+      productProvider: ''
+    };
+
+    // Get clearing house data if available
+    if (client.raw_data) {
+      console.log('Found clearing house data:', client.raw_data);
+      const clearingHouseData = client.raw_data;
+
+      // Update with client info from clearing house
+      if (clearingHouseData.lakoach) {
+        journeyData.birthDate = clearingHouseData.lakoach.TAARICH_LEIDA || '';
+        journeyData.address_street = clearingHouseData.lakoach.KTOVET || journeyData.address_street;
+        journeyData.address_city = clearingHouseData.lakoach.YISHUV || journeyData.address_city;
+        journeyData.zipCode = clearingHouseData.lakoach.MIKUD || '';
+      }
+      console.log('Updated data with clearing house info:', journeyData);
+
+      // Update with employer info
+      if (clearingHouseData.maasik) {
+        journeyData.employer_name = clearingHouseData.maasik.SHEM_MAASIK || journeyData.employer_name;
+        journeyData.employer_address = clearingHouseData.maasik.KTOVET || journeyData.employer_address;
+        journeyData.employer_id = clearingHouseData.maasik.MISPAR_ZIHUY || '';
+      }
+      console.log('Updated data with employer info:', journeyData);
+
+      // Get first product info if available
+      if (clearingHouseData.mutzarim && clearingHouseData.mutzarim.length > 0) {
+        const firstProduct = clearingHouseData.mutzarim[0];
+        console.log('Found first product:', firstProduct);
+        
+        journeyData.productType = firstProduct['SUG-MUTZAR'] || '';
+        journeyData.productName = firstProduct['SHEM-MUTZAR'] || '';
+        journeyData.productProvider = firstProduct['SHEM-YATZRAN'] || '';
+      }
+      console.log('Updated data with product info:', journeyData);
+    }
+
+    console.log('Final data being saved:', journeyData);
+    
+    // Save to sessionStorage and navigate
+    try {
+      sessionStorage.setItem('journeyClientData', JSON.stringify(journeyData));
+      console.log('Data saved to sessionStorage successfully');
+      setIsViewDetailsDialogOpen(false);
+      window.location.href = '/customer-journey';
+    } catch (error) {
+      console.error('Error saving journey data:', error);
+      toast.error('שגיאה בשמירת נתוני הלקוח');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6" dir="rtl">
       <div className="flex gap-6">
@@ -758,6 +831,14 @@ export default function ClientsTable() {
             <DialogTitle className="text-right">
               נתוני מסלקה - {selectedClient?.first_name} {selectedClient?.last_name}
             </DialogTitle>
+            <Button
+              onClick={() => selectedClient && handleStartJourney(selectedClient)}
+              variant="default"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-6 py-3 text-lg w-full justify-center mt-4"
+            >
+              <Calendar className="h-6 w-6" />
+              התחל מסע לקוח
+            </Button>
           </DialogHeader>
 
           <div className="mt-4">
@@ -833,7 +914,7 @@ export default function ClientsTable() {
                                 '2': 'פנסיה מקיפה',
                                 '3': 'קופת גמל',
                                 '4': 'קרן השתלמות',
-                                '5': 'קופת ��מל להשקעה',
+                                '5': 'קופת גמל להשקעה',
                                 '6': 'ביטוח חיים',
                                 '7': 'קרן פנסיה כללית',
                                 '8': 'קופת גמל מרכזית',
