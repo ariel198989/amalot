@@ -76,26 +76,49 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       // First check if a record exists
-      const { data: existingData } = await supabase
+      const { data: existingData, error: fetchError } = await supabase
         .from('sales_settings')
-        .select('id')
+        .select('id, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      if (fetchError) {
+        console.error('Error fetching existing record:', fetchError);
+        throw fetchError;
+      }
+
       let error;
+      const currentTime = new Date().toISOString();
+
       if (existingData) {
         console.log('Updating existing record:', existingData.id);
-        // Update existing record
+        // Update existing record with optimistic locking
         const { error: updateError } = await supabase
           .from('sales_settings')
           .update({
             closing_rate: closingRate,
             monthly_meetings: monthlyMeetings,
             working_days: workingDays,
-            updated_at: new Date().toISOString()
+            updated_at: currentTime
           })
-          .eq('id', existingData.id);
+          .eq('id', existingData.id)
+          .eq('updated_at', existingData.updated_at); // Add optimistic locking
         error = updateError;
+
+        if (error?.code === '409') {
+          // Handle conflict by retrying the operation
+          const { error: retryError } = await supabase
+            .from('sales_settings')
+            .upsert({
+              id: existingData.id,
+              user_id: user.id,
+              closing_rate: closingRate,
+              monthly_meetings: monthlyMeetings,
+              working_days: workingDays,
+              updated_at: currentTime
+            });
+          error = retryError;
+        }
       } else {
         console.log('Creating new record');
         // Insert new record
@@ -105,13 +128,20 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             user_id: user.id,
             closing_rate: closingRate,
             monthly_meetings: monthlyMeetings,
-            working_days: workingDays
+            working_days: workingDays,
+            updated_at: currentTime
           });
         error = insertError;
       }
 
       if (error) {
         console.error('Database operation error:', error);
+        if (error.code === '409') {
+          alert('נתונים עודכנו במקביל. מנסה לשמור שוב...');
+          // Wait a bit and try one more time
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return saveChanges();
+        }
         throw error;
       }
       
@@ -175,20 +205,26 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .from('sales_settings')
           .select('*')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
 
         if (settingsError) {
           console.error('Settings fetch error:', settingsError);
-          throw settingsError;
-        }
+          // Don't throw the error, just log it and continue with defaults
+          console.log('Using default settings due to fetch error');
+          setClosingRate(0);
+          setMonthlyMeetings(0);
+          setWorkingDays(Array(12).fill(22));
+        } else {
+          console.log('Fetched settings:', settingsData);
 
-        console.log('Fetched settings:', settingsData);
-
-        // Update settings
-        if (settingsData) {
-          setClosingRate(settingsData.closing_rate || 0);
-          setMonthlyMeetings(settingsData.monthly_meetings || 0);
-          setWorkingDays(settingsData.working_days || Array(12).fill(22));
+          // Update settings
+          if (settingsData) {
+            setClosingRate(settingsData.closing_rate || 0);
+            setMonthlyMeetings(settingsData.monthly_meetings || 0);
+            setWorkingDays(settingsData.working_days || Array(12).fill(22));
+          }
         }
 
         // Fetch performances from sales_targets table
@@ -200,26 +236,33 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
         if (performancesError) {
           console.error('Performances fetch error:', performancesError);
-          throw performancesError;
-        }
+          // Don't throw the error, just log it and continue with empty performances
+          console.log('Using empty performances due to fetch error');
+          setPerformances({});
+        } else {
+          console.log('Fetched performances:', performancesData);
 
-        console.log('Fetched performances:', performancesData);
-
-        // Organize performances by category
-        if (performancesData) {
-          const organizedPerformances: Record<string, number[]> = {};
-          performancesData.forEach(record => {
-            if (!organizedPerformances[record.category]) {
-              organizedPerformances[record.category] = Array(12).fill(0);
-            }
-            if (record.performance) {
-              organizedPerformances[record.category] = record.performance;
-            }
-          });
-          setPerformances(organizedPerformances);
+          // Organize performances by category
+          if (performancesData) {
+            const organizedPerformances: Record<string, number[]> = {};
+            performancesData.forEach(record => {
+              if (!organizedPerformances[record.category]) {
+                organizedPerformances[record.category] = Array(12).fill(0);
+              }
+              if (record.performance) {
+                organizedPerformances[record.category] = record.performance;
+              }
+            });
+            setPerformances(organizedPerformances);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Use default values in case of error
+        setClosingRate(0);
+        setMonthlyMeetings(0);
+        setWorkingDays(Array(12).fill(22));
+        setPerformances({});
       }
     };
 
