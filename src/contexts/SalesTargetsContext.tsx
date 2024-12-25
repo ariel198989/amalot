@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface CommissionAgreement {
   category: string;
@@ -88,66 +89,6 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
-<<<<<<< HEAD
-      // First check if a record exists
-      const { data: existingData, error: fetchError } = await supabase
-        .from('sales_settings')
-        .select('id, updated_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching existing record:', fetchError);
-        throw fetchError;
-      }
-
-      let error;
-      const currentTime = new Date().toISOString();
-
-      if (existingData) {
-        console.log('Updating existing record:', existingData.id);
-        // Update existing record with optimistic locking
-        const { error: updateError } = await supabase
-          .from('sales_settings')
-          .update({
-            closing_rate: closingRate,
-            monthly_meetings: monthlyMeetings,
-            working_days: workingDays,
-            updated_at: currentTime
-          })
-          .eq('id', existingData.id)
-          .eq('updated_at', existingData.updated_at); // Add optimistic locking
-        error = updateError;
-
-        if (error?.code === '409') {
-          // Handle conflict by retrying the operation
-          const { error: retryError } = await supabase
-            .from('sales_settings')
-            .upsert({
-              id: existingData.id,
-              user_id: user.id,
-              closing_rate: closingRate,
-              monthly_meetings: monthlyMeetings,
-              working_days: workingDays,
-              updated_at: currentTime
-            });
-          error = retryError;
-        }
-      } else {
-        console.log('Creating new record');
-        // Insert new record
-        const { error: insertError } = await supabase
-          .from('sales_settings')
-          .insert({
-            user_id: user.id,
-            closing_rate: closingRate,
-            monthly_meetings: monthlyMeetings,
-            working_days: workingDays,
-            updated_at: currentTime
-          });
-        error = insertError;
-      }
-=======
       // Use upsert to handle both insert and update cases
       const { error } = await supabase
         .from('sales_settings')
@@ -159,7 +100,6 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           working_days: workingDays,
           updated_at: new Date().toISOString()
         });
->>>>>>> b93a6b1 (feat: Add personal commission agreements support)
 
       if (error) {
         console.error('Database operation error:', error);
@@ -270,17 +210,15 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const agreement = {
-        user_id: user.id,
-        category,
-        commission_rate: commissionRate,
-        monthly_rate: monthlyRate || null,
-        updated_at: new Date().toISOString()
-      };
-
       const { error } = await supabase
         .from('commission_agreements')
-        .upsert(agreement);
+        .upsert({
+          user_id: user.id,
+          category,
+          commission_rate: commissionRate,
+          monthly_rate: monthlyRate,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) throw error;
 
@@ -288,91 +226,59 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setCommissionAgreements(prev => {
         const newAgreements = [...prev];
         const index = newAgreements.findIndex(a => a.category === category);
-        if (index >= 0) {
-          newAgreements[index] = { category, commission_rate: commissionRate, monthly_rate: monthlyRate };
+        const newAgreement = { category, commission_rate: commissionRate, monthly_rate: monthlyRate };
+        
+        if (index !== -1) {
+          newAgreements[index] = newAgreement;
         } else {
-          newAgreements.push({ category, commission_rate: commissionRate, monthly_rate: monthlyRate });
+          newAgreements.push(newAgreement);
         }
+        
         return newAgreements;
       });
+
+      toast.success('הסכם העמלות עודכן בהצלחה');
     } catch (error) {
       console.error('Error updating commission agreement:', error);
-      throw error;
+      toast.error('שגיאה בעדכון הסכם העמלות');
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('Fetching data...');
-        
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.error('No user found');
-          return;
-        }
+        if (!user) return;
 
-        // Fetch settings from sales_settings table
+        // Fetch settings
         const { data: settingsData, error: settingsError } = await supabase
           .from('sales_settings')
           .select('*')
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false })
           .limit(1)
-<<<<<<< HEAD
-          .single();
-=======
           .maybeSingle();
->>>>>>> b93a6b1 (feat: Add personal commission agreements support)
 
         if (settingsError) {
-          console.error('Settings fetch error:', settingsError);
-          // Don't throw the error, just log it and continue with defaults
-          console.log('Using default settings due to fetch error');
-          setClosingRate(0);
-          setMonthlyMeetings(0);
-          setWorkingDays(Array(12).fill(22));
-        } else {
-          console.log('Fetched settings:', settingsData);
-
-          // Update settings
-          if (settingsData) {
-            setClosingRate(settingsData.closing_rate || 0);
-            setMonthlyMeetings(settingsData.monthly_meetings || 0);
-            setWorkingDays(settingsData.working_days || Array(12).fill(22));
-          }
+          throw settingsError;
         }
 
-        // Fetch performances from sales_targets table
+        if (settingsData) {
+          setClosingRate(settingsData.closing_rate || 0);
+          setMonthlyMeetings(settingsData.monthly_meetings || 0);
+          setWorkingDays(settingsData.working_days || Array(12).fill(22));
+        }
+
+        // Fetch performances
         const { data: performancesData, error: performancesError } = await supabase
-          .from('sales_targets')
-          .select('category, performance, month')
-          .eq('user_id', user.id)
-          .eq('year', new Date().getFullYear());
+          .from('sales_performances')
+          .select('*')
+          .eq('user_id', user.id);
 
         if (performancesError) {
-          console.error('Performances fetch error:', performancesError);
-          // Don't throw the error, just log it and continue with empty performances
-          console.log('Using empty performances due to fetch error');
-          setPerformances({});
-        } else {
-          console.log('Fetched performances:', performancesData);
+          throw performancesError;
+        }
 
-<<<<<<< HEAD
-          // Organize performances by category
-          if (performancesData) {
-            const organizedPerformances: Record<string, number[]> = {};
-            performancesData.forEach(record => {
-              if (!organizedPerformances[record.category]) {
-                organizedPerformances[record.category] = Array(12).fill(0);
-              }
-              if (record.performance) {
-                organizedPerformances[record.category] = record.performance;
-              }
-            });
-            setPerformances(organizedPerformances);
-          }
-=======
         console.log('Fetched performances:', performancesData);
 
         // Organize performances by category
@@ -389,7 +295,6 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }
           });
           setPerformances(organizedPerformances);
->>>>>>> b93a6b1 (feat: Add personal commission agreements support)
         }
 
         // Fetch commission agreements
@@ -399,66 +304,19 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .eq('user_id', user.id);
 
         if (agreementsError) {
-          console.error('Commission agreements fetch error:', agreementsError);
           throw agreementsError;
         }
 
         if (agreementsData) {
-          setCommissionAgreements(agreementsData.map(agreement => ({
-            category: agreement.category,
-            commission_rate: agreement.commission_rate,
-            monthly_rate: agreement.monthly_rate
-          })));
+          setCommissionAgreements(agreementsData);
         }
+
       } catch (error) {
         console.error('Error fetching data:', error);
-        // Use default values in case of error
-        setClosingRate(0);
-        setMonthlyMeetings(0);
-        setWorkingDays(Array(12).fill(22));
-        setPerformances({});
       }
     };
 
-    // Run fetchData immediately
     fetchData();
-
-    // Set up real-time subscription for sales_targets changes
-    const setupSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const subscription = supabase
-        .channel('sales_targets_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'sales_targets',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('Real-time update received for current user:', payload);
-            fetchData(); // Reload data when changes occur for this user
-          }
-        )
-        .subscribe();
-
-      return subscription;
-    };
-
-    let subscription: any;
-    setupSubscription().then(sub => {
-      subscription = sub;
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
   }, []);
 
   return (
