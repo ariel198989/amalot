@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  PiggyBank, 
+  Wallet, 
   Shield, 
   Coins
 } from 'lucide-react';
@@ -12,7 +12,7 @@ const productTypes = [
   {
     id: 'pension',
     label: 'פנסיה',
-    icon: PiggyBank,
+    icon: Wallet,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
     description: 'בדיקת כדאיות מכירת מוצרי פנסיה',
@@ -67,14 +67,14 @@ const CalculatorPage: React.FC = () => {
       </div>
 
       <Tabs defaultValue="pension" className="w-full">
-        <TabsList className="inline-flex h-auto w-full justify-start gap-4 rounded-none border-b bg-transparent p-0">
+        <TabsList className="inline-flex h-auto w-full justify-end gap-4 rounded-none border-b bg-transparent p-0">
           {productTypes.map((product) => (
             <TabsTrigger
               key={product.id}
               value={product.id}
               className="inline-flex items-center justify-center rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-secondary-500 shadow-none transition-all duration-200 hover:text-secondary-900 data-[state=active]:border-primary data-[state=active]:text-primary-600 data-[state=active]:shadow-none"
             >
-              <product.icon className={cn("w-4 h-4 mr-2", product.color)} />
+              <product.icon className={cn("w-4 h-4 ml-2", product.color)} />
               {product.label}
             </TabsTrigger>
           ))}
