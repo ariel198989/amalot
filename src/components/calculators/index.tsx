@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
+import { calculateCommissions, getAgentAgreement } from '@/services/AgentAgreementService';
 import { productTypes, ProductType, Product } from '@/config/products';
 
 interface CommissionResult {
@@ -18,10 +18,10 @@ interface CommissionResults {
 }
 
 const CalculatorPage: React.FC = () => {
-  const [companyRates, setCompanyRates] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
   const [results, setResults] = useState<CommissionResults>({});
+  const [companyRates, setCompanyRates] = useState<Record<string, any>>({});
   const [formData, setFormData] = useState({
     pension: {
       salary: '',
@@ -39,34 +39,23 @@ const CalculatorPage: React.FC = () => {
 
   const loadCompanyRates = async () => {
     try {
-      const rates: Record<string, any> = {};
-      const pensionCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה', 'מיטב', 'אלטשולר שחם', 'מור'];
-      const insuranceCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה'];
-      const financialCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'מיטב', 'אלטשולר שחם', 'מור'];
-      const categories = ['pension', 'insurance', 'savings_and_study'];
-      
-      for (const category of categories) {
-        rates[category] = {};
-        const companies = category === 'pension' ? pensionCompanies : 
-                         category === 'insurance' ? insuranceCompanies :
-                         category === 'savings_and_study' ? financialCompanies :
-                         pensionCompanies;
-        
-        for (const company of companies) {
-          const companyRate = await getCompanyRates(category, company);
-          if (companyRate) {
-            rates[category][company] = companyRate;
-          }
-        }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
       }
-      
-      console.log('Loaded company rates:', rates);
-      setCompanyRates(rates);
+
+      const agentRates = await getAgentAgreement(user.id);
+      if (!agentRates) {
+        console.error('No agent rates found');
+        return;
+      }
+
+      setCompanyRates(agentRates);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading company rates:', error);
       toast.error('שגיאה בטעינת נתוני החברות');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -98,20 +87,19 @@ const CalculatorPage: React.FC = () => {
         return;
       }
 
-      // Check if we have rates for this company and type
-      const category = product.id === 'investment' ? 'savings_and_study' : product.id;
       const calculatedResults: CommissionResults = {};
 
+      // Check if we have rates for this company and type
+      const category = product.id === 'investment' ? 'savings_and_study' : product.id;
+      
       for (const company of product.companies) {
-        const companyRate = companyRates[category]?.[company];
-        if (!companyRate) {
-          console.log('No rates found for:', { category, company });
+        const companyRate = companyRates[`${category}_companies`]?.[company];
+        if (!companyRate?.active) {
+          console.log('No active rates found for:', { category, company });
           continue;
         }
 
-        let amount = 0;
-        let totalAccumulated = 0;
-        let insuranceType = '';
+        let result;
 
         switch (product.id) {
           case 'pension':
@@ -119,8 +107,21 @@ const CalculatorPage: React.FC = () => {
               toast.error('נא למלא את כל השדות');
               return;
             }
-            amount = Number(formData.pension.salary);
-            totalAccumulated = Number(formData.pension.accumulation);
+            result = await calculateCommissions(
+              user.id,
+              'pension',
+              company,
+              Number(formData.pension.salary),
+              undefined,
+              Number(formData.pension.accumulation)
+            );
+            if (result) {
+              calculatedResults[company] = {
+                scope_commission: result.scope_commission,
+                monthly_commission: result.monthly_commission,
+                total_commission: result.total_commission
+              };
+            }
             break;
 
           case 'insurance':
@@ -128,8 +129,20 @@ const CalculatorPage: React.FC = () => {
               toast.error('נא למלא את כל השדות');
               return;
             }
-            amount = Number(formData.insurance.premium);
-            insuranceType = formData.insurance.product;
+            result = await calculateCommissions(
+              user.id,
+              'insurance',
+              company,
+              Number(formData.insurance.premium),
+              formData.insurance.product
+            );
+            if (result) {
+              calculatedResults[company] = {
+                scope_commission: result.scope_commission,
+                monthly_commission: result.monthly_commission,
+                total_commission: result.total_commission
+              };
+            }
             break;
 
           case 'investment':
@@ -137,22 +150,21 @@ const CalculatorPage: React.FC = () => {
               toast.error('נא למלא את כל השדות');
               return;
             }
-            amount = Number(formData.investment.amount);
-            insuranceType = formData.investment.product;
+            result = await calculateCommissions(
+              user.id,
+              'savings_and_study',
+              company,
+              Number(formData.investment.amount),
+              formData.investment.product
+            );
+            if (result) {
+              calculatedResults[company] = {
+                scope_commission: result.scope_commission,
+                monthly_commission: result.monthly_commission,
+                total_commission: result.total_commission
+              };
+            }
             break;
-        }
-
-        const rates = await calculateCommissions(
-          user.id,
-          category,
-          company,
-          amount,
-          insuranceType,
-          totalAccumulated
-        );
-
-        if (rates) {
-          calculatedResults[company] = rates;
         }
       }
 
@@ -296,6 +308,7 @@ const CalculatorPage: React.FC = () => {
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">סה"כ חד פעמי</th>
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">עמלת היקף על הצבירה</th>
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">עמלת היקף על הפקדה</th>
+                                <th className="h-12 px-4 text-right font-medium text-secondary-700">חברה</th>
                               </>
                             ) : (
                               <>
@@ -303,9 +316,9 @@ const CalculatorPage: React.FC = () => {
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">עמלת נפרעים שנתית</th>
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">עמלת נפרעים חודשית</th>
                                 <th className="h-12 px-4 text-right font-medium text-secondary-700">עמלת היקף</th>
+                                <th className="h-12 px-4 text-right font-medium text-secondary-700">חברה</th>
                               </>
                             )}
-                            <th className="h-12 px-4 text-right font-medium text-secondary-700">חברה</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -318,6 +331,7 @@ const CalculatorPage: React.FC = () => {
                                     <td className="p-4 font-medium text-primary-600 text-right">₪{result.total_commission.toLocaleString()}</td>
                                     <td className="p-4 text-secondary-700 text-right">₪{(result.monthly_commission || 0).toLocaleString()}</td>
                                     <td className="p-4 text-secondary-700 text-right">₪{result.scope_commission.toLocaleString()}</td>
+                                    <td className="p-4 font-medium text-secondary-900 text-right">{company}</td>
                                   </>
                                 ) : (
                                   <>
@@ -325,9 +339,9 @@ const CalculatorPage: React.FC = () => {
                                     <td className="p-4 text-secondary-700 text-right">₪{(result.monthly_commission * 12 || 0).toLocaleString()}</td>
                                     <td className="p-4 text-secondary-700 text-right">₪{(result.monthly_commission || 0).toLocaleString()}</td>
                                     <td className="p-4 text-secondary-700 text-right">₪{result.scope_commission.toLocaleString()}</td>
+                                    <td className="p-4 font-medium text-secondary-900 text-right">{company}</td>
                                   </>
                                 )}
-                                <td className="p-4 font-medium text-secondary-900 text-right">{company}</td>
                               </tr>
                             );
                           })}
