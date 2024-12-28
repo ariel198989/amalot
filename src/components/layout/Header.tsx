@@ -39,7 +39,7 @@ const Header: React.FC = () => {
     { path: '/', label: 'דשבורד', icon: <Building2 className="w-5 h-5" /> },
     { path: '/journey', label: 'מסע לקוח', icon: <RouteIcon className="w-5 h-5" /> },
     { path: '/clients', label: 'לקוחות', icon: <Users className="w-5 h-5" /> },
-    { path: '/calculators', label: 'מחשבונים', icon: <Calculator className="w-5 h-5" /> },
+    { path: '/calculators', label: 'בדיקת כדאיות', icon: <Calculator className="w-5 h-5" /> },
     { path: '/reports', label: 'דוחות', icon: <FileText className="w-5 h-5" /> },
     { path: '/agreements', label: 'הסכמי סוכן', icon: <Handshake className="w-5 h-5" /> },
     { path: '/work-plan', label: 'תוכנית עבודה', icon: <Calendar className="w-5 h-5" /> },
