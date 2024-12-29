@@ -322,7 +322,10 @@ const CalculatorPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {product.companies.map((company: string, index: number) => {
+                          {product.companies
+                            .filter(company => results[company]?.total_commission > 0)
+                            .sort((a, b) => (results[b]?.total_commission || 0) - (results[a]?.total_commission || 0))
+                            .map((company: string, index: number) => {
                             const result = results[company] || { scope_commission: 0, monthly_commission: 0, total_commission: 0 };
                             return (
                               <tr key={company} className={cn("border-b transition-colors hover:bg-muted/50", index % 2 === 0 ? "bg-muted/20" : "bg-background")}>
