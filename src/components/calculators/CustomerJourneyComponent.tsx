@@ -13,7 +13,10 @@ import {
   Download,
   Save,
   Brain,
-  Menu
+  Menu,
+  User,
+  CreditCard,
+  Calendar
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -193,6 +196,8 @@ interface FormValues {
 
 interface ClientInfo {
   fullName: string;
+  idNumber: string;
+  meetingDate: string;
 }
 
 const ProductIcon = ({ type, className }: { type: string; className?: string }) => {
@@ -932,7 +937,14 @@ export const CustomerJourneyComponent = () => {
     return commissionType === 'scope' ? 'עמלת היקף' : 'עמלת נפרעים';
   };
 
-  const handleClientInfoSubmit = (clientInfo: ClientInfo) => {
+  const handleClientInfoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const clientInfo: ClientInfo = {
+      fullName: formData.get('fullName')?.toString() || '',
+      idNumber: formData.get('idNumber')?.toString() || '',
+      meetingDate: formData.get('meetingDate')?.toString() || ''
+    };
     setClientInfo(clientInfo);
     setClientName(clientInfo.fullName);
     setStep('journey');
@@ -940,14 +952,89 @@ export const CustomerJourneyComponent = () => {
 
   return (
     <motion.div 
-      className="container space-y-6"
+      className="container max-w-4xl mx-auto py-12"
       initial="initial"
       animate="animate"
       exit="exit"
     >
-      {step === 'info' && (
-        <ClientInfoForm onNext={handleClientInfoSubmit} />
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <form onSubmit={handleClientInfoSubmit}>
+          <Card className="border-0 bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-8 pt-8 px-8 text-center bg-gradient-to-r from-blue-600 to-purple-600">
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <Brain className="h-8 w-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-white">מסע לקוח חכם</CardTitle>
+                <p className="text-white/80 text-sm">הזן את פרטי הלקוח להתחלת המסע</p>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-8">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <User className="h-4 w-4 text-blue-500" />
+                    שם מלא
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    className="block w-full rounded-xl border-gray-200 bg-white/50 shadow-sm 
+                             focus:border-blue-500 focus:ring-blue-500 transition-all duration-200
+                             hover:bg-white/80 text-right px-4 py-3"
+                    required
+                    placeholder="הכנס שם מלא"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-blue-500" />
+                    תעודת זהות
+                  </label>
+                  <input
+                    type="text"
+                    name="idNumber"
+                    className="block w-full rounded-xl border-gray-200 bg-white/50 shadow-sm 
+                             focus:border-blue-500 focus:ring-blue-500 transition-all duration-200
+                             hover:bg-white/80 text-right px-4 py-3"
+                    required
+                    placeholder="הכנס מספר תעודת זהות"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-500" />
+                    תאריך פגישה
+                  </label>
+                  <input
+                    type="date"
+                    name="meetingDate"
+                    className="block w-full rounded-xl border-gray-200 bg-white/50 shadow-sm 
+                             focus:border-blue-500 focus:ring-blue-500 transition-all duration-200
+                             hover:bg-white/80 text-right px-4 py-3"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="pt-4">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white
+                           rounded-xl py-3 font-medium text-lg shadow-lg
+                           hover:shadow-xl transition-all duration-200
+                           hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  המשך למסע
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </motion.div>
 
       {step === 'journey' && (
         <motion.div variants={staggerContainer}>

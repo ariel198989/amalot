@@ -287,4 +287,70 @@ export async function calculateCommissions(
   return getEmptyCalculation(amount);
 }
 
+export const updatePerformance = async (category: string, month: number, performance_value: number) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+
+    // קביעת סוג המטריקה בהתאם לקטגוריה
+    let metric_type = 'monthly_premium';
+    if (category === 'finance') {
+      metric_type = 'total_amount';
+    } else if (category === 'pension') {
+      metric_type = 'monthly_deposit';
+    }
+
+    // בדיקה אם כבר קיים רשומה
+    const { data: existingTarget } = await supabase
+      .from('sales_targets')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('category', category)
+      .eq('month', month)
+      .eq('year', year)
+      .eq('metric_type', metric_type)
+      .single();
+
+    if (existingTarget) {
+      // עדכון רשומה קיימת
+      const { error } = await supabase
+        .from('sales_targets')
+        .update({ 
+          performance: performance_value,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingTarget.id);
+
+      if (error) throw error;
+    } else {
+      // יצירת רשומה חדשה
+      const { error } = await supabase
+        .from('sales_targets')
+        .insert([
+          {
+            user_id: user.id,
+            category,
+            month,
+            year,
+            performance: performance_value,
+            target_amount: 0,
+            metric_type,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ]);
+
+      if (error) throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating performance:', error);
+    throw error;
+  }
+};
+
 // ... rest of the code ...
