@@ -25,14 +25,8 @@ import { cn } from '@/lib/utils';
 import { reportService } from '@/services/reportService';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { 
-  CommissionDetails,
   CustomerJourneyClient,
-  PensionCommission,
-  InsuranceCommission,
-  InvestmentCommission,
-  PolicyCommission,
   JourneyProduct,
-  JourneyProductType,
   CustomerJourney
 } from './CustomerJourneyTypes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -78,7 +72,6 @@ interface Field {
 }
 
 interface CalculatorFormProps {
-  onSubmit: (data: any) => void;
   fields: Field[];
   type: ProductType;
   className?: string;
@@ -86,16 +79,75 @@ interface CalculatorFormProps {
   setClients: React.Dispatch<React.SetStateAction<CustomerJourneyClient[]>>;
 }
 
-const CalculatorForm: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients, onSubmit }) => {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const data = Object.fromEntries(formData.entries());
-    onSubmit(data);
-  };
-
+const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients }) => {
   return (
-    <form onSubmit={handleSubmit} className={cn("space-y-6", className)}>
+    <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const details: { [key: string]: any } = {};
+      
+      fields.forEach(field => {
+        const value = formData.get(field.name);
+        if (value) {
+          if (field.type === 'number') {
+            details[field.name] = parseFloat(value.toString()) || 0;
+          } else {
+            details[field.name] = value.toString();
+          }
+        }
+      });
+
+      try {
+        // חישוב העמלות
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('משתמש לא מחובר');
+          return;
+        }
+
+        // קביעת הסכום לחישוב העמלות בהתאם לסוג המוצר
+        let amount = 0;
+        if (type === 'insurance') {
+          amount = details.insurancePremium * 12; // הכפלה ב-12 לקבלת פרמיה שנתית
+        } else {
+          amount = details.salary || details.insurancePremium || details.investmentAmount || 0;
+        }
+
+        const rates = await calculateCommissions(
+          user.id,
+          type,
+          details.company,
+          amount,
+          details.transactionType || details.insuranceType || details.productType || '',
+          details.totalAccumulated || 0
+        );
+
+        const newClient: CustomerJourneyClient = {
+          type: type,
+          date: new Date().toISOString(),
+          name: clientName,
+          company: details.company || '',
+          insuranceType: details.insuranceType || details.transactionType || '',
+          productType: details.productType || details.serviceType || details.financeType || '',
+          pensionType: details.pensionType,
+          pensionContribution: details.pensionContribution,
+          salary: details.salary,
+          totalAccumulated: details.totalAccumulated,
+          insurancePremium: details.insurancePremium,
+          investmentAmount: details.investmentAmount,
+          scope_commission: rates.scope_commission || 0,
+          monthly_commission: rates.monthly_commission || 0,
+          total_commission: rates.total_commission || 0,
+          clientInfo: null
+        };
+
+        setClients(prev => [...prev, newClient]);
+        toast.success('נוסף בהצלחה');
+      } catch (error) {
+        console.error('Error calculating rates:', error);
+        toast.error('שגיאה בחישוב העמלות');
+      }
+    }} className={className}>
       <div className="flex flex-row gap-4 items-start">
         {fields.map((field, index) => (
           <div key={index} className="flex-1">
@@ -185,7 +237,6 @@ export const CustomerJourneyComponent = () => {
   });
   const [step, setStep] = useState<'info' | 'journey'>('info');
   const [_clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-  const [companyRates, setCompanyRates] = useState<Record<string, any>>({});
 
   const handleDownload = () => {
     if (clients.length === 0) {
@@ -276,28 +327,6 @@ export const CustomerJourneyComponent = () => {
     return () => { subscription.unsubscribe(); };
   }, []);
 
-  useEffect(() => {
-    if (step === 'journey' && !Object.values(selectedProducts).some(Boolean)) {
-      toast.error('חובה לבחור לפחות מוצר אחד');
-    }
-  }, [selectedProducts, step]);
-
-  const handleProductSelect = useCallback((productType: ProductType) => {
-    setSelectedProducts(prev => {
-      const newState = {
-        ...prev,
-        [productType]: !prev[productType]
-      };
-      
-      if (!prev[productType] || Object.values(newState).some(Boolean)) {
-        return newState;
-      }
-      
-      toast.error('חובה לבחור לפחות מוצר אחד');
-      return prev;
-    });
-  }, []);
-
   const loadCompanyRates = async () => {
     try {
       const rates: Record<string, any> = {};
@@ -322,12 +351,33 @@ export const CustomerJourneyComponent = () => {
       }
       
       console.log('Loaded company rates:', rates);
-      setCompanyRates(rates);
     } catch (error) {
       console.error('Error loading company rates:', error);
       toast.error('שגיאה בטעינת נתוני החברות');
     }
   };
+
+  useEffect(() => {
+    if (step === 'journey' && !Object.values(selectedProducts).some(Boolean)) {
+      toast.error('חובה לבחור לפחות מוצר אחד');
+    }
+  }, [selectedProducts, step]);
+
+  const handleProductSelect = useCallback((productType: ProductType) => {
+    setSelectedProducts(prev => {
+      const newState = {
+        ...prev,
+        [productType]: !prev[productType]
+      };
+      
+      if (!prev[productType] || Object.values(newState).some(Boolean)) {
+        return newState;
+      }
+      
+      toast.error('חובה לבחור לפחות מוצר אחד');
+      return prev;
+    });
+  }, []);
 
   const getProductFields = (type: 'pension' | 'insurance' | 'savings_and_study' | 'policy' | 'service' | 'finance') => {
     const getPensionCompanies = () => [
@@ -610,7 +660,10 @@ export const CustomerJourneyComponent = () => {
                 annual_premium: (client.insurancePremium || 0) * 12,
                 insurance_type: client.insuranceType || '',
                 payment_method: 'monthly',
-                nifraim: client.monthly_commission * 12
+                nifraim: client.monthly_commission * 12,
+                scope_commission: client.scope_commission,
+                monthly_commission: client.monthly_commission,
+                total_commission: client.total_commission
               };
               break;
             case 'investment':
@@ -675,6 +728,12 @@ export const CustomerJourneyComponent = () => {
   const handleClientInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const clientInfo: ClientInfo = {
+      name: formData.get('fullName')?.toString() || '',
+      phone: formData.get('idNumber')?.toString() || '',
+    };
+    setClientInfo(clientInfo);
+    setClientName(clientInfo.name);
     setStep('journey');
   };
 
@@ -890,13 +949,12 @@ export const CustomerJourneyComponent = () => {
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
-                        <CalculatorForm
+                        <CalculatorFormComponent
                           fields={getProductFields(type)}
                           type={type}
                           className="w-full"
                           clientName={clientName}
                           setClients={setClients}
-                          onSubmit={handleFormSubmit}
                         />
                       </CardContent>
                     </Card>
