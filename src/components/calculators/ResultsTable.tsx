@@ -1,10 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, Trash2, Building2, ArrowUpRight, CheckCircle } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { Download, Share2, Building2, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from "@/lib/utils";
 import { productTypes } from '@/config/products';
 
 interface Column {
@@ -19,7 +17,6 @@ interface ResultsTableProps {
   columns: Column[];
   onDownload: () => void;
   onShare: () => void;
-  onClear: () => void;
 }
 
 const tableVariants = {
@@ -56,7 +53,6 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   data,
   onDownload,
   onShare,
-  onClear,
 }) => {
   if (data.length === 0) {
     return null;
