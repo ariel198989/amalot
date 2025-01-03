@@ -56,6 +56,14 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   onShare,
   onClear,
 }) => {
+  React.useEffect(() => {
+    return () => {
+      if (onClear) {
+        void onClear;
+      }
+    };
+  }, [onClear]);
+
   if (data.length === 0) {
     return null;
   }
