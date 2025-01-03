@@ -668,10 +668,7 @@ export const CustomerJourneyComponent = () => {
                 annual_premium: (client.insurancePremium || 0) * 12,
                 insurance_type: client.insuranceType || '',
                 payment_method: 'monthly',
-                nifraim: client.monthly_commission * 12,
-                scope_commission: client.scope_commission,
-                monthly_commission: client.monthly_commission,
-                total_commission: client.total_commission
+                nifraim: client.monthly_commission * 12
               };
               break;
             case 'investment':
@@ -711,9 +708,7 @@ export const CustomerJourneyComponent = () => {
     }
   };
 
-  type JourneyProductType = 'pension' | 'insurance' | 'investment' | 'policy';
-
-  const mapClientTypeToJourneyType = (type: CustomerJourneyClient['type']): JourneyProductType => {
+  const mapClientTypeToJourneyType = (type: CustomerJourneyClient['type']): 'pension' | 'insurance' | 'investment' | 'policy' => {
     switch (type) {
       case 'savings_and_study':
       case 'finance':
@@ -732,67 +727,7 @@ export const CustomerJourneyComponent = () => {
   const handleClientInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const clientInfo: ClientInfo = {
-      name: formData.get('fullName')?.toString() || '',
-      phone: formData.get('idNumber')?.toString() || '',
-    };
-    setClientInfo(clientInfo);
-    setClientName(clientInfo.name);
     setStep('journey');
-  };
-
-  const calculateCommissionDetails = (clients: CustomerJourneyClient[]): CommissionDetails => {
-    const details: CommissionDetails = {
-      pension: { companies: {}, total: 0 },
-      insurance: { companies: {}, total: 0 },
-      investment: { companies: {}, total: 0 },
-      policy: { companies: {}, total: 0 }
-    };
-
-    clients.forEach(client => {
-      const type = mapClientTypeToJourneyType(client.type);
-      
-      if (!details[type].companies[client.company]) {
-        if (type === 'insurance') {
-          const commission: InsuranceCommission = {
-            nifraim: client.monthly_commission * 12,
-            scopeCommission: client.scope_commission,
-            monthlyCommission: client.monthly_commission,
-            totalCommission: client.total_commission
-          };
-          details[type].companies[client.company] = commission;
-        } else if (type === 'investment') {
-          const commission: InvestmentCommission = {
-            scope_commission: client.scope_commission,
-            nifraim: client.monthly_commission * 12,
-            total_commission: client.total_commission
-          };
-          details[type].companies[client.company] = commission;
-        } else {
-          const commission: PensionCommission | PolicyCommission = {
-            scopeCommission: client.scope_commission,
-            monthlyCommission: type === 'pension' ? client.monthly_commission : undefined,
-            totalCommission: client.total_commission
-          };
-          details[type].companies[client.company] = commission;
-        }
-      } else {
-        const companyDetails = details[type].companies[client.company];
-        if (type === 'investment') {
-          (companyDetails as InvestmentCommission).scope_commission += client.scope_commission;
-          (companyDetails as InvestmentCommission).total_commission += client.total_commission;
-        } else {
-          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).scopeCommission += client.scope_commission;
-          if ('monthlyCommission' in companyDetails) {
-            (companyDetails as PensionCommission | InsuranceCommission).monthlyCommission += client.monthly_commission;
-          }
-          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).totalCommission += client.total_commission;
-        }
-      }
-      details[type].total += client.total_commission;
-    });
-
-    return details;
   };
 
   return (
