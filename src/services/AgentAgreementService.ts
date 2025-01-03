@@ -211,30 +211,56 @@ export async function calculateCommissions(
       return getEmptyCalculation(amount);
     }
 
-    const millionsInAmount = amount / 1000000;
-    const scope_commission = Math.round(productRates.scope_commission * millionsInAmount);
-    const monthly_commission = Math.round(productRates.monthly_rate * millionsInAmount);
-    const total_commission = scope_commission + (monthly_commission * 12);
+    // מקבלים סכום שנתי
+    const annual_amount = amount;
+    const monthly_amount = Math.round(annual_amount / 12);
+    const millions = annual_amount / 1000000; // כמה מיליונים יש בסכום
 
-    console.log('Savings calculation details:', {
-      amount,
-      millionsInAmount,
-      productType,
-      productRates,
+    console.log('Amount calculation:', {
+      annual_amount,
+      monthly_amount,
+      millions,
+      calculation: `${annual_amount} / 1,000,000 = ${millions.toFixed(2)} מיליון`
+    });
+
+    // עמלת היקף - חד פעמי (סכום בשקלים למיליון)
+    const scope_commission = Math.round(millions * productRates.scope_commission);
+    console.log('Scope commission calculation:', {
+      millions,
+      scope_rate_per_million: productRates.scope_commission,
+      calculation: `${millions.toFixed(2)} מיליון × ${productRates.scope_commission.toLocaleString()}₪ = ${scope_commission.toLocaleString()}₪`,
+      final: scope_commission
+    });
+
+    // עמלת נפרעים - חודשי (סכום בשקלים למיליון)
+    const monthly_commission = Math.round(millions * productRates.monthly_rate);
+    const annual_commission = monthly_commission * 12; // סה"כ נפרעים שנתי
+    console.log('Monthly commission calculation:', {
+      millions,
+      monthly_rate_per_million: productRates.monthly_rate,
+      calculation: `${millions.toFixed(2)} מיליון × ${productRates.monthly_rate.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪`,
+      annual_calculation: `${monthly_commission.toLocaleString()}₪ × 12 = ${annual_commission.toLocaleString()}₪ בשנה`,
+      final: monthly_commission
+    });
+
+    // סה"כ = עמלת היקף (חד פעמי) + עמלת נפרעים שנתית
+    const total_commission = scope_commission + annual_commission;
+    console.log('Total commission calculation:', {
       scope_commission,
-      monthly_commission,
-      total_commission
+      annual_commission,
+      calculation: `${scope_commission.toLocaleString()}₪ (חד פעמי) + ${annual_commission.toLocaleString()}₪ (נפרעים שנתי) = ${total_commission.toLocaleString()}₪`,
+      final: total_commission
     });
 
     return {
       category,
-      amount,
+      amount: monthly_amount,
       scope_commission,
       monthly_commission,
       total_commission,
       details: {
-        scope_commission_explanation: `${productRates.scope_commission.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${scope_commission.toLocaleString()}₪`,
-        monthly_commission_explanation: `${productRates.monthly_rate.toLocaleString()}₪ × ${millionsInAmount.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪ לחודש`
+        scope_commission_explanation: `עמלת היקף: ${productRates.scope_commission.toLocaleString()}₪ למיליון × ${millions.toFixed(2)} מיליון = ${scope_commission.toLocaleString()}₪ (חד פעמי)`,
+        monthly_commission_explanation: `עמלת נפרעים שנתית: ${productRates.monthly_rate.toLocaleString()}₪ למיליון × ${millions.toFixed(2)} מיליון = ${monthly_commission.toLocaleString()}₪ לחודש (${annual_commission.toLocaleString()}₪ בשנה)`
       }
     };
   }
@@ -255,31 +281,57 @@ export async function calculateCommissions(
     }
 
     // For insurance:
-    // one_time_rate is percentage of annual premium
-    // monthly_rate is percentage of monthly premium
-    const annual_premium = amount * 12;
-    const scope_commission = Math.round((rates.one_time_rate / 100) * annual_premium);
-    const monthly_commission = Math.round((rates.monthly_rate / 100) * amount);
-    const total_commission = scope_commission + (monthly_commission * 12);
-
-    console.log('Insurance calculation details:', {
-      amount,
+    const annual_premium = amount; // מקבלים פרמיה שנתית
+    const monthly_premium = Math.round(annual_premium / 12); // מחשבים פרמיה חודשית
+    
+    console.log('Premium calculation:', {
       annual_premium,
-      rates,
+      monthly_premium,
+      calculation: `${annual_premium} / 12 = ${monthly_premium} לחודש`
+    });
+    
+    // עמלת היקף - אחוז מהפרמיה השנתית (חד פעמי)
+    const scope_commission = Math.round(annual_premium * (rates.one_time_rate / 100));
+    console.log('Scope commission calculation:', {
+      annual_premium,
+      one_time_rate: rates.one_time_rate,
+      calculation: `${annual_premium.toLocaleString()}₪ × ${rates.one_time_rate}% = ${scope_commission.toLocaleString()}₪`,
+      final: scope_commission
+    });
+    
+    // עמלת נפרעים - אחוז מהפרמיה החודשית (משולם כל חודש)
+    const monthly_rate = rates.monthly_rate; // כבר מגיע כאחוז נכון (למשל 20)
+    console.log('Monthly rate:', monthly_rate);
+    
+    // לדוגמה: 400 * 0.2 = 80
+    const monthly_commission = Math.round(monthly_premium * (monthly_rate / 100));
+    const annual_commission = monthly_commission * 12;
+    console.log('Monthly commission calculation:', {
+      monthly_premium,
+      monthly_rate,
+      calculation: `${monthly_premium.toLocaleString()}₪ × ${monthly_rate}% = ${monthly_commission.toLocaleString()}₪`,
+      annual_calculation: `${monthly_commission.toLocaleString()}₪ × 12 = ${annual_commission.toLocaleString()}₪ בשנה`,
+      final: monthly_commission
+    });
+
+    // סה"כ עמלה שנתית = עמלת היקף + (עמלת נפרעים * 12)
+    const total_commission = scope_commission + annual_commission;
+    console.log('Total commission calculation:', {
       scope_commission,
-      monthly_commission,
-      total_commission
+      annual_commission,
+      calculation: `${scope_commission.toLocaleString()}₪ (חד פעמי) + ${annual_commission.toLocaleString()}₪ (נפרעים שנתי) = ${total_commission.toLocaleString()}₪`,
+      final: total_commission
     });
 
     return {
       category,
-      amount,
+      amount: monthly_premium,
       scope_commission,
       monthly_commission,
       total_commission,
       details: {
-        scope_commission_explanation: `${rates.one_time_rate}% × ${annual_premium.toLocaleString()}₪ (פרמיה שנתית) = ${scope_commission.toLocaleString()}₪`,
-        monthly_commission_explanation: `${rates.monthly_rate}% × ${amount.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לחודש`
+        scope_commission_explanation: `עמלת היקף: ${rates.one_time_rate}% × ${annual_premium.toLocaleString()}₪ = ${scope_commission.toLocaleString()}₪ (חד פעמי)`,
+        monthly_commission_explanation: `עמלת נפרעים שנתית: ${monthly_rate}% × ${monthly_premium.toLocaleString()}₪ = ${monthly_commission.toLocaleString()}₪ לחודש (${annual_commission.toLocaleString()}₪ בשנה)`
       }
     };
   }
@@ -295,12 +347,25 @@ export const updatePerformance = async (category: string, month: number, perform
     const currentDate = new Date();
     const year = currentDate.getFullYear();
 
-    // קביעת סוג המטריקה בהתאם לקטגוריה
+    // קביעת סוג המטריקה בערך הביצוע בהתאם לקטגוריה
     let metric_type = 'monthly_premium';
-    if (category === 'finance') {
-      metric_type = 'total_amount';
-    } else if (category === 'pension') {
-      metric_type = 'monthly_deposit';
+    let actual_performance = performance_value;
+
+    switch(category) {
+      case 'finance':
+      case 'finance-transfer':
+        metric_type = 'total_amount';
+        break;
+      case 'pension':
+      case 'pension-transfer':
+        metric_type = 'monthly_deposit';
+        break;
+      case 'risks':
+        metric_type = 'monthly_premium';
+        actual_performance = performance_value; // כבר מקבלים פרמיה חודשית
+        break;
+      default:
+        metric_type = 'monthly_premium';
     }
 
     // בדיקה אם כבר קיים רשומה
@@ -319,7 +384,7 @@ export const updatePerformance = async (category: string, month: number, perform
       const { error } = await supabase
         .from('sales_targets')
         .update({ 
-          performance: performance_value,
+          performance: actual_performance,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingTarget.id);
@@ -335,7 +400,7 @@ export const updatePerformance = async (category: string, month: number, perform
             category,
             month,
             year,
-            performance: performance_value,
+            performance: actual_performance,
             target_amount: 0,
             metric_type,
             created_at: new Date().toISOString(),

@@ -49,6 +49,12 @@ export interface AgentRates {
   };
 }
 
+export interface SavingsProductRates {
+  scope_commission: number;
+  monthly_rate: number;
+  active: boolean;
+}
+
 export const DEFAULT_COMPANY_RATES: CompanyRates = {
   active: false,
   products: {}

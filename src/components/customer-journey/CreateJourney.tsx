@@ -113,25 +113,7 @@ export function CreateJourney() {
         return;
       }
 
-      // שמירת מסע הלקוח
-      const { error: journeyError } = await supabase
-        .from('customer_journeys')
-        .insert([
-          {
-            agent_id: user.id,
-            client_id: client.id,
-            product_type: formData.productType,
-            amount: formData.amount,
-            client_name: formData.clientName,
-            client_phone: formData.clientPhone,
-            client_email: formData.clientEmail,
-            notes: formData.notes
-          }
-        ]);
-
-      if (journeyError) throw journeyError;
-
-      // עדכון הביצועים
+      // שדכון הביצועים
       const currentDate = new Date();
       const date = { 
         month: currentDate.getMonth() + 1, 
@@ -158,7 +140,7 @@ export function CreateJourney() {
           break;
       }
 
-      toast.success('מסע הלקוח נוצר בהצלחה');
+      toast.success('המכירה נוספה בהצלחה');
       
       // איפוס הטופס
       setFormData({

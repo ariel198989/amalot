@@ -23,6 +23,7 @@ import { motion } from 'framer-motion';
 import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
 import { reportService } from '@/services/reportService';
+import ClientInfoForm from '../client-info/ClientInfoForm';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { 
   CustomerJourney, 
@@ -84,11 +85,13 @@ interface CalculatorFormProps {
   fields: Field[];
   type: ProductType;
   className?: string;
+  clientName: string;
+  setClients: React.Dispatch<React.SetStateAction<CustomerJourneyClient[]>>;
 }
 
-const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fields, type, className }) => {
+const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients }) => {
   return (
-    <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+    <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       const formData = new FormData(e.currentTarget);
       const details: { [key: string]: any } = {};
@@ -104,24 +107,56 @@ const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ onSubmit, fiel
         }
       });
 
-      const data: FormValues = {
-        type,
-        company: details.company || '',
-        details: {
-          name: '',
-          pensionType: details.pensionType || '',
-          pensionContribution: details.pensionContribution || '',
-          salary: details.salary || 0,
-          totalAccumulated: details.totalAccumulated || 0,
-          insuranceType: details.insuranceType || details.transactionType || '',
-          insurancePremium: details.insurancePremium || 0,
-          productType: details.productType || details.serviceType || details.financeType || '',
-          investmentAmount: details.investmentAmount || details.serviceFee || details.financeAmount || 0,
-          clientInfo: null
+      try {
+        // חישוב העמלות
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('משתמש לא מחובר');
+          return;
         }
-      };
-      
-      onSubmit(data);
+
+        // קביעת הסכום לחישוב העמלות בהתאם לסוג המוצר
+        let amount = 0;
+        if (type === 'insurance') {
+          amount = details.insurancePremium * 12; // הכפלה ב-12 לקבלת פרמיה שנתית
+        } else {
+          amount = details.salary || details.insurancePremium || details.investmentAmount || 0;
+        }
+
+        const rates = await calculateCommissions(
+          user.id,
+          type,
+          details.company,
+          amount,
+          details.transactionType || details.insuranceType || details.productType || '',
+          details.totalAccumulated || 0
+        );
+
+        const newClient: CustomerJourneyClient = {
+          type: type,
+          date: new Date().toISOString(),
+          name: clientName,
+          company: details.company || '',
+          insuranceType: details.insuranceType || details.transactionType || '',
+          productType: details.productType || details.serviceType || details.financeType || '',
+          pensionType: details.pensionType,
+          pensionContribution: details.pensionContribution,
+          salary: details.salary,
+          totalAccumulated: details.totalAccumulated,
+          insurancePremium: details.insurancePremium,
+          investmentAmount: details.investmentAmount,
+          scope_commission: rates.scope_commission || 0,
+          monthly_commission: rates.monthly_commission || 0,
+          total_commission: rates.total_commission || 0,
+          clientInfo: null
+        };
+
+        setClients(prev => [...prev, newClient]);
+        toast.success('נוסף בהצלחה');
+      } catch (error) {
+        console.error('Error calculating rates:', error);
+        toast.error('שגיאה בחישוב העמלות');
+      }
     }} className={className}>
       <div className="flex flex-row gap-4 items-start">
         {fields.map((field, index) => (
@@ -233,12 +268,6 @@ export const CustomerJourneyComponent = () => {
   const [_clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [companyRates, setCompanyRates] = useState<Record<string, any>>({});
 
-  const totalSummary = {
-    scopeCommission: clients.reduce((sum, client) => sum + client.scopeCommission, 0),
-    monthlyCommission: clients.reduce((sum, client) => sum + client.monthlyCommission, 0),
-    totalCommission: clients.reduce((sum, client) => sum + client.totalCommission, 0)
-  };
-
   const handleDownload = () => {
     if (clients.length === 0) {
       toast.error('אין נתונים להורדה');
@@ -246,17 +275,14 @@ export const CustomerJourneyComponent = () => {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "ריך,שם הלקוח,חברה,סוג מוצר,עמלת היקף,עמלת נפרעים,סה\"כ\n";
+    csvContent += "תאריך,שם הלקוח,חברה,סוג מוצר\n";
     
     clients.forEach((client) => {
       const row = [
         client.date,
         client.name,
         client.company,
-        client.type,
-        client.scopeCommission,
-        client.monthlyCommission,
-        client.totalCommission
+        client.type
       ].join(",");
       csvContent += row + "\n";
     });
@@ -320,11 +346,7 @@ export const CustomerJourneyComponent = () => {
         }
         return '-';
       }
-    },
-    { key: 'scopeCommission', label: 'עמלת היקף', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'monthlyCommission', label: 'עמלה נפרעים', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'totalCommission', label: 'סה"כ', format: (value: number) => value ? `₪${value.toLocaleString()}` : '₪0'},
-    { key: 'actions', label: 'פעולות' }
+    }
   ];
 
   useEffect(() => {
@@ -624,98 +646,13 @@ export const CustomerJourneyComponent = () => {
     }
   };
 
-  const calculateRates = async (values: FormValues) => {
-    const { type, company, details } = values;
-    let amount = 0;
-    let annualContribution = 0;
-    let insuranceType = '';
-    let totalAccumulated = 0;
-
-    // Check if we have rates for this company and type
-    const category = type === 'finance' ? 'savings_and_study' : type;
-    const companyRate = companyRates[category]?.[company];
-    
-    if (!companyRate) {
-      console.error('No rates found for:', { category, company });
-      toast.error('לא נמצאו נתוני עמלות לחברה זו');
-      return;
-    }
-
-    switch (type) {
-      case 'pension':
-        amount = details.salary || 0;
-        annualContribution = (details.salary * parseFloat(details.pensionContribution || '0') / 100) * 12;
-        totalAccumulated = details.totalAccumulated || 0;
-        break;
-        
-      case 'insurance':
-        amount = details.insurancePremium || 0;
-        annualContribution = amount * 12;
-        insuranceType = details.transactionType || details.insuranceType || '';
-        break;
-        
-      case 'savings_and_study':
-      case 'finance':
-        amount = details.investmentAmount || 0;
-        annualContribution = amount;
-        insuranceType = details.productType || '';
-        break;
-    }
-
-    console.log('Calculated values:', { amount, annualContribution, insuranceType, totalAccumulated });
-    console.log('Using company rates:', companyRate);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('User not authenticated');
-      return;
-    }
-
-    const rates = await calculateCommissions(
-      user.id,
-      category,
-      company,
-      amount,
-      insuranceType,
-      totalAccumulated
-    );
-    console.log('Calculated rates:', rates);
-    
-    if (rates.total_commission === 0) {
-      toast.error('לא נמצאו נתוני עמלות מתאימים');
-      return;
-    }
-
-    const newClient: CustomerJourneyClient = {
-      type: type as CustomerJourneyClient['type'],
-      date: new Date().toISOString(),
-      name: clientName,
-      company,
-      scopeCommission: rates.scope_commission || 0,
-      monthlyCommission: rates.monthly_commission || 0,
-      totalCommission: rates.total_commission || 0,
-      salary: amount,
-      totalAccumulated,
-      insuranceType,
-      insurancePremium: amount,
-      productType: insuranceType,
-      investmentAmount: amount,
-      pensionType: details.pensionType,
-      pensionContribution: details.pensionContribution,
-      clientInfo: details.clientInfo
-    };
-
-    setClients(prev => [...prev, newClient]);
-    toast.success('נוסף בהצלחה');
-  };
-
   const handleSave = async () => {
     try {
       const user = await supabase.auth.getUser();
       const userId = user.data.user?.id || '';
       const currentDate = new Date().toISOString();
 
-      const journeyData: CustomerJourney = {
+      const journeyData = {
         user_id: userId,
         journey_date: currentDate,
         date: currentDate,
@@ -729,112 +666,53 @@ export const CustomerJourneyComponent = () => {
             client_name: clientName,
             company: client.company,
             date: currentDate,
-            total_commission: client.totalCommission,
-            scope_commission: client.scopeCommission,
-            monthly_commission: client.monthlyCommission
+            total_commission: client.total_commission,
+            scope_commission: client.scope_commission,
+            monthly_commission: client.monthly_commission
           };
 
-          let details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
-          
+          let details;
           switch (type) {
             case 'pension':
-              console.log('Creating pension product with:', {
-                salary: client.salary,
-                totalAccumulated: client.totalAccumulated,
-                pensionContribution: client.pensionContribution,
-                rawClient: client
-              });
-              
-              const pensionsalary = Number(client.salary);
-              const pensionaccumulation = Number(client.totalAccumulated);
-              const pensioncontribution = client.pensionContribution ? Number(client.pensionContribution) : 0;
-              
-              if (isNaN(pensionsalary) || isNaN(pensionaccumulation) || isNaN(pensioncontribution)) {
-                console.error('Invalid pension values:', {
-                  salary: client.salary,
-                  totalAccumulated: client.totalAccumulated,
-                  pensionContribution: client.pensionContribution
-                });
-                throw new Error('ערכי פנסיה לא תקינים');
-              }
-              
               details = {
                 ...baseProduct,
                 type: 'pension',
-                pensionsalary,
-                pensionaccumulation,
-                pensioncontribution,
+                pensionsalary: client.salary || 0,
+                pensionaccumulation: client.totalAccumulated || 0,
+                pensioncontribution: client.pensionContribution ? parseFloat(client.pensionContribution) : 0,
                 activityType: 'new_policy'
-              } as PensionProduct;
-              
-              console.log('Created pension details:', details);
+              };
               break;
-            
             case 'insurance':
               details = {
                 ...baseProduct,
+                type: 'insurance',
                 premium: client.insurancePremium || 0,
+                annual_premium: (client.insurancePremium || 0) * 12,
                 insurance_type: client.insuranceType || '',
                 payment_method: 'monthly',
-                nifraim: 0,
-                salary: client.salary,
-                transfer_amount: client.totalAccumulated,
-                contribution_percentage: client.pensionContribution ? parseFloat(client.pensionContribution) : undefined
-              } as InsuranceProduct;
+                nifraim: client.monthly_commission * 12,
+                scope_commission: client.scope_commission,
+                monthly_commission: client.monthly_commission,
+                total_commission: client.total_commission
+              };
               break;
-            
             case 'investment':
-              console.log('Creating investment product - Raw input:', {
-                investmentAmount: client.investmentAmount,
-                productType: client.productType,
-                scopeCommission: client.scopeCommission,
-                monthlyCommission: client.monthlyCommission,
-                rawClient: client
-              });
-              
-              const investment_amount = Number(client.investmentAmount) || 0;
-              const scope_commission = Number(client.scopeCommission) || 0;
-              const monthly_commission = Number(client.monthlyCommission) || 0;
-              
-              console.log('Investment values after conversion:', {
-                investment_amount,
-                scope_commission,
-                monthly_commission,
-                calculated_nifraim: monthly_commission * 12
-              });
-              
-              if (isNaN(investment_amount) || isNaN(scope_commission) || isNaN(monthly_commission)) {
-                console.error('Invalid investment values:', {
-                  investmentAmount: client.investmentAmount,
-                  scopeCommission: client.scopeCommission,
-                  monthlyCommission: client.monthlyCommission
-                });
-                throw new Error('ערכי השקעה לא תקינים');
-              }
-              
               details = {
                 ...baseProduct,
-                investment_amount,
+                investment_amount: client.investmentAmount || 0,
                 investment_type: client.productType || '',
-                scope_commission,
-                monthly_commission,
-                nifraim: monthly_commission * 12,
-                total_commission: scope_commission + (monthly_commission * 12)
-              } as InvestmentProduct;
-              
-              console.log('Final investment product details:', details);
+                nifraim: client.monthly_commission * 12
+              };
               break;
-            
             case 'policy':
               details = {
                 ...baseProduct,
                 policy_amount: client.investmentAmount || 0,
                 policy_period: 12,
-                policy_type: client.productType || '',
-                scope_commission: client.scopeCommission
-              } as PolicyProduct;
+                policy_type: client.productType || ''
+              };
               break;
-            
             default:
               throw new Error(`Invalid product type: ${type}`);
           }
@@ -845,7 +723,7 @@ export const CustomerJourneyComponent = () => {
             details
           };
         }),
-        total_commission: totalSummary.totalCommission,
+        total_commission: clients.reduce((sum, client) => sum + client.total_commission, 0),
         commissionDetails: calculateCommissionDetails(clients)
       };
 
@@ -875,6 +753,19 @@ export const CustomerJourneyComponent = () => {
     }
   };
 
+  const handleClientInfoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const clientInfo: ClientInfo = {
+      fullName: formData.get('fullName')?.toString() || '',
+      idNumber: formData.get('idNumber')?.toString() || '',
+      meetingDate: formData.get('meetingDate')?.toString() || ''
+    };
+    setClientInfo(clientInfo);
+    setClientName(clientInfo.fullName);
+    setStep('journey');
+  };
+
   const calculateCommissionDetails = (clients: CustomerJourneyClient[]): CommissionDetails => {
     const details: CommissionDetails = {
       pension: { companies: {}, total: 0 },
@@ -889,64 +780,44 @@ export const CustomerJourneyComponent = () => {
       if (!details[type].companies[client.company]) {
         if (type === 'insurance') {
           const commission: InsuranceCommission = {
-            nifraim: 0,
-            scopeCommission: client.scopeCommission,
-            monthlyCommission: client.monthlyCommission,
-            totalCommission: client.totalCommission
+            nifraim: client.monthly_commission * 12,
+            scopeCommission: client.scope_commission,
+            monthlyCommission: client.monthly_commission,
+            totalCommission: client.total_commission
           };
           details[type].companies[client.company] = commission;
         } else if (type === 'investment') {
           const commission: InvestmentCommission = {
-            scope_commission: client.scopeCommission,
-            nifraim: 0,
-            total_commission: client.totalCommission
+            scope_commission: client.scope_commission,
+            nifraim: client.monthly_commission * 12,
+            total_commission: client.total_commission
           };
           details[type].companies[client.company] = commission;
         } else {
           const commission: PensionCommission | PolicyCommission = {
-            scopeCommission: client.scopeCommission,
-            monthlyCommission: type === 'pension' ? client.monthlyCommission : undefined,
-            totalCommission: client.totalCommission
+            scopeCommission: client.scope_commission,
+            monthlyCommission: type === 'pension' ? client.monthly_commission : undefined,
+            totalCommission: client.total_commission
           };
           details[type].companies[client.company] = commission;
         }
       } else {
         const companyDetails = details[type].companies[client.company];
         if (type === 'investment') {
-          (companyDetails as InvestmentCommission).scope_commission += client.scopeCommission;
-          (companyDetails as InvestmentCommission).total_commission += client.totalCommission;
+          (companyDetails as InvestmentCommission).scope_commission += client.scope_commission;
+          (companyDetails as InvestmentCommission).total_commission += client.total_commission;
         } else {
-          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).scopeCommission += client.scopeCommission;
+          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).scopeCommission += client.scope_commission;
           if ('monthlyCommission' in companyDetails) {
-            (companyDetails as PensionCommission | InsuranceCommission).monthlyCommission += client.monthlyCommission;
+            (companyDetails as PensionCommission | InsuranceCommission).monthlyCommission += client.monthly_commission;
           }
-          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).totalCommission += client.totalCommission;
+          (companyDetails as PensionCommission | InsuranceCommission | PolicyCommission).totalCommission += client.total_commission;
         }
       }
-      details[type].total += client.totalCommission;
+      details[type].total += client.total_commission;
     });
 
     return details;
-  };
-
-  const getCommissionLabel = (type: string, commissionType: 'scope' | 'monthly') => {
-    if (type === 'pension') {
-      return commissionType === 'scope' ? 'עמלת היקף על השכר' : 'עמלת היקף על בירה';
-    }
-    return commissionType === 'scope' ? 'עמלת היקף' : 'עמלת נפרעים';
-  };
-
-  const handleClientInfoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const clientInfo: ClientInfo = {
-      fullName: formData.get('fullName')?.toString() || '',
-      idNumber: formData.get('idNumber')?.toString() || '',
-      meetingDate: formData.get('meetingDate')?.toString() || ''
-    };
-    setClientInfo(clientInfo);
-    setClientName(clientInfo.fullName);
-    setStep('journey');
   };
 
   return (
@@ -1034,6 +905,197 @@ export const CustomerJourneyComponent = () => {
           </Card>
         </form>
       </motion.div>
+
+      {step === 'journey' && (
+        <motion.div variants={staggerContainer}>
+          <motion.div 
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4"
+            variants={fadeIn}
+          >
+            <h1 className="text-2xl font-semibold">מסע לקוח</h1>
+            <p className="text-muted-foreground">נהל את המוצרים והעמלות שלך בצורה חכמה ויעילה</p>
+          </motion.div>
+
+          <motion.div 
+            className="space-y-8 mt-6"
+            variants={fadeIn}
+          >
+            <Card className="border-0 shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-end gap-2">
+                  <CardTitle className="text-xl">בחירת מוצרים</CardTitle>
+                  <Brain className="h-5 w-5" />
+                </div>
+                <p className="text-muted-foreground text-right">בחר את המוצרים הרלוונטיים</p>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Desktop View */}
+                <div className="hidden md:grid grid-cols-3 gap-4">
+                  {productTypes.map(({ type, title }) => (
+                    <motion.div
+                      key={type}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div
+                        className={cn(
+                          "p-4 rounded-xl cursor-pointer transition-all",
+                          "border hover:shadow-md",
+                          "flex items-center gap-3",
+                          selectedProducts[type] 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        )}
+                        onClick={() => handleProductSelect(type)}
+                      >
+                        <ProductIcon type={type} className="w-5 h-5" />
+                        <span className="font-medium">{title}</span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" className="w-full flex items-center justify-between">
+                        <span>בחר מוצרים</span>
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-[300px]">
+                      <SheetHeader>
+                        <SheetTitle>בחירת מוצרים</SheetTitle>
+                      </SheetHeader>
+                      <div className="flex flex-col gap-3 mt-4">
+                        {productTypes.map(({ type, title }) => (
+                          <div
+                            key={type}
+                            className={cn(
+                              "p-4 rounded-xl cursor-pointer transition-all",
+                              "border",
+                              "flex items-center gap-3",
+                              selectedProducts[type] 
+                                ? "border-primary bg-primary/5" 
+                                : "border-border"
+                            )}
+                            onClick={() => handleProductSelect(type)}
+                          >
+                            <ProductIcon type={type} className="w-5 h-5" />
+                            <span className="font-medium">{title}</span>
+                            {selectedProducts[type] && (
+                              <div className="mr-auto">
+                                <div className="h-2 w-2 rounded-full bg-primary" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  {/* Selected Products Pills */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {Object.entries(selectedProducts)
+                      .filter(([_, isSelected]) => isSelected)
+                      .map(([type]) => (
+                        <div
+                          key={type}
+                          className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        >
+                          <ProductIcon type={type} className="w-4 h-4" />
+                          <span>{productTypes.find(pt => pt.type === type)?.title}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* הצגת טפסי הנתונים למוצרים שנבחרו */}
+            <div className="space-y-6">
+              {productTypes.map(({ type, title }) => (
+                selectedProducts[type] && (
+                  <motion.div
+                    key={type}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="w-full"
+                  >
+                    <Card className="border-0 shadow-none">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <CardTitle className="text-xl">{title}</CardTitle>
+                          <ProductIcon type={type} className="h-5 w-5" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <CalculatorFormComponent
+                          fields={getProductFields(type)}
+                          type={type}
+                          className="w-full"
+                          clientName={clientName}
+                          setClients={setClients}
+                        />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )
+              ))}
+            </div>
+
+            {/* הצגת תוצאות החישוב */}
+            {clients.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl">סירוט מוצרים</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ResultsTable
+                      data={clients}
+                      columns={columns}
+                      onDownload={handleDownload}
+                      onClear={handleClear}
+                      onShare={() => {}}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </motion.div>
+
+          <motion.div 
+            className="mt-8 flex justify-end gap-4"
+            variants={fadeIn}
+          >
+            <Button
+              variant="outline"
+              onClick={handleDownload}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              הורד דוח
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="gap-2"
+            >
+              <Save className="w-4 h-4" />
+              שלח לדוחות
+            </Button>
+          </motion.div>
+
+          <div className="dir-rtl" />
+
+        </motion.div>
+      )}
     </motion.div>
   );
 };

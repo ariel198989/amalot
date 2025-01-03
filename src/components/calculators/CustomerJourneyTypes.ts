@@ -166,27 +166,20 @@ export interface Product {
 }
 
 export interface CustomerJourneyClient {
-  type: 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance' | 'policy';
+  type: ProductType;
   date: string;
   name: string;
   company: string;
-  scopeCommission: number;
-  monthlyCommission: number;
-  totalCommission: number;
-  
-  // Pension fields
+  insuranceType?: string;
+  productType?: string;
   pensionType?: string;
   pensionContribution?: string;
   salary?: number;
   totalAccumulated?: number;
-  
-  // Insurance fields
-  insuranceType?: string;
   insurancePremium?: number;
-  
-  // Investment fields
-  productType?: string;
   investmentAmount?: number;
-  
-  clientInfo?: ClientInfo;
+  scope_commission: number;
+  monthly_commission: number;
+  total_commission: number;
+  clientInfo: any;
 }

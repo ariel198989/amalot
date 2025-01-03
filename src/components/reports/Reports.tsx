@@ -381,7 +381,7 @@ const Reports: React.FC = () => {
             <tr>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סה"כ עמלה</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת היקף</th>
-              <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">נפרעים</th>
+              <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת נפרעים שנתית</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">פרמיה</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג ביטוח</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">אופן תשלום</th>
