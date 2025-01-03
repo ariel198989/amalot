@@ -32,7 +32,8 @@ import type {
   InvestmentCommission,
   PolicyCommission,
   JourneyProduct,
-  JourneyProductType
+  JourneyProductType,
+  CustomerJourney
 } from './CustomerJourneyTypes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -85,75 +86,16 @@ interface CalculatorFormProps {
   setClients: React.Dispatch<React.SetStateAction<CustomerJourneyClient[]>>;
 }
 
-const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients }) => {
+const CalculatorForm: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients, onSubmit }) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const data = Object.fromEntries(formData.entries());
+    onSubmit(data);
+  };
+
   return (
-    <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      const formData = new FormData(e.currentTarget);
-      const details: { [key: string]: any } = {};
-      
-      fields.forEach(field => {
-        const value = formData.get(field.name);
-        if (value) {
-          if (field.type === 'number') {
-            details[field.name] = parseFloat(value.toString()) || 0;
-          } else {
-            details[field.name] = value.toString();
-          }
-        }
-      });
-
-      try {
-        // חישוב העמלות
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error('משתמש לא מחובר');
-          return;
-        }
-
-        // קביעת הסכום לחישוב העמלות בהתאם לסוג המוצר
-        let amount = 0;
-        if (type === 'insurance') {
-          amount = details.insurancePremium * 12; // הכפלה ב-12 לקבלת פרמיה שנתית
-        } else {
-          amount = details.salary || details.insurancePremium || details.investmentAmount || 0;
-        }
-
-        const rates = await calculateCommissions(
-          user.id,
-          type,
-          details.company,
-          amount,
-          details.transactionType || details.insuranceType || details.productType || '',
-          details.totalAccumulated || 0
-        );
-
-        const newClient: CustomerJourneyClient = {
-          type: type,
-          date: new Date().toISOString(),
-          name: clientName,
-          company: details.company || '',
-          insuranceType: details.insuranceType || details.transactionType || '',
-          productType: details.productType || details.serviceType || details.financeType || '',
-          pensionType: details.pensionType,
-          pensionContribution: details.pensionContribution,
-          salary: details.salary,
-          totalAccumulated: details.totalAccumulated,
-          insurancePremium: details.insurancePremium,
-          investmentAmount: details.investmentAmount,
-          scope_commission: rates.scope_commission || 0,
-          monthly_commission: rates.monthly_commission || 0,
-          total_commission: rates.total_commission || 0,
-          clientInfo: null
-        };
-
-        setClients(prev => [...prev, newClient]);
-        toast.success('נוסף בהצלחה');
-      } catch (error) {
-        console.error('Error calculating rates:', error);
-        toast.error('שגיאה בחישוב העמלות');
-      }
-    }} className={className}>
+    <form onSubmit={handleSubmit} className={cn("space-y-6", className)}>
       <div className="flex flex-row gap-4 items-start">
         {fields.map((field, index) => (
           <div key={index} className="flex-1">
@@ -629,7 +571,7 @@ export const CustomerJourneyComponent = () => {
       const userId = user.data.user?.id || '';
       const currentDate = new Date().toISOString();
 
-      const journeyData = {
+      const journeyData: CustomerJourney = {
         user_id: userId,
         journey_date: currentDate,
         date: currentDate,
@@ -697,7 +639,13 @@ export const CustomerJourneyComponent = () => {
             details
           } as JourneyProduct;
         }),
-        total_commission: clients.reduce((sum, client) => sum + (client.total_commission || 0), 0)
+        total_commission: clients.reduce((sum, client) => sum + (client.total_commission || 0), 0),
+        commissionDetails: {
+          pension: { companies: {}, total: 0 },
+          insurance: { companies: {}, total: 0 },
+          investment: { companies: {}, total: 0 },
+          policy: { companies: {}, total: 0 }
+        }
       };
 
       await reportService.saveCustomerJourney(journeyData);
@@ -942,12 +890,13 @@ export const CustomerJourneyComponent = () => {
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
-                        <CalculatorFormComponent
+                        <CalculatorForm
                           fields={getProductFields(type)}
                           type={type}
                           className="w-full"
                           clientName={clientName}
                           setClients={setClients}
+                          onSubmit={handleFormSubmit}
                         />
                       </CardContent>
                     </Card>

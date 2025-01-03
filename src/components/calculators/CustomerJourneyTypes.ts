@@ -165,6 +165,8 @@ export interface Product {
   companies: string[];
 }
 
+export type ProductType = 'pension' | 'insurance' | 'investment' | 'policy' | 'savings_and_study' | 'service' | 'finance';
+
 export interface CustomerJourneyClient {
   type: ProductType;
   date: string;
