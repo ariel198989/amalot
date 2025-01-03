@@ -23,20 +23,16 @@ import { motion } from 'framer-motion';
 import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
 import { reportService } from '@/services/reportService';
-import ClientInfoForm from '../client-info/ClientInfoForm';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { 
-  CustomerJourney, 
-  PensionProduct,
-  InsuranceProduct,
-  InvestmentProduct,
-  PolicyProduct,
   CommissionDetails,
   CustomerJourneyClient,
   PensionCommission,
   InsuranceCommission,
   InvestmentCommission,
-  PolicyCommission
+  PolicyCommission,
+  JourneyProduct,
+  JourneyProductType
 } from './CustomerJourneyTypes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -210,28 +206,9 @@ type ProductType = 'pension' | 'insurance' | 'savings_and_study' | 'service' | '
 
 type SelectedProducts = Record<ProductType, boolean>;
 
-interface FormValues {
-  type: string;
-  company: string;
-  details: {
-    name: string;
-    pensionType: string;
-    pensionContribution: string;
-    salary: number;
-    totalAccumulated: number;
-    insuranceType: string;
-    transactionType?: string;
-    insurancePremium: number;
-    productType: string;
-    investmentAmount: number;
-    clientInfo: any;
-  };
-}
-
 interface ClientInfo {
-  fullName: string;
-  idNumber: string;
-  meetingDate: string;
+  name: string;
+  phone: string;
 }
 
 const ProductIcon = ({ type, className }: { type: string; className?: string }) => {
@@ -656,14 +633,14 @@ export const CustomerJourneyComponent = () => {
         user_id: userId,
         journey_date: currentDate,
         date: currentDate,
-        client_name: clientName,
+        client_name: clients[0]?.name || '',
         client_phone: clients[0]?.clientInfo?.phone || '',
         selected_products: clients.map(client => {
           const type = mapClientTypeToJourneyType(client.type);
           const baseProduct = {
             id: undefined,
             user_id: userId,
-            client_name: clientName,
+            client_name: client.name,
             company: client.company,
             date: currentDate,
             total_commission: client.total_commission,
@@ -721,10 +698,9 @@ export const CustomerJourneyComponent = () => {
             type,
             company: client.company,
             details
-          };
+          } as JourneyProduct;
         }),
-        total_commission: clients.reduce((sum, client) => sum + client.total_commission, 0),
-        commissionDetails: calculateCommissionDetails(clients)
+        total_commission: clients.reduce((sum, client) => sum + (client.total_commission || 0), 0)
       };
 
       await reportService.saveCustomerJourney(journeyData);
@@ -757,12 +733,11 @@ export const CustomerJourneyComponent = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const clientInfo: ClientInfo = {
-      fullName: formData.get('fullName')?.toString() || '',
-      idNumber: formData.get('idNumber')?.toString() || '',
-      meetingDate: formData.get('meetingDate')?.toString() || ''
+      name: formData.get('fullName')?.toString() || '',
+      phone: formData.get('idNumber')?.toString() || '',
     };
     setClientInfo(clientInfo);
-    setClientName(clientInfo.fullName);
+    setClientName(clientInfo.name);
     setStep('journey');
   };
 
