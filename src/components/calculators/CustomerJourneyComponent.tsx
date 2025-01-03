@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { 
   Building2, 
   Shield,
-  Wallet,
   HeartHandshake,
   Coins,
   Download,
