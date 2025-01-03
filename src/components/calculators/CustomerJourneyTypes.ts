@@ -183,3 +183,5 @@ export interface CustomerJourneyClient {
   total_commission: number;
   clientInfo: any;
 }
+
+export type ProductType = 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance';

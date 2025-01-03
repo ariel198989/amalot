@@ -27,7 +27,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import type { 
   CustomerJourneyClient,
   JourneyProduct,
-  CustomerJourney
+  CustomerJourney,
+  ProductType
 } from './CustomerJourneyTypes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
