@@ -17,7 +17,7 @@ interface ResultsTableProps {
   columns: Column[];
   onDownload: () => void;
   onShare: () => void;
-  _onClear: () => void;
+  onClear: () => void;
 }
 
 const tableVariants = {
@@ -54,7 +54,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   data,
   onDownload,
   onShare,
-  _onClear: onClear,
+  onClear,
 }) => {
   if (data.length === 0) {
     return null;
