@@ -197,8 +197,6 @@ const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, 
   );
 };
 
-type ProductType = 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance';
-
 type SelectedProducts = Record<ProductType, boolean>;
 
 interface ClientInfo {
@@ -215,8 +213,6 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
       return <Shield className={cn(iconClass, "text-green-500")} />;
     case 'savings_and_study':
       return <Coins className={cn(iconClass, "text-purple-500")} />;
-    case 'policy':
-      return <Wallet className={cn(iconClass, "text-orange-500")} />;
     case 'service':
       return <HeartHandshake className={cn(iconClass, "text-pink-500")} />;
     case 'finance':
@@ -710,7 +706,7 @@ export const CustomerJourneyComponent = () => {
     }
   };
 
-  const mapClientTypeToJourneyType = (type: CustomerJourneyClient['type']): 'pension' | 'insurance' | 'investment' | 'policy' => {
+  const mapClientTypeToJourneyType = (type: CustomerJourneyClient['type']): JourneyProduct['type'] => {
     switch (type) {
       case 'savings_and_study':
       case 'finance':
@@ -719,7 +715,6 @@ export const CustomerJourneyComponent = () => {
         return 'policy';
       case 'pension':
       case 'insurance':
-      case 'policy':
         return type;
       default:
         throw new Error(`Invalid client type: ${type}`);
