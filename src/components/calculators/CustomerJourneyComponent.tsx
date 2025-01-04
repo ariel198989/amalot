@@ -262,18 +262,6 @@ export const CustomerJourneyComponent = () => {
     document.body.removeChild(link);
   };
 
-  const handleClear = () => {
-    setClients([]);
-    setClientName('');
-    setSelectedProducts({
-      pension: false,
-      insurance: false,
-      savings_and_study: false,
-      service: false,
-      finance: false
-    });
-  };
-
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם לקוח' },
