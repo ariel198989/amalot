@@ -114,8 +114,9 @@ const PensionCalculator: React.FC = () => {
         data={clients}
         columns={columns}
         onDownload={handleDownload}
-        onShare={handleShare}
-        onClear={handleClear}
+        onShare={() => {}}
+        onClear={() => setClients([])}
+        customerName={clients[0]?.name || ''}
       />
     </div>
   );

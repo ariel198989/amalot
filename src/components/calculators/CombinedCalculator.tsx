@@ -212,6 +212,7 @@ const CombinedCalculator: React.FC = () => {
         onDownload={() => {}}
         onShare={() => {}}
         onClear={() => setClients([])}
+        customerName={clients[0]?.name || ''}
       />
     </div>
   );
