@@ -1,4 +1,33 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import ResultsTable from '../calculators/ResultsTable';
+import { CustomerJourneyClient } from '@/types/calculators';
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
+};
+
 export const CustomerJourneyComponent = () => {
+  const [step, setStep] = useState<'journey' | 'results'>('journey');
+  const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
+
+  const columns = [
+    { key: 'date', label: 'תאריך' },
+    { key: 'name', label: 'שם לקוח' },
+    { key: 'type', label: 'סוג מוצר' },
+    { key: 'amount', label: 'סכום', format: (value: number) => `₪${value.toLocaleString()}` }
+  ];
+
+  const handleDownload = () => {
+    // יישום הורדת הקובץ
+  };
+
   return (
     <div>
       {step === 'journey' && (
