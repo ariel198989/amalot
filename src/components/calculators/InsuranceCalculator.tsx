@@ -46,16 +46,6 @@ const InsuranceCalculator: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleShare = () => {
-    // Implement share functionality
-    toast.error('פונקציונליות השיתוף עדיין לא זמינה');
-  };
-
-  const handleClear = () => {
-    setClients([]);
-    toast.success('הנתונים נמחקו בהצלחה');
-  };
-
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם לקוח' },

@@ -99,29 +99,6 @@ const PolicyCalculator: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleShare = () => {
-    if (clients.length === 0) {
-      toast.error('אין נתונים לשליחה');
-      return;
-    }
-    
-    let message = "סיכום עמלות פוליסת חסכון:\n\n";
-    clients.forEach((client, index) => {
-      message += `${index + 1}. ${client.name} (${client.company}):\n`;
-      message += `   תאריך: ${client.date}\n`;
-      message += `   סכום הפקדה: ${client.amount.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
-    });
-    
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-  };
-
-  const handleClear = () => {
-    setClients([]);
-  };
-
   return (
     <div>
       <CalculatorForm

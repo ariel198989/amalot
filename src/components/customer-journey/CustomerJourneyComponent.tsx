@@ -9,7 +9,7 @@ export const CustomerJourneyComponent = () => {
             onDownload={handleDownload}
             onShare={() => {}}
             onClear={() => setClients([])}
-            customerName={clientName}
+            customerName={clients[0]?.name || ''}
           />
         </motion.div>
       )}

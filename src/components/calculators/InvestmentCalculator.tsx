@@ -124,42 +124,6 @@ const InvestmentCalculator: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleShare = () => {
-    if (clients.length === 0) {
-      toast.error('אין נתונים לשלחה');
-      return;
-    }
-    
-    let message = "סיכום עמלות גמל והשתלמות:\n\n";
-    let totalAmount = 0;
-    let totalScopeCommission = 0;
-    let totalMonthlyCommission = 0;
-
-    clients.forEach((client, index) => {
-      totalAmount += client.amount;
-      totalScopeCommission += client.scopeCommission;
-      totalMonthlyCommission += client.monthlyCommission;
-
-      message += `${index + 1}. ${client.name} (${client.company}):\n`;
-      message += `   תאריך: ${client.date}\n`;
-      message += `   סכום ניוד: ${client.amount.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
-    });
-
-    message += "\nסיכום:\n";
-    message += `סך ניודים: ${totalAmount.toLocaleString()} ₪\n`;
-    message += `סך עמלות היקף: ${totalScopeCommission.toLocaleString()} ₪\n`;
-    message += `סך עמלות נפרעים: ${totalMonthlyCommission.toLocaleString()} ₪\n`;
-    
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-  };
-
-  const handleClear = () => {
-    setClients([]);
-  };
-
   return (
     <div>
       <CalculatorForm

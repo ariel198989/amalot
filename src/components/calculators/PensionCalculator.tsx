@@ -84,14 +84,6 @@ const PensionCalculator: React.FC = () => {
     // TODO: Implement Excel export
   };
 
-  const handleShare = () => {
-    // TODO: Implement WhatsApp sharing
-  };
-
-  const handleClear = () => {
-    setClients([]);
-  };
-
   const columns = [
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם הלקוח' },
