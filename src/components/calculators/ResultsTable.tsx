@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Building2, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { productTypes } from '@/config/products';
+import html2pdf from 'html2pdf.js';
 
 interface Column {
   key: string;
@@ -18,6 +19,7 @@ interface ResultsTableProps {
   onDownload: () => void;
   onShare: () => void;
   onClear: () => void;
+  customerName: string;
 }
 
 const tableVariants = {
@@ -55,7 +57,11 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
   onDownload,
   onShare,
   onClear,
+  customerName,
 }) => {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
   React.useEffect(() => {
     return () => {
       if (onClear) {
@@ -64,9 +70,49 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
     };
   }, [onClear]);
 
+  const exportToPDF = () => {
+    try {
+      setIsPrinting(true);
+      const element = document.querySelector('.results-content');
+      if (!element) {
+        console.error('Element not found');
+        return;
+      }
+
+      const opt = {
+        margin: [15, 15, 15, 15],
+        filename: `סיכום_מכירות_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait'
+        }
+      };
+
+      html2pdf().from(element).set(opt).save().then(() => {
+        setIsPrinting(false);
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      setIsPrinting(false);
+    }
+  };
+
   if (data.length === 0) {
     return null;
   }
+
+  const currentDate = new Date().toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   return (
     <motion.div
@@ -89,14 +135,47 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
               </div>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={onDownload}
-                className="bg-white/10 hover:bg-white/20 text-white
-                         flex items-center gap-2 px-4 py-2 rounded-xl"
-              >
-                <Download className="h-4 w-4" />
-                <span>ייצא דוח</span>
-              </Button>
+              <div className="relative">
+                <Button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="bg-white/10 hover:bg-white/20 text-white
+                           flex items-center gap-2 px-4 py-2 rounded-xl"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>ייצא דוח</span>
+                </Button>
+
+                {showExportMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowExportMenu(false)}
+                    />
+                    <div className="absolute left-0 mt-2 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1" role="menu">
+                        <button
+                          onClick={() => {
+                            onDownload();
+                            setShowExportMenu(false);
+                          }}
+                          className="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          ייצא לאקסל
+                        </button>
+                        <button
+                          onClick={() => {
+                            exportToPDF();
+                            setShowExportMenu(false);
+                          }}
+                          className="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          ייצא לPDF
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <Button 
                 onClick={onShare}
                 className="bg-white/10 hover:bg-white/20 text-white
@@ -109,7 +188,60 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className={`p-6 results-content text-right ${isPrinting ? 'printing-pdf' : ''}`} dir="rtl">
+          <style>
+            {`
+              @media print, .printing-pdf {
+                .results-content {
+                  font-size: 12px !important;
+                }
+                .results-content .text-lg {
+                  font-size: 14px !important;
+                }
+                .results-content .text-base {
+                  font-size: 12px !important;
+                }
+                .results-content .text-sm {
+                  font-size: 11px !important;
+                }
+                .results-content .p-6 {
+                  padding: 1rem !important;
+                }
+                .results-content .gap-6 {
+                  gap: 0.75rem !important;
+                }
+                .results-content .mb-8 {
+                  margin-bottom: 1rem !important;
+                }
+                .results-content .mb-6 {
+                  margin-bottom: 0.75rem !important;
+                }
+                .results-content .mb-4 {
+                  margin-bottom: 0.5rem !important;
+                }
+                .results-content .space-y-4 > * + * {
+                  margin-top: 0.5rem !important;
+                }
+                .no-print-pdf {
+                  display: none !important;
+                }
+              }
+            `}
+          </style>
+
+          <div className="mb-8 text-right">
+            <div className="mb-6">
+              <div className="text-lg font-medium mb-2">{currentDate}</div>
+              <div className="text-lg mb-1">לכבוד</div>
+              <div className="text-lg font-medium">{customerName}</div>
+              <div className="text-lg mb-4">א.ג.נ,</div>
+              <div className="text-lg mb-6">הנדון: דוח סיכום מכירות</div>
+              <div className="text-base mb-8">
+                מצ"ב דוח המפרט את סיכום המכירות שלך. הדוח כולל את כל הפרטים והנתונים הרלוונטיים לעסקאות שבוצעו.
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {data.map((item, index) => (
               <div 
@@ -202,11 +334,18 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
               </div>
             ))}
 
-            <div className="bg-[#4318FF]/5 rounded-2xl p-4 mt-6">
-              <div className="flex justify-between items-center">
-                <span className="text-[#4318FF] font-medium">את נתוני המכירה ניתן לראות ב"דוחות"</span>
-                <ArrowUpRight className="h-5 w-5 text-[#4318FF]" />
+            {!isPrinting && (
+              <div className="bg-[#4318FF]/5 rounded-2xl p-4 mt-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#4318FF] font-medium">את נתוני המכירה ניתן לראות ב"דוחות"</span>
+                  <ArrowUpRight className="h-5 w-5 text-[#4318FF]" />
+                </div>
               </div>
+            )}
+
+            <div className="mt-8 text-right">
+              <div className="text-base mb-2">בברכה,</div>
+              <div className="text-base font-medium">צוות המכירות</div>
             </div>
           </div>
         </CardContent>

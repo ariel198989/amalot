@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -10,7 +10,8 @@ import {
   PiggyBank,
   Search,
   ArrowUpRight,
-  Printer
+  Printer,
+  Download
 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -24,8 +25,12 @@ import {
   PolicyProduct 
 } from '../calculators/CustomerJourneyTypes';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 
 const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
       style: 'currency',
@@ -38,13 +43,146 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
     window.print();
   };
 
+  const exportToExcel = () => {
+    try {
+      const wsData = [
+        ['דוח מכירות חודשי'],
+        ['תאריך:', new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })],
+        [''],
+        ['סיכום כללי'],
+        ['סה"כ מכירות:', data.total.count],
+        ['סה"כ עמלות:', formatCurrency(data.total.commission)],
+        ['עמלה ממוצעת:', formatCurrency(data.total.count ? data.total.commission / data.total.count : 0)],
+        [''],
+        ['מכירות פנסיה'],
+        ['סה"כ:', formatCurrency(data.total.pension.commission)],
+        ...Object.entries(data.byCompany?.pension || {}).map(([company, stats]: [string, any]) => [
+          company,
+          stats.count,
+          formatCurrency(stats.commission),
+          formatCurrency(stats.count ? stats.commission / stats.count : 0)
+        ]),
+        [''],
+        ['מכירות ביטוח'],
+        ['סה"כ:', formatCurrency(data.total.insurance.commission)],
+        ...Object.entries(data.byCompany?.insurance || {}).map(([company, stats]: [string, any]) => [
+          company,
+          stats.count,
+          formatCurrency(stats.commission),
+          formatCurrency(stats.nifraim || 0)
+        ]),
+        [''],
+        ['מכירות פיננסים'],
+        ['סה"כ:', formatCurrency(data.total.investment.commission)],
+        ...Object.entries(data.byCompany?.investment || {}).map(([company, stats]: [string, any]) => [
+          company,
+          stats.count,
+          formatCurrency(stats.total_amount || 0),
+          formatCurrency(stats.commission)
+        ])
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'דוח מכירות');
+
+      // התאמת רוחב העמודות
+      const colWidths = [
+        { wch: 30 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 20 }
+      ];
+      ws['!cols'] = colWidths;
+
+      // שמירת הקובץ
+      const fileName = `דוח_מכירות_${format(new Date(), 'MM-yyyy')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('הקובץ יוצא בהצלחה');
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      toast.error('שגיאה בייצוא הקובץ');
+    }
+  };
+
+  const exportToPDF = () => {
+    try {
+      const element = document.querySelector('.print-content');
+      if (!element) {
+        toast.error('לא נמצא תוכן להורדה');
+        return;
+      }
+
+      const opt = {
+        margin: 10,
+        filename: `דוח_מכירות_${format(new Date(), 'MM-yyyy')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait'
+        }
+      };
+
+      html2pdf().from(element).set(opt).save();
+      toast.success('הקובץ יוצא בהצלחה');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('שגיאה בייצוא הקובץ');
+    }
+  };
+
   return (
     <div className="print-container" dir="rtl">
-      <div className="no-print mb-4">
+      <div className="no-print mb-4 flex gap-2">
         <Button onClick={handlePrint} className="flex items-center gap-2">
           <Printer className="w-4 h-4" />
           הדפס דוח
         </Button>
+
+        <div className="relative">
+          <Button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            הורד דוח
+          </Button>
+          
+          {showExportMenu && (
+            <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+              <div className="py-1" role="menu" aria-orientation="vertical">
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportToExcel();
+                    setShowExportMenu(false);
+                  }}
+                  className="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                >
+                  ייצא לאקסל
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportToPDF();
+                    setShowExportMenu(false);
+                  }}
+                  className="block w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  role="menuitem"
+                >
+                  ייצא לPDF
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="print-content">
@@ -161,6 +299,14 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
           </div>
         </div>
       </div>
+      
+      {/* סגירת התפריט בלחיצה מחוץ לתפריט */}
+      {showExportMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowExportMenu(false)}
+        />
+      )}
     </div>
   );
 };
@@ -194,28 +340,27 @@ const Reports: React.FC = () => {
       console.log('Loading data for user:', user.id);
 
       // Build date filter based on selected period
-      let dateFilter = {};
       const now = new Date();
+      let startDate = now;
       if (selectedPeriod !== 'all') {
-        let startDate = new Date();
         switch (selectedPeriod) {
           case 'week':
+            startDate = new Date(now);
             startDate.setDate(now.getDate() - 7);
             break;
           case 'month':
+            startDate = new Date(now);
             startDate.setMonth(now.getMonth() - 1);
             break;
           case 'quarter':
+            startDate = new Date(now);
             startDate.setMonth(now.getMonth() - 3);
             break;
           case 'year':
+            startDate = new Date(now);
             startDate.setFullYear(now.getFullYear() - 1);
             break;
         }
-        dateFilter = {
-          gte: startDate.toISOString(),
-          lte: now.toISOString()
-        };
       }
 
       // Load all data in parallel with date filter
@@ -225,30 +370,58 @@ const Reports: React.FC = () => {
         { data: investmentData, error: investmentError },
         { data: policyData, error: policyError }
       ] = await Promise.all([
-        supabase
-          .from('pension_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .match(selectedPeriod !== 'all' ? { date: dateFilter } : {}),
-        supabase
-          .from('insurance_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .match(selectedPeriod !== 'all' ? { date: dateFilter } : {}),
-        supabase
-          .from('investment_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .match(selectedPeriod !== 'all' ? { date: dateFilter } : {}),
-        supabase
-          .from('policy_sales')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .match(selectedPeriod !== 'all' ? { date: dateFilter } : {})
+        selectedPeriod === 'all' 
+          ? supabase
+              .from('pension_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+          : supabase
+              .from('pension_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .gte('date', startDate.toISOString())
+              .lte('date', now.toISOString()),
+        selectedPeriod === 'all'
+          ? supabase
+              .from('insurance_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+          : supabase
+              .from('insurance_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .gte('date', startDate.toISOString())
+              .lte('date', now.toISOString()),
+        selectedPeriod === 'all'
+          ? supabase
+              .from('investment_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+          : supabase
+              .from('investment_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .gte('date', startDate.toISOString())
+              .lte('date', now.toISOString()),
+        selectedPeriod === 'all'
+          ? supabase
+              .from('policy_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+          : supabase
+              .from('policy_sales')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .gte('date', startDate.toISOString())
+              .lte('date', now.toISOString())
       ]);
 
       // Handle errors if any

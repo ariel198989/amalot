@@ -105,7 +105,7 @@ export const reportService = {
                 commission_rate: (Number(pensionProduct.scope_commission) || 0) / (Number(pensionProduct.pensionsalary) || 1) * 100,
                 scope_commission: Number(pensionProduct.scope_commission) || 0,
                 monthly_commission: Number(pensionProduct.monthly_commission) || 0,
-                journey_id: journey.id,
+                journey_id: journey_id,
                 status: 'active'
               };
 
@@ -147,7 +147,7 @@ export const reportService = {
               nifraim: (details.monthly_commission || 0) * 12,
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
-              journey_id: journey.id
+              journey_id: journey_id
             };
 
             const { error: insuranceError } = await supabase
@@ -187,7 +187,7 @@ export const reportService = {
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
               nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0,
-              journey_id
+              journey_id: journey_id
             };
 
             console.log('Investment data to save:', investmentData);
@@ -218,7 +218,7 @@ export const reportService = {
               policy_type: details.policy_type,
               scope_commission: details.scope_commission,
               total_commission: details.total_commission,
-              journey_id: journey.id
+              journey_id: journey_id
             };
 
             const { error: policyError } = await supabase
