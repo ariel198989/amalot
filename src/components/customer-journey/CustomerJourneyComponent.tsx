@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import ResultsTable from '../calculators/ResultsTable';
 import { CustomerJourneyClient } from '@/types/calculators';
@@ -14,7 +14,6 @@ const staggerContainer = {
 };
 
 export const CustomerJourneyComponent = () => {
-  const [step, setStep] = useState<'journey' | 'results'>('journey');
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
 
   const columns = [
@@ -30,18 +29,16 @@ export const CustomerJourneyComponent = () => {
 
   return (
     <div>
-      {step === 'journey' && (
-        <motion.div variants={staggerContainer}>
-          <ResultsTable
-            data={clients}
-            columns={columns}
-            onDownload={handleDownload}
-            onShare={() => {}}
-            onClear={() => setClients([])}
-            customerName={clients[0]?.name || ''}
-          />
-        </motion.div>
-      )}
+      <motion.div variants={staggerContainer}>
+        <ResultsTable
+          data={clients}
+          columns={columns}
+          onDownload={handleDownload}
+          onShare={() => {}}
+          onClear={() => setClients([])}
+          customerName={clients[0]?.name || ''}
+        />
+      </motion.div>
     </div>
   );
 };

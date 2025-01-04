@@ -118,3 +118,10 @@ export interface Journey {
   created_at?: string;
   user_id?: string;
 }
+
+export interface CustomerJourneyClient {
+  date: string;
+  name: string;
+  type: string;
+  amount: number;
+}

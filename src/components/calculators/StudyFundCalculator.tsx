@@ -127,68 +127,6 @@ const StudyFundCalculator: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleShare = () => {
-    if (clients.length === 0) {
-      toast.error('אין נתונים לשליחה');
-      return;
-    }
-    
-    let message = "סיכום עמלות גמל והשתלמות:\n\n";
-    let totalAmount = 0;
-    let totalScopeCommission = 0;
-    let totalMonthlyCommission = 0;
-    
-    // סיכומים נפרדים לכל סוג מוצר
-    let studyFundTotal = { amount: 0, scope: 0, monthly: 0 };
-    let pensionTotal = { amount: 0, scope: 0, monthly: 0 };
-
-    clients.forEach((client, index) => {
-      totalAmount += client.amount;
-      totalScopeCommission += client.scopeCommission;
-      totalMonthlyCommission += client.monthlyCommission;
-
-      // הוספה לסיכום לפי סוג מוצר
-      if (client.productType === 'study') {
-        studyFundTotal.amount += client.amount;
-        studyFundTotal.scope += client.scopeCommission;
-        studyFundTotal.monthly += client.monthlyCommission;
-      } else {
-        pensionTotal.amount += client.amount;
-        pensionTotal.scope += client.scopeCommission;
-        pensionTotal.monthly += client.monthlyCommission;
-      }
-
-      message += `${index + 1}. ${client.name} (${client.company}):\n`;
-      message += `   סוג: ${client.productType === 'study' ? 'קרן השתלמות' : 'קופת גמל'}\n`;
-      message += `   תאריך: ${client.date}\n`;
-      message += `   סכום ניוד: ${client.amount.toLocaleString()} ₪\n`;
-      message += `   עמלת היקף: ${client.scopeCommission.toLocaleString()} ₪\n`;
-      message += `   עמלת נפרעים: ${client.monthlyCommission.toLocaleString()} ₪\n\n`;
-    });
-
-    message += "\nסיכום קרנות השתלמות:\n";
-    message += `סך ניודים: ${studyFundTotal.amount.toLocaleString()} ₪\n`;
-    message += `סך עמלות היקף: ${studyFundTotal.scope.toLocaleString()} ₪\n`;
-    message += `סך עמלות נפרעים: ${studyFundTotal.monthly.toLocaleString()} ₪\n\n`;
-
-    message += "סיכום קופות גמל:\n";
-    message += `סך ניודים: ${pensionTotal.amount.toLocaleString()} ₪\n`;
-    message += `סך עמלות היקף: ${pensionTotal.scope.toLocaleString()} ₪\n`;
-    message += `סך עמלות נפרעים: ${pensionTotal.monthly.toLocaleString()} ₪\n\n`;
-
-    message += "סיכום כללי:\n";
-    message += `סך כל הניודים: ${totalAmount.toLocaleString()} ₪\n`;
-    message += `סך כל עמלות היקף: ${totalScopeCommission.toLocaleString()} ₪\n`;
-    message += `סך כל עמלות נפרעים: ${totalMonthlyCommission.toLocaleString()} ₪\n`;
-    
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-  };
-
-  const handleClear = () => {
-    setClients([]);
-  };
-
   return (
     <div>
       <CalculatorForm
