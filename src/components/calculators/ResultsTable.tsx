@@ -244,6 +244,29 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
           </div>
 
           <div className="space-y-4">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  {columns.map((column) => (
+                    <th key={column.key} className="p-2 text-right font-medium text-gray-600">
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((item, index) => (
+                  <tr key={index}>
+                    {columns.map((column) => (
+                      <td key={column.key} className="p-2 text-right">
+                        {column.format ? column.format(item[column.key]) : item[column.key]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
             {data.map((item, index) => (
               <div 
                 key={index}

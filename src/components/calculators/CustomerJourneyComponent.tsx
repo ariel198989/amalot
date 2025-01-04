@@ -974,8 +974,9 @@ export const CustomerJourneyComponent = () => {
                       data={clients}
                       columns={columns}
                       onDownload={handleDownload}
-                      onClear={handleClear}
                       onShare={() => {}}
+                      onClear={() => setClients([])}
+                      customerName={clients[0]?.name || ''}
                     />
                   </CardContent>
                 </Card>
