@@ -17,6 +17,7 @@ interface Column {
 
 interface ResultsTableProps {
   data: any[];
+  columns?: Column[];
   onDownload: () => void;
   onShare: () => void;
   onClear: () => void;
@@ -55,6 +56,7 @@ const getInvestmentTypeLabel = (type: string) => {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({
   data,
+  columns,
   onDownload,
   onShare,
   onClear,
