@@ -91,8 +91,6 @@ const navItems: NavItem[] = [
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const pathname = location.pathname;
-  const [activeRoute, setActiveRoute] = useState(pathname);
-  const [activeParent, setActiveParent] = useState(pathname);
 
   return (
     <AnimatePresence mode="wait">
@@ -119,122 +117,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
           >
-            {/* Close Button */}
-            <motion.div 
-              className="absolute left-2 top-2"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="hover:bg-secondary-100 transition-all duration-200"
-              >
-                <X className="h-6 w-6 text-secondary-600" />
-              </Button>
-            </motion.div>
-
-            {/* Sidebar Content */}
-            <div className="flex flex-col h-full p-6 overscroll-none">
-              {/* Logo */}
-              <motion.div 
-                className="flex items-center gap-3 mb-8"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <motion.div 
-                  className="p-2 bg-primary-100 rounded-xl"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <PiggyBank className="h-7 w-7 text-primary-600" />
-                </motion.div>
-                <div>
-                  <motion.h1 
-                    className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    מערכת עמלות
-                  </motion.h1>
-                  <motion.p 
-                    className="text-sm text-secondary-500"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    ניהול ומעקב עמלות
-                  </motion.p>
-                </div>
-              </motion.div>
-
-              {/* Navigation */}
-              <nav className="flex-1 space-y-1.5">
-                {navItems.map((route) => {
-                  const path = route.path || route.href || '/';
-                  const isActive = pathname === path;
-                  const displayName = route.title || route.name || '';
-                  
-                  return (
-                    <Link
-                      key={route.id || path}
-                      to={path}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
-                        isActive ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50" : ""
-                      )}
-                      onClick={() => {
-                        setActiveRoute(path);
-                        setActiveParent(path);
-                      }}
-                    >
-                      {route.icon && <route.icon className="h-4 w-4" />}
-                      <span>{displayName}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              {/* Bottom Navigation */}
-              <motion.div 
-                className="border-t border-secondary-100 pt-4 mt-4 space-y-1.5"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <Link
-                  to="/settings"
-                  className={cn(
-                    "group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-                    isActivePath('/settings')
-                      ? "bg-primary-50 text-primary-600 shadow-sm ring-1 ring-primary-100"
-                      : "text-secondary-600 hover:bg-secondary-50 hover:text-secondary-900"
-                  )}
-                  onClick={onClose}
-                >
-                  <motion.div 
+            {/* Navigation */}
+            <nav className="flex-1 space-y-1.5">
+              {navItems.map((route) => {
+                const path = route.path || route.href || '/';
+                const isActive = pathname === path;
+                const displayName = route.title || route.name || '';
+                
+                return (
+                  <Link
+                    key={route.id || path}
+                    to={path}
                     className={cn(
-                      "p-2 rounded-lg transition-colors duration-200",
-                      isActivePath('/settings')
-                        ? "bg-primary-100 text-primary-600"
-                        : "bg-secondary-100 text-secondary-600 group-hover:bg-secondary-200"
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
+                      isActive ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50" : ""
                     )}
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    whileTap={{ scale: 0.95 }}
+                    onClick={onClose}
                   >
-                    <Settings className="h-5 w-5" />
-                  </motion.div>
-                  <div>
-                    <div className="font-medium">הגדרות</div>
-                    <div className="text-xs text-secondary-500">הגדרות מערכת</div>
-                  </div>
-                </Link>
-              </motion.div>
-            </div>
+                    {route.icon && <route.icon className="h-4 w-4" />}
+                    <span>{displayName}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           </motion.div>
         </>
       )}
