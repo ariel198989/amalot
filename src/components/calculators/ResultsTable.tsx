@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { productTypes } from '@/config/products';
 import html2pdf from 'html2pdf.js';
 import { supabase } from '@/lib/supabase';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface Column {
   key: string;
@@ -128,6 +129,65 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
       console.error('Error exporting PDF:', error);
       setIsPrinting(false);
     }
+  };
+
+  // פונקציה להכנת נתונים לתרשים
+  const prepareChartData = () => {
+    const salesByType = data.reduce((acc: { [key: string]: number }, item) => {
+      let type = '';
+      let amount = 0;
+
+      if (item.pensionType) {
+        type = item.pensionType === 'comprehensive' ? 'פנסיה מקיפה' : 'פנסיה משלימה';
+        amount = item.salary || 0;
+      } else if (item.insuranceType) {
+        type = getInsuranceTypeLabel(item.insuranceType);
+        amount = item.insurancePremium || 0;
+      } else if (item.investmentAmount) {
+        type = getInvestmentTypeLabel(item.productType);
+        amount = item.investmentAmount;
+      }
+
+      if (type && amount) {
+        acc[type] = (acc[type] || 0) + amount;
+      }
+
+      return acc;
+    }, {});
+
+    return Object.entries(salesByType).map(([name, value]) => ({
+      name,
+      value
+    }));
+  };
+
+  const COLORS = [
+    '#4318FF', // כחול כהה
+    '#868CFF', // כחול בהיר
+    '#36B37E', // ירוק
+    '#00B8D9', // תכלת
+    '#6554C0', // סגול
+    '#FF5630'  // כתום
+  ];
+
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="text-xs font-medium"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
   };
 
   if (data.length === 0) {
@@ -255,8 +315,8 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
             `}
           </style>
 
-          <div className="mb-8 text-right">
-            <div className="flex justify-between items-start mb-6">
+          <div className="mb-12 text-right">
+            <div className="flex justify-between items-start mb-8">
               <div className="w-32">
                 {agentSettings?.logo_url && (
                   <img 
@@ -268,148 +328,194 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
               </div>
               <div className="text-left">
                 <div className="text-lg font-medium mb-2">{currentDate}</div>
-                <div className="text-lg font-bold">{agentSettings?.company}</div>
+                <div className="text-xl font-bold">{agentSettings?.company}</div>
               </div>
             </div>
 
-            <div className="border-b border-gray-200 mb-6"></div>
+            <div className="border-b-2 border-gray-200 mb-8"></div>
 
-            <div className="text-lg mb-1">לכבוד</div>
-            <div className="text-lg font-medium">{customerName}</div>
+            <div className="text-lg mb-2">לכבוד</div>
+            <div className="text-xl font-bold mb-1">{customerName}</div>
             <div className="text-lg mb-4">א.ג.נ,</div>
-            <div className="text-lg mb-6">הנדון: דוח סיכום מכירות</div>
-            <div className="text-base mb-8">
-              מצ"ב דוח המפרט את סיכום המכירות שלך. הדוח כולל את כל הפרטים והנתונים הרלוונטיים לעסקאות שבוצעו.
+            <div className="text-xl font-bold mb-6">הנדון: דוח סיכום פעילות עסקית</div>
+            <div className="text-base leading-relaxed mb-8">
+              אנו מתכבדים להגיש לך דוח מפורט המסכם את הפעילות העסקית שבוצעה. 
+              הדוח כולל פירוט מקיף של כל העסקאות והמוצרים הפיננסיים שנרכשו, 
+              תוך הצגת התפלגות ההשקעות והביטוחים השונים.
             </div>
           </div>
 
-          <div className="space-y-4">
-            <table className="w-full">
-              <thead>
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} className="p-2 text-right font-medium text-gray-600">
-                      {column.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((item, index) => (
-                  <tr key={index}>
-                    {columns.map((column) => (
-                      <td key={column.key} className="p-2 text-right">
-                        {column.format ? column.format(item[column.key]) : item[column.key]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            {/* תרשים התפלגות המכירות */}
+            <div className="mb-12 bg-gray-50 rounded-2xl p-8">
+              <h3 className="text-xl font-bold mb-6">התפלגות תיק ההשקעות והביטוחים</h3>
+              <div className="h-[400px] w-full bg-white rounded-xl p-6 shadow-sm">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={prepareChartData()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={renderCustomizedLabel}
+                      outerRadius={150}
+                      innerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {prepareChartData().map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]}
+                          stroke="white"
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ 
+                        textAlign: 'right', 
+                        direction: 'rtl',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: '8px',
+                        border: 'none',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        padding: '12px'
+                      }}
+                    />
+                    <Legend 
+                      layout="vertical" 
+                      align="right"
+                      verticalAlign="middle"
+                      formatter={(value: string) => (
+                        <span style={{ 
+                          textAlign: 'right',
+                          fontSize: '14px',
+                          fontWeight: 500
+                        }}>
+                          {value}
+                        </span>
+                      )}
+                      wrapperStyle={{
+                        paddingRight: '20px'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-            {data.map((item, index) => (
-              <div 
-                key={index}
-                className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#4318FF] rounded-full p-2">
-                        <Building2 className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{item.client_name}</div>
-                        <div className="text-sm text-gray-500">{formatDate(item.date)}</div>
-                      </div>
-                    </div>
-                    <div className="text-sm font-medium text-[#4318FF]">{item.company}</div>
-                  </div>
-
+            {/* פירוט העסקאות */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-6">פירוט העסקאות</h3>
+              {data.map((item, index) => (
+                <div 
+                  key={index}
+                  className="bg-white rounded-2xl p-6 shadow-sm mb-4 border border-gray-100"
+                >
                   <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-6">
-                      {(item.pensionType || item.transactionType || item.insurance_type || item.investment_type) && (
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">סוג מוצר</div>
-                          <div className="font-medium text-gray-900">
-                            {item.pensionType === 'comprehensive' ? 'פנסיה מקיפה' : 
-                             item.pensionType === 'supplementary' ? 'פנסיה משלימה' :
-                             item.transactionType === 'personal_accident' ? 'תאונות אישיות' :
-                             item.transactionType === 'mortgage' ? 'משכנתא' :
-                             item.transactionType === 'health' ? 'בריאות' :
-                             item.transactionType === 'critical_illness' ? 'מחלות קשות' :
-                             item.transactionType === 'insurance_umbrella' ? 'מטריה ביטוחית' :
-                             item.transactionType === 'risk' ? 'ריסק' :
-                             item.transactionType === 'service' ? 'כתבי שירות' :
-                             item.transactionType === 'disability' ? 'אכ"ע' :
-                             item.insurance_type || item.investment_type || ''}
-                          </div>
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-[#4318FF] rounded-full p-2">
+                          <Building2 className="h-5 w-5 text-white" />
                         </div>
-                      )}
+                        <div>
+                          <div className="font-medium text-gray-900">{item.client_name}</div>
+                          <div className="text-sm text-gray-500">{formatDate(item.date)}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-[#4318FF]">{item.company}</div>
+                    </div>
 
-                      {item.pensionType ? (
-                        <div className="col-span-2">
-                          <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
-                            <CheckCircle className="w-6 h-6 text-green-500" />
-                            <div className="text-lg font-medium text-[#4318FF]">
-                              {formatCurrency(item.salary || 0)} שכר ב{item.pensionType === 'comprehensive' ? 'פנסיה מקיפה' : 'פנסיה משלימה'}
-                              {item.totalAccumulated > 0 && (
-                                <span className="text-sm mr-2">
-                                  (צבירה: {formatCurrency(item.totalAccumulated)})
-                                </span>
-                              )}
-                              {item.pensionContribution && (
-                                <span className="text-sm mr-2">
-                                  {item.pensionContribution}% הפרשה
-                                </span>
-                              )}
+                    <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-6">
+                        {(item.pensionType || item.transactionType || item.insurance_type || item.investment_type) && (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">סוג מוצר</div>
+                            <div className="font-medium text-gray-900">
+                              {item.pensionType === 'comprehensive' ? 'פנסיה מקיפה' : 
+                               item.pensionType === 'supplementary' ? 'פנסיה משלימה' :
+                               item.transactionType === 'personal_accident' ? 'תאונות אישיות' :
+                               item.transactionType === 'mortgage' ? 'משכנתא' :
+                               item.transactionType === 'health' ? 'בריאות' :
+                               item.transactionType === 'critical_illness' ? 'מחלות קשות' :
+                               item.transactionType === 'insurance_umbrella' ? 'מטריה ביטוחית' :
+                               item.transactionType === 'risk' ? 'ריסק' :
+                               item.transactionType === 'service' ? 'כתבי שירות' :
+                               item.transactionType === 'disability' ? 'אכ"ע' :
+                               item.insurance_type || item.investment_type || ''}
                             </div>
                           </div>
-                        </div>
-                      ) : item.insuranceType ? (
-                        <div className="col-span-2">
-                          <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
-                            <CheckCircle className="w-6 h-6 text-green-500" />
-                            <div className="text-lg font-medium text-[#4318FF]">
-                              {formatCurrency(item.insurancePremium || 0)} פרמיה בביטוח {getInsuranceTypeLabel(item.insuranceType)}
+                        )}
+
+                        {item.pensionType ? (
+                          <div className="col-span-2">
+                            <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
+                              <CheckCircle className="w-6 h-6 text-green-500" />
+                              <div className="text-lg font-medium text-[#4318FF]">
+                                {formatCurrency(item.salary || 0)} שכר ב{item.pensionType === 'comprehensive' ? 'פנסיה מקיפה' : 'פנסיה משלימה'}
+                                {item.totalAccumulated > 0 && (
+                                  <span className="text-sm mr-2">
+                                    (צבירה: {formatCurrency(item.totalAccumulated)})
+                                  </span>
+                                )}
+                                {item.pensionContribution && (
+                                  <span className="text-sm mr-2">
+                                    {item.pensionContribution}% הפרשה
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : item.investmentAmount ? (
-                        <div className="col-span-2">
-                          <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
-                            <CheckCircle className="w-6 h-6 text-green-500" />
-                            <div className="text-lg font-medium text-[#4318FF]">
-                              {formatCurrency(item.investmentAmount || 0)} {getInvestmentTypeLabel(item.productType)}
+                        ) : item.insuranceType ? (
+                          <div className="col-span-2">
+                            <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
+                              <CheckCircle className="w-6 h-6 text-green-500" />
+                              <div className="text-lg font-medium text-[#4318FF]">
+                                {formatCurrency(item.insurancePremium || 0)} פרמיה בביטוח {getInsuranceTypeLabel(item.insuranceType)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-sm text-gray-500 mb-1">סכום השקעה</div>
-                          <div className="font-medium text-[#4318FF]">
-                            {formatCurrency(item.investmentAmount || 0)}
+                        ) : item.investmentAmount ? (
+                          <div className="col-span-2">
+                            <div className="flex items-center justify-center gap-3 bg-[#4318FF]/5 p-4 rounded-xl">
+                              <CheckCircle className="w-6 h-6 text-green-500" />
+                              <div className="text-lg font-medium text-[#4318FF]">
+                                {formatCurrency(item.investmentAmount || 0)} {getInvestmentTypeLabel(item.productType)}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">סכום השקעה</div>
+                            <div className="font-medium text-[#4318FF]">
+                              {formatCurrency(item.investmentAmount || 0)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {!isPrinting && (
-              <div className="bg-[#4318FF]/5 rounded-2xl p-4 mt-6">
+              <div className="bg-[#4318FF]/5 rounded-2xl p-6 mt-8">
                 <div className="flex justify-between items-center">
-                  <span className="text-[#4318FF] font-medium">את נתוני המכירה ניתן לראות ב"דוחות"</span>
+                  <span className="text-[#4318FF] font-medium">
+                    לצפייה בנתונים נוספים ופירוט מלא, אנא בקרו במערכת הדוחות
+                  </span>
                   <ArrowUpRight className="h-5 w-5 text-[#4318FF]" />
                 </div>
               </div>
             )}
 
-            <div className="mt-8 text-right">
-              <div className="text-base mb-2">בברכה,</div>
-              <div className="text-base font-medium">{agentSettings?.company || 'צוות המכירות'}</div>
+            <div className="mt-12 text-right border-t-2 border-gray-200 pt-8">
+              <div className="text-base mb-2">בכבוד רב,</div>
+              <div className="text-lg font-bold">{agentSettings?.company || 'צוות המכירות'}</div>
             </div>
           </div>
         </CardContent>
