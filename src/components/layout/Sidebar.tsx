@@ -107,7 +107,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               zIndex: 40,
               cursor: 'pointer',
               width: '100%',
-              height: '100%'
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
             onClick={onClose}
           />
@@ -121,7 +124,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               width: '20rem',
               backgroundColor: 'white',
               borderLeft: '1px solid #e5e7eb',
-              zIndex: 50
+              zIndex: 50,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
             }}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
