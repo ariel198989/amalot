@@ -94,20 +94,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {isOpen && (
         <>
           <motion.div 
-            key="overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             style={{ 
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              backdropFilter: 'blur(4px)',
-              zIndex: 40,
-              cursor: 'pointer'
+              zIndex: 40
             }}
-            onClick={onClose}
+            onClick={() => setShowExportMenu(false)}
           />
           <motion.div 
             key="sidebar"
