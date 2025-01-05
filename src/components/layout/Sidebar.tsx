@@ -8,7 +8,8 @@ import {
   BarChart4,
   HandCoins,
   CircleDollarSign,
-  CalendarDays
+  CalendarDays,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +23,7 @@ interface NavItem {
   id?: string;
   title?: string;
   path?: string;
-  icon?: React.ComponentType;
+  icon?: LucideIcon;
   description?: string;
   name?: string;
   href?: string;
@@ -94,12 +95,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {isOpen && (
         <>
           <motion.div 
+            key="overlay"
             style={{ 
               position: 'fixed',
               inset: 0,
-              zIndex: 40
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 40,
+              cursor: 'pointer'
             }}
-            onClick={() => setShowExportMenu(false)}
+            onClick={onClose}
           />
           <motion.div 
             key="sidebar"
