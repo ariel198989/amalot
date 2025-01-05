@@ -15,13 +15,30 @@ type SelectedProducts = Record<ProductType, boolean>;
 
 const CombinedCalculator: React.FC = () => {
   const [clients, setClients] = React.useState<CombinedClient[]>([]);
+  const [showResults, setShowResults] = React.useState(false);
+  const [results, setResults] = React.useState<any[]>([]);
   const [selectedProducts, setSelectedProducts] = React.useState<SelectedProducts>({
     pension: false,
     insurance: false,
     investment: false,
     policy: false
   });
-  const { register, setValue } = useForm();
+  const { register, setValue, watch } = useForm();
+
+  const handleDownload = () => {
+    // TODO: Implement download functionality
+    console.log('Download clicked');
+  };
+
+  const handleShare = () => {
+    // TODO: Implement share functionality
+    console.log('Share clicked');
+  };
+
+  const handleClear = () => {
+    setResults([]);
+    setShowResults(false);
+  };
 
   const products = [
     { id: 'pension' as const, label: 'פנסיה', description: 'חישוב עמלות פנסיה' },
@@ -70,6 +87,8 @@ const CombinedCalculator: React.FC = () => {
 
       // עדכון המצב המקומי
       setClients([...clients, newClient]);
+      setResults([newClient]);
+      setShowResults(true);
       toast.success('החישוב נשמר בהצלחה!');
 
     } catch (error: any) {
@@ -212,7 +231,7 @@ const CombinedCalculator: React.FC = () => {
           onDownload={handleDownload}
           onShare={handleShare}
           onClear={handleClear}
-          customerName={formData.client_name}
+          customerName={watch('name')}
         />
       )}
     </div>
