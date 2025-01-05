@@ -8,13 +8,6 @@ import html2pdf from 'html2pdf.js';
 import { supabase } from '@/lib/supabase';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
-interface Column {
-  key: string;
-  label: string;
-  format?: (value: any) => string;
-  width?: string;
-}
-
 interface ResultsTableProps {
   data: any[];
   onDownload: () => void;
