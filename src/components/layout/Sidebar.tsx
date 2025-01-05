@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard,
@@ -21,13 +21,17 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-interface Route {
-  href: string;
+interface NavItem {
+  id?: string;
   title: string;
+  path?: string;
   icon?: React.ComponentType;
+  description?: string;
+  name?: string;
+  href?: string;
 }
 
-const navItems = [
+const navItems: NavItem[] = [
   { 
     id: 'dashboard',
     title: 'דשבורד', 
@@ -86,7 +90,9 @@ const navItems = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const isActivePath = (path: string) => location.pathname === path;
+  const pathname = location.pathname;
+  const [activeRoute, setActiveRoute] = useState(pathname);
+  const [activeParent, setActiveParent] = useState(pathname);
 
   return (
     <AnimatePresence mode="wait">
@@ -168,42 +174,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
               {/* Navigation */}
               <nav className="flex-1 space-y-1.5">
-                {navItems.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 + index * 0.1 }}
-                  >
+                {navItems.map((route) => {
+                  const isActive = pathname === (route.path || route.href || '/');
+                  const path = route.path || route.href || '/';
+                  return (
                     <Link
-                      to={item.path}
+                      key={route.id || route.href}
+                      to={path}
                       className={cn(
-                        "group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-                        isActivePath(item.path)
-                          ? "bg-primary-50 text-primary-600 shadow-sm ring-1 ring-primary-100"
-                          : "text-secondary-600 hover:bg-secondary-50 hover:text-secondary-900"
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
+                        isActive ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50" : ""
                       )}
-                      onClick={onClose}
+                      onClick={() => {
+                        setActiveRoute(path);
+                        setActiveParent(path);
+                      }}
                     >
-                      <motion.div 
-                        className={cn(
-                          "p-2 rounded-lg transition-colors duration-200",
-                          isActivePath(item.path)
-                            ? "bg-primary-100 text-primary-600"
-                            : "bg-secondary-100 text-secondary-600 group-hover:bg-secondary-200"
-                        )}
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <item.icon className="h-5 w-5" />
-                      </motion.div>
-                      <div>
-                        <div className="font-medium">{item.title}</div>
-                        <div className="text-xs text-secondary-500">{item.description}</div>
-                      </div>
+                      {route.icon && <route.icon className="h-4 w-4" />}
+                      <span>{route.title || route.name}</span>
                     </Link>
-                  </motion.div>
-                ))}
+                  );
+                })}
               </nav>
 
               {/* Bottom Navigation */}
