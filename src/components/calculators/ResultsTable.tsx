@@ -8,8 +8,16 @@ import html2pdf from 'html2pdf.js';
 import { supabase } from '@/lib/supabase';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
+interface Column {
+  key: string;
+  label: string;
+  format?: (value: any) => string;
+  width?: string;
+}
+
 interface ResultsTableProps {
   data: any[];
+  columns?: Column[];
   onDownload: () => void;
   onShare: () => void;
   onClear: () => void;
@@ -48,6 +56,7 @@ const getInvestmentTypeLabel = (type: string) => {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({
   data,
+  columns,
   onDownload,
   onShare,
   onClear,
