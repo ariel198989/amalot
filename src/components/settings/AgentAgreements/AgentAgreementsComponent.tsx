@@ -9,12 +9,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { AgentRates, DEFAULT_COMPANY_RATES } from './AgentAgreementsTypes';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, Save, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, Loader2, Trash2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 const pensionCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה', 'מיטב דש', 'אלטשולר שחם', 'אנליסט', 'מור'] as const;
 const savingsCompanies = ['מגדל', 'הראל', 'כלל', 'מנורה', 'הפניקס', 'הכשרה', 'מיטב דש', 'אלטשולר שחם', 'אנליסט', 'מור', 'ילין לפידות', 'פסגות'] as const;
@@ -43,6 +46,8 @@ const AgentAgreementsComponent: React.FC = () => {
   const [savingCompany, setSavingCompany] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [savedCompany, setSavedCompany] = useState<string>('');
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchAgentRates = async () => {
@@ -246,6 +251,37 @@ const AgentAgreementsComponent: React.FC = () => {
     handleCheckboxChange(checked === true, category, company);
   };
 
+  const handleDeleteSalesData = async () => {
+    setIsDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('משתמש לא מחובר');
+        return;
+      }
+
+      // מריאה לפונקציית המחיקה בצד השרת
+      const { error } = await supabase.rpc('delete_user_sales_data');
+
+      if (error) {
+        console.error('Error deleting sales data:', error);
+        throw error;
+      }
+
+      // רענון הדף כדי לראות את השינויים
+      window.location.href = '/reports';
+
+      toast.success('כל נתוני המכירות ומחקו בהצלחה');
+      setShowDeleteConfirmDialog(false);
+    } catch (error) {
+      console.error('Error deleting sales data:', error);
+      toast.error('שגיאה במחיקת נתוני המכירות');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return <div>טוען...</div>;
   }
@@ -256,7 +292,17 @@ const AgentAgreementsComponent: React.FC = () => {
 
   return (
     <div className="space-y-8 p-6 text-right">
-      <h1 className="text-3xl font-bold tracking-tight">הסכמי סוכן</h1>
+      <div className="flex justify-between items-center">
+        <Button
+          variant="destructive"
+          className="flex items-center gap-2"
+          onClick={() => setShowDeleteConfirmDialog(true)}
+        >
+          <Trash2 className="w-4 h-4" />
+          מחיקת נתוני מכירה
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">הסכמי סוכן</h1>
+      </div>
       
       <Tabs defaultValue="pension" className="w-full" dir="rtl">
         <TabsList className="w-full justify-start border-b">
@@ -580,6 +626,46 @@ const AgentAgreementsComponent: React.FC = () => {
               כל השינויים נשמרו במערכת
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">מחיקת נתוני מכירה</DialogTitle>
+            <DialogDescription className="text-right">
+              האם אתה בטוח שברצונך למחוק את כל נתוני המכירה? פעולה זו תמחק את כל המכירות מכל הקטגוריות. לא ניתן לשחזר נתונים אלו לאחר המחיקה.
+              <br />
+              <br />
+              <strong>שים לב:</strong> הסכמי העמלות ויעדי המכירה יישארו ללא שינוי.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row-reverse justify-start gap-2">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteSalesData}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                  מוחק...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  מחק הכל
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirmDialog(false)}
+              disabled={isDeleting}
+            >
+              ביטול
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
