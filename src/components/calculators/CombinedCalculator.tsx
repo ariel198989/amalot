@@ -206,14 +206,15 @@ const CombinedCalculator: React.FC = () => {
         )}
       </form>
 
-      <ResultsTable
-        data={clients}
-        columns={[/* ... columns ... */]}
-        onDownload={() => {}}
-        onShare={() => {}}
-        onClear={() => setClients([])}
-        customerName={clients[0]?.name || ''}
-      />
+      {showResults && (
+        <ResultsTable
+          data={results}
+          onDownload={handleDownload}
+          onShare={handleShare}
+          onClear={handleClear}
+          customerName={formData.client_name}
+        />
+      )}
     </div>
   );
 };
