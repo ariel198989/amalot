@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Building2, ArrowUpRight, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { productTypes } from '@/config/products';
 import html2pdf from 'html2pdf.js';
+import { supabase } from '@/lib/supabase';
 
 interface Column {
   key: string;
@@ -62,6 +63,30 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
 }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [agentSettings, setAgentSettings] = useState<{ company: string; logo_url: string | null } | null>(null);
+
+  useEffect(() => {
+    fetchAgentSettings();
+  }, []);
+
+  const fetchAgentSettings = async () => {
+    try {
+      const { data: settingsData, error } = await supabase
+        .from('agent_settings')
+        .select('company, logo_url')
+        .single();
+
+      if (error) throw error;
+      
+      if (settingsData.company === 'חברת ברירת מחדל') {
+        settingsData.company = '';
+      }
+      
+      setAgentSettings(settingsData);
+    } catch (error) {
+      console.error('Error fetching agent settings:', error);
+    }
+  };
 
   React.useEffect(() => {
     return () => {
@@ -231,15 +256,30 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
           </style>
 
           <div className="mb-8 text-right">
-            <div className="mb-6">
-              <div className="text-lg font-medium mb-2">{currentDate}</div>
-              <div className="text-lg mb-1">לכבוד</div>
-              <div className="text-lg font-medium">{customerName}</div>
-              <div className="text-lg mb-4">א.ג.נ,</div>
-              <div className="text-lg mb-6">הנדון: דוח סיכום מכירות</div>
-              <div className="text-base mb-8">
-                מצ"ב דוח המפרט את סיכום המכירות שלך. הדוח כולל את כל הפרטים והנתונים הרלוונטיים לעסקאות שבוצעו.
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-32">
+                {agentSettings?.logo_url && (
+                  <img 
+                    src={agentSettings.logo_url} 
+                    alt="לוגו סוכן" 
+                    className="max-w-full h-auto object-contain"
+                  />
+                )}
               </div>
+              <div className="text-left">
+                <div className="text-lg font-medium mb-2">{currentDate}</div>
+                <div className="text-lg font-bold">{agentSettings?.company}</div>
+              </div>
+            </div>
+
+            <div className="border-b border-gray-200 mb-6"></div>
+
+            <div className="text-lg mb-1">לכבוד</div>
+            <div className="text-lg font-medium">{customerName}</div>
+            <div className="text-lg mb-4">א.ג.נ,</div>
+            <div className="text-lg mb-6">הנדון: דוח סיכום מכירות</div>
+            <div className="text-base mb-8">
+              מצ"ב דוח המפרט את סיכום המכירות שלך. הדוח כולל את כל הפרטים והנתונים הרלוונטיים לעסקאות שבוצעו.
             </div>
           </div>
 
@@ -369,7 +409,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({
 
             <div className="mt-8 text-right">
               <div className="text-base mb-2">בברכה,</div>
-              <div className="text-base font-medium">צוות המכירות</div>
+              <div className="text-base font-medium">{agentSettings?.company || 'צוות המכירות'}</div>
             </div>
           </div>
         </CardContent>

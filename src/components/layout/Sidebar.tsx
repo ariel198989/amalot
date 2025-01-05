@@ -70,6 +70,11 @@ const navItems = [
     path: '/journey', 
     icon: LineChart,
     description: 'ניהול פגישות ומכירות ללקוח'
+  },
+  {
+    name: 'הגדרות',
+    icon: Settings,
+    href: '/settings'
   }
 ];
 
