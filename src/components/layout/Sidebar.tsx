@@ -104,7 +104,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               inset: 0,
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
               backdropFilter: 'blur(4px)',
-              zIndex: 40
+              zIndex: 40,
+              cursor: 'pointer'
             }}
             onClick={onClose}
           />
