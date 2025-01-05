@@ -21,6 +21,12 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+interface Route {
+  href: string;
+  title: string;
+  icon?: React.ComponentType;
+}
+
 const navItems = [
   { 
     id: 'dashboard',
