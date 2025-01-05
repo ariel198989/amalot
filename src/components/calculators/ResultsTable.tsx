@@ -56,7 +56,6 @@ const getInvestmentTypeLabel = (type: string) => {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({
   data,
-  columns,
   onDownload,
   onShare,
   onClear,
