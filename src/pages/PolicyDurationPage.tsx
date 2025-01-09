@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Search, Building2, PiggyBank, Shield } from 'lucide-react';
@@ -23,6 +23,7 @@ interface Policy {
   pensionaccumulation?: number;
   scope_commission?: number;
   monthly_commission?: number;
+  payment_method?: string;
 }
 
 const calculateDuration = (startDate: string) => {
