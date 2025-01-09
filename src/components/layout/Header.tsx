@@ -16,7 +16,8 @@ import {
   Route as RouteIcon,
   Menu,
   X,
-  ChevronLeft
+  ChevronLeft,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +48,7 @@ const Header: React.FC = () => {
 
   const topBarItems = [
     { path: '/promotions', label: 'מבצעים', icon: <Gift className="w-5 h-5" /> },
+    { path: '/policy-duration', label: 'זמן פוליסה', icon: <Clock className="w-5 h-5" /> },
     { path: '/birthdays', label: 'ימי הולדת', icon: <Gift className="w-5 h-5" /> },
     { path: '/settings', label: 'הגדרות', icon: <SettingsIcon className="w-5 h-5" /> },
   ];

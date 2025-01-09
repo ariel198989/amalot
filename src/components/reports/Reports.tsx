@@ -215,15 +215,15 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
-                  <th className="p-3 text-right font-medium">עמלת היקף</th>
-                  <th className="p-3 text-right font-medium">עמלת היקף על הצבירה</th>
-                  <th className="p-3 text-right font-medium">הפרשה</th>
-                  <th className="p-3 text-right font-medium">סכום ניוד</th>
-                  <th className="p-3 text-right font-medium">שכר</th>
-                  <th className="p-3 text-right font-medium">חברה</th>
-                  <th className="p-3 text-right font-medium">שם לקוח</th>
-                  <th className="p-3 text-right font-medium">תאריך</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת היקף על הצבירה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[100px]">הפרשה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום ניוד</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שכר</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,15 +245,15 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
-                  <th className="p-3 text-right font-medium">עמלת היקף</th>
-                  <th className="p-3 text-right font-medium">נפרעים</th>
-                  <th className="p-3 text-right font-medium">פרמיה</th>
-                  <th className="p-3 text-right font-medium">סוג ביטוח</th>
-                  <th className="p-3 text-right font-medium">אופן תשלום</th>
-                  <th className="p-3 text-right font-medium">חברה</th>
-                  <th className="p-3 text-right font-medium">שם לקוח</th>
-                  <th className="p-3 text-right font-medium">תאריך</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת נפרעים שנתית</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">פרמיה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג ביטוח</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">אופן תשלום</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,14 +275,14 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
             <table>
               <thead>
                 <tr>
-                  <th className="p-3 text-right font-medium">סה"כ עמלה</th>
-                  <th className="p-3 text-right font-medium">עמלת היקף</th>
-                  <th className="p-3 text-right font-medium">נפרעים</th>
-                  <th className="p-3 text-right font-medium">סכום השקעה</th>
-                  <th className="p-3 text-right font-medium">סוג השקעה</th>
-                  <th className="p-3 text-right font-medium">חברה</th>
-                  <th className="p-3 text-right font-medium">שם לקוח</th>
-                  <th className="p-3 text-right font-medium">תאריך</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סה"כ עמלה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">עמלת היקף</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">נפרעים</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום השקעה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג השקעה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
               </thead>
               <tbody>
@@ -516,7 +516,7 @@ const Reports: React.FC = () => {
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                <td colSpan={10} className="text-center p-8 text-muted-foreground">
                   לא נמצאו תוצאות
                 </td>
               </tr>
@@ -566,7 +566,7 @@ const Reports: React.FC = () => {
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center p-8 text-muted-foreground">
+                <td colSpan={10} className="text-center p-8 text-muted-foreground">
                   לא נמצאו תוצאות
                 </td>
               </tr>
@@ -615,7 +615,7 @@ const Reports: React.FC = () => {
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                <td colSpan={9} className="text-center p-8 text-muted-foreground">
                   לא נמצאו תוצאות
                 </td>
               </tr>

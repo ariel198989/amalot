@@ -12,6 +12,7 @@ import ClientsTable from './components/clients/ClientsTable';
 import AnnualWorkPlan from './pages/AnnualWorkPlan';
 import BirthdaysPage from './pages/birthdays';
 import PromotionsPage from './pages/promotions';
+import PolicyDurationPage from './pages/PolicyDurationPage';
 import AuthPage from './pages/AuthPage';
 import AuthCallback from './pages/AuthCallback';
 import { UserProvider } from './contexts/UserContext';
@@ -76,6 +77,7 @@ const AppRoutes = () => {
         <Route path="work-plan" element={<AnnualWorkPlan />} />
         <Route path="birthdays" element={<BirthdaysPage />} />
         <Route path="promotions" element={<PromotionsPage />} />
+        <Route path="policy-duration" element={<PolicyDurationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
