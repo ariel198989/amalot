@@ -29,11 +29,20 @@ export interface ClientInfo {
 }
 
 // Pension specific interfaces
-export interface PensionProduct extends BaseProduct {
+export interface PensionProduct {
+  id?: string;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
   pensionsalary: number;
   pensionaccumulation: number;
   pensioncontribution: number;
-  activityType: 'transfer' | 'new_policy' | 'agent_appointment';
+  activityType: string;
+  total_commission: number;
+  scope_commission: number;
+  monthly_commission: number;
+  agent_number: string;
 }
 
 export interface PensionCommission {
@@ -43,16 +52,21 @@ export interface PensionCommission {
 }
 
 // Insurance specific interfaces
-export interface InsuranceProduct extends BaseProduct {
+export interface InsuranceProduct {
+  id?: string;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
   premium: number;
+  annual_premium: number;
   insurance_type: string;
   payment_method: string;
   nifraim: number;
   scope_commission: number;
   monthly_commission: number;
-  salary?: number;
-  transfer_amount?: number;
-  contribution_percentage?: number;
+  total_commission: number;
+  agent_number: string;
 }
 
 export interface InsuranceCommission {
@@ -63,13 +77,19 @@ export interface InsuranceCommission {
 }
 
 // Investment specific interfaces
-export interface InvestmentProduct extends BaseProduct {
+export interface InvestmentProduct {
+  id?: string;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
   investment_amount: number;
   investment_type: string;
-  scope_commission: number;
-  monthly_commission?: number;
   nifraim: number;
-  total_commission?: number;
+  total_commission: number;
+  scope_commission: number;
+  monthly_commission: number;
+  agent_number: string;
 }
 
 export interface InvestmentCommission {
@@ -86,11 +106,19 @@ export interface InvestmentRates {
 }
 
 // Policy specific interfaces
-export interface PolicyProduct extends BaseProduct {
+export interface PolicyProduct {
+  id?: string;
+  user_id: string;
+  client_name: string;
+  company: string;
+  date: string;
   policy_amount: number;
   policy_period: number;
   policy_type: string;
+  total_commission: number;
   scope_commission: number;
+  monthly_commission: number;
+  agent_number: string;
 }
 
 export interface PolicyCommission {
@@ -166,12 +194,14 @@ export interface Product {
 }
 
 export interface CustomerJourneyClient {
-  type: ProductType;
+  type: 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance';
   date: string;
   name: string;
   company: string;
   insuranceType?: string;
   productType?: string;
+  serviceType?: string;
+  financeType?: string;
   pensionType?: string;
   pensionContribution?: string;
   salary?: number;
@@ -181,7 +211,8 @@ export interface CustomerJourneyClient {
   scope_commission: number;
   monthly_commission: number;
   total_commission: number;
-  clientInfo: any;
+  clientInfo: { phone: string } | null;
+  agent_number: string;
 }
 
 export type ProductType = 'pension' | 'insurance' | 'savings_and_study' | 'service' | 'finance';

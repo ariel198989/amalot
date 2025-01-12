@@ -51,116 +51,91 @@ export interface DashboardStats {
 export const reportService = {
   async saveCustomerJourney(journey: CustomerJourney) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) throw new Error('משתמש לא מחובר');
 
       // עמירת מסע הלקוח
-      const { data: journeyData, error: journeyError } = await supabase
+      const journeyData = {
+        user_id: user.id,
+        date: journey.date,
+        total_commission: journey.selected_products.reduce((sum, product) => {
+          const details = product.details as any;
+          return sum + (details.total_commission || 0);
+        }, 0),
+        client_name: journey.selected_products[0]?.details?.client_name || '',
+        client_phone: journey.client_info?.phone || ''
+      };
+
+      const { data: savedJourney, error: journeyError } = await supabase
         .from('customer_journeys')
-        .insert([{
-          user_id: journey.user_id,
-          client_name: journey.client_name,
-          client_phone: journey.client_phone || '',
-          date: journey.date,
-          total_commission: journey.total_commission
-        }])
+        .insert([journeyData])
         .select()
         .single();
 
       if (journeyError) throw journeyError;
 
-      const journey_id = journeyData.id;
+      const journey_id = savedJourney.id;
 
       // שמירת המוצרים
       for (const product of journey.selected_products) {
         switch (product.type) {
           case 'pension': {
-            // שמירת מוצר פנסיה
-            console.log('Raw pension product:', product.details);
             const pensionProduct = product.details as PensionProduct;
-            console.log('Pension product after casting:', pensionProduct);
-            
-            // בדיקה שפורטת של הערכים
-            if ('pensionsalary' in product.details && 'pensionaccumulation' in product.details && 'pensioncontribution' in product.details) {
-              console.log('Detailed pension values:', {
-                rawSalary: product.details.pensionsalary,
-                rawAccumulation: product.details.pensionaccumulation,
-                rawContribution: product.details.pensioncontribution,
-                castedSalary: pensionProduct.pensionsalary,
-                castedAccumulation: pensionProduct.pensionaccumulation,
-                castedContribution: pensionProduct.pensioncontribution,
-                originalClient: journey.selected_products.find(p => p.type === 'pension')?.details
-              });
+            const pensionData = {
+              user_id: user.id,
+              journey_id,
+              client_name: journeyData.client_name,
+              client_phone: journeyData.client_phone,
+              company: product.company,
+              date: journey.date,
+              pensionsalary: Number(pensionProduct.pensionsalary) || 0,
+              pensionaccumulation: Number(pensionProduct.pensionaccumulation) || 0,
+              pensioncontribution: Number(pensionProduct.pensioncontribution) || 0,
+              provision_rate: Number(pensionProduct.pensioncontribution) || 0,
+              commission_rate: (Number(pensionProduct.scope_commission) || 0) / (Number(pensionProduct.pensionsalary) || 1) * 100,
+              scope_commission: Number(pensionProduct.scope_commission) || 0,
+              monthly_commission: Number(pensionProduct.monthly_commission) || 0,
+              agent_number: pensionProduct.agent_number || '',
+              status: 'active'
+            };
 
-              const pensionData = {
-                user_id: user.id,
-                client_name: journey.client_name,
-                client_phone: journey.client_phone || '',
-                company: product.company,
-                date: new Date(journey.date).toISOString(),
-                pensionsalary: Number(pensionProduct.pensionsalary) || 0,
-                pensionaccumulation: Number(pensionProduct.pensionaccumulation) || 0,
-                pensioncontribution: Number(pensionProduct.pensioncontribution) || 0,
-                provision_rate: Number(pensionProduct.pensioncontribution) || 0,
-                commission_rate: (Number(pensionProduct.scope_commission) || 0) / (Number(pensionProduct.pensionsalary) || 1) * 100,
-                scope_commission: Number(pensionProduct.scope_commission) || 0,
-                monthly_commission: Number(pensionProduct.monthly_commission) || 0,
-                journey_id: journey_id,
-                status: 'active'
-              };
+            const { error: pensionError } = await supabase
+              .from('pension_sales')
+              .insert([pensionData]);
 
-              const { error: pensionError } = await supabase
-                .from('pension_sales')
-                .insert([pensionData]);
+            if (pensionError) throw pensionError;
 
-              if (pensionError) {
-                console.error('Pension save error:', pensionError);
-                throw pensionError;
-              }
-
-              // עדכון ביצועים לפנסיה
-              await this.updatePerformanceMetrics({
-                type: 'pension',
-                pensionaccumulation: pensionData.pensionaccumulation
-              });
-            } else {
-              console.error('Missing required pension fields:', product.details);
-              throw new Error('חסרים שדות חובה במוצר פנסיה');
-            }
+            await this.updatePerformanceMetrics({
+              type: 'pension',
+              pensionaccumulation: pensionData.pensionaccumulation
+            });
             break;
           }
 
           case 'insurance': {
-            // שמירת מוצר ביטוח
             const details = product.details as InsuranceProduct;
-            console.log('Current user:', user);
-            
             const insuranceData = {
               user_id: user.id,
-              client_name: journey.client_name,
-              client_phone: journey.client_phone || '',
+              journey_id,
+              client_name: journeyData.client_name,
+              client_phone: journeyData.client_phone,
               company: product.company,
-              date: new Date(journey.date).toISOString(),
+              date: journey.date,
               premium: details.premium || 0,
-              insurance_type: details.insurance_type,
-              payment_method: details.payment_method,
+              insurance_type: details.insurance_type || '',
+              payment_method: details.payment_method || 'monthly',
               nifraim: (details.monthly_commission || 0) * 12,
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
-              journey_id: journey_id
+              agent_number: details.agent_number || ''
             };
 
             const { error: insuranceError } = await supabase
               .from('insurance_sales')
               .insert([insuranceData]);
 
-            if (insuranceError) {
-              console.error('Insurance save error:', insuranceError);
-              console.error('Failed insurance data:', insuranceData);
-              throw insuranceError;
-            }
+            if (insuranceError) throw insuranceError;
 
-            // עדכון ביצועים לביטוח
             await this.updatePerformanceMetrics({
               type: 'insurance',
               premium: insuranceData.premium
@@ -170,31 +145,24 @@ export const reportService = {
 
           case 'investment': {
             const details = product.details as InvestmentProduct;
-            console.log('Investment product before saving:', {
-              raw_details: details,
-              monthly_commission: details.monthly_commission,
-              calculated_nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0
-            });
-            
             const investmentData = {
-              user_id: journey.user_id,
-              client_name: journey.client_name,
-              client_phone: journey.client_phone || '',
+              user_id: user.id,
+              journey_id,
+              client_name: journeyData.client_name,
+              client_phone: journeyData.client_phone,
               company: product.company,
-              date: new Date(journey.date).toISOString(),
+              date: journey.date,
               investment_amount: details.investment_amount || 0,
-              investment_type: details.investment_type,
+              investment_type: details.investment_type || '',
               scope_commission: details.scope_commission || 0,
               monthly_commission: details.monthly_commission || 0,
-              nifraim: details.monthly_commission ? details.monthly_commission * 12 : 0,
-              journey_id: journey_id
+              nifraim: (details.monthly_commission || 0) * 12,
+              agent_number: details.agent_number || ''
             };
 
-            console.log('Investment data to save:', investmentData);
             const { error: investmentError } = await this.saveInvestmentProduct(investmentData);
             if (investmentError) throw investmentError;
 
-            // עדכון ביצועים להשקעות
             await this.updatePerformanceMetrics({
               type: 'savings_and_study',
               details: {
@@ -205,20 +173,20 @@ export const reportService = {
           }
 
           case 'policy': {
-            // שמירת מוצר פוליסות
             const details = product.details as PolicyProduct;
             const policyData = {
               user_id: user.id,
-              client_name: journey.client_name,
-              client_phone: journey.client_phone || '',
+              journey_id,
+              client_name: journeyData.client_name,
+              client_phone: journeyData.client_phone,
               company: product.company,
               date: journey.date,
-              policy_amount: details.policy_amount,
-              policy_period: details.policy_period,
-              policy_type: details.policy_type,
-              scope_commission: details.scope_commission,
-              total_commission: details.total_commission,
-              journey_id: journey_id
+              policy_amount: details.policy_amount || 0,
+              policy_period: details.policy_period || 12,
+              policy_type: details.policy_type || '',
+              scope_commission: details.scope_commission || 0,
+              total_commission: details.total_commission || 0,
+              agent_number: details.agent_number || ''
             };
 
             const { error: policyError } = await supabase
@@ -242,7 +210,10 @@ export const reportService = {
 
     const { data: sales, error } = await supabase
       .from('sales')
-      .select('*')
+      .select(`
+        *,
+        agent_number
+      `)
       .eq('user_id', user.id);
 
     if (error) throw error;

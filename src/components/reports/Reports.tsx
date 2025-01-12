@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -27,6 +27,7 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
+import { useUser } from '@/contexts/UserContext';
 
 const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -222,6 +223,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום ניוד</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שכר</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
@@ -252,6 +254,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג ביטוח</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">אופן תשלום</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
@@ -281,6 +284,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום השקעה</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג השקעה</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+                  <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
                   <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
                 </tr>
@@ -312,6 +316,7 @@ const MonthlyReport: React.FC<{ data: any }> = ({ data }) => {
 };
 
 const Reports: React.FC = () => {
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedPeriod, setSelectedPeriod] = React.useState('all');
   const [isLoading, setIsLoading] = React.useState(false);
@@ -321,6 +326,7 @@ const Reports: React.FC = () => {
   const [investmentSales, setInvestmentSales] = React.useState<InvestmentProduct[]>([]);
   const [policySales, setPolicySales] = React.useState<PolicyProduct[]>([]);
   const loadingRef = React.useRef(false);
+  const [agentNumbers, setAgentNumbers] = useState<{ [company: string]: { number: string; name: string; }[] }>({});
 
   const loadSalesData = React.useCallback(async () => {
     // Prevent multiple simultaneous loads
@@ -458,6 +464,40 @@ const Reports: React.FC = () => {
     loadSalesData();
   }, [loadSalesData]);
 
+  useEffect(() => {
+    const fetchAgentNumbers = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('agent_settings')
+          .select('agent_numbers')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data?.agent_numbers) {
+          const numbersMap = data.agent_numbers.reduce((acc: any, curr: any) => {
+            acc[curr.company] = curr.numbers;
+            return acc;
+          }, {});
+          setAgentNumbers(numbersMap);
+        }
+      } catch (error) {
+        console.error('Error fetching agent numbers:', error);
+      }
+    };
+
+    fetchAgentNumbers();
+  }, [user]);
+
+  const getAgentNumberLabel = (company: string, number: string) => {
+    if (!agentNumbers[company]) return number;
+    const agentNumber = agentNumbers[company].find(entry => entry.number === number);
+    return agentNumber ? `${number} - ${agentNumber.name}` : number;
+  };
+
   const calculateTotalRevenue = () => {
     const allSales = [...pensionSales, ...insuranceSales, ...investmentSales, ...policySales];
     return allSales.reduce((sum, sale) => sum + (sale.total_commission || 0), 0);
@@ -509,6 +549,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום ניוד</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שכר</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+              <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
             </tr>
@@ -525,11 +566,12 @@ const Reports: React.FC = () => {
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
                   <td className="p-3 text-right font-medium w-[150px]">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.scope_commission)}</td>
-                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission)}</td>
-                  <td className="p-3 text-right w-[100px]">{formatPercentage(sale.pensioncontribution)}</td>
+                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission * 12)}</td>
+                  <td className="p-3 text-right w-[100px]">{sale.pensioncontribution}%</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.pensionaccumulation)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.pensionsalary)}</td>
                   <td className="p-3 text-right w-[120px]">{sale.company}</td>
+                  <td className="p-3 text-right w-[120px]">{sale.agent_number}</td>
                   <td className="p-3 text-right w-[150px]">{sale.client_name}</td>
                   <td className="p-3 text-right w-[120px]">{formatDate(sale.date)}</td>
                 </tr>
@@ -559,6 +601,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג ביטוח</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">אופן תשלום</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+              <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
             </tr>
@@ -580,6 +623,7 @@ const Reports: React.FC = () => {
                   <td className="p-3 text-right w-[120px]">{sale.insurance_type}</td>
                   <td className="p-3 text-right w-[120px]">{sale.payment_method}</td>
                   <td className="p-3 text-right w-[120px]">{sale.company}</td>
+                  <td className="p-3 text-right w-[120px]">{getAgentNumberLabel(sale.company, sale.agent_number)}</td>
                   <td className="p-3 text-right w-[150px]">{sale.client_name}</td>
                   <td className="p-3 text-right w-[120px]">{formatDate(sale.date)}</td>
                 </tr>
@@ -608,6 +652,7 @@ const Reports: React.FC = () => {
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">סכום השקעה</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">סוג השקעה</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">חברה</th>
+              <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">מספר סוכן</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[150px]">שם לקוח</th>
               <th className="p-3 text-right font-medium whitespace-nowrap w-[120px]">תאריך</th>
             </tr>
@@ -628,6 +673,7 @@ const Reports: React.FC = () => {
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.investment_amount)}</td>
                   <td className="p-3 text-right w-[120px]">{sale.investment_type}</td>
                   <td className="p-3 text-right w-[120px]">{sale.company}</td>
+                  <td className="p-3 text-right w-[120px]">{getAgentNumberLabel(sale.company, sale.agent_number)}</td>
                   <td className="p-3 text-right w-[150px]">{sale.client_name}</td>
                   <td className="p-3 text-right w-[120px]">{formatDate(sale.date)}</td>
                 </tr>

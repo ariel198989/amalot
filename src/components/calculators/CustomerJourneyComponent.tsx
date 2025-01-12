@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ResultsTable from './ResultsTable';
 import { calculateCommissions, getCompanyRates } from '@/services/AgentAgreementService';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase, getCurrentUser } from '@/lib/supabase';
 import { 
   Building2, 
   Shield,
@@ -30,6 +30,7 @@ import type {
   ProductType
 } from './CustomerJourneyTypes';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useUser } from '@/contexts/UserContext';
 
 const productTypes = [
   { type: 'pension' as const, title: 'פנסיה' },
@@ -80,91 +81,94 @@ interface CalculatorFormProps {
 }
 
 const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, className, clientName, setClients }) => {
-  return (
-    <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      const formData = new FormData(e.currentTarget);
-      const details: { [key: string]: any } = {};
-      
-      fields.forEach(field => {
-        const value = formData.get(field.name);
-        if (value) {
-          if (field.type === 'number') {
-            details[field.name] = parseFloat(value.toString()) || 0;
-          } else {
-            details[field.name] = value.toString();
-          }
-        }
-      });
+  const [formData, setFormData] = useState<Record<string, any>>({});
 
-      try {
-        // חישוב העמלות
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error('משתמש לא מחובר');
-          return;
-        }
+  const getFieldOptions = (field: Field) => {
+    if (typeof field.options === 'function') {
+      return field.options(formData);
+    }
+    return field.options || [];
+  };
 
-        // קביעת הסכום לחישוב העמלות בהתאם לסוג המוצר
-        let amount = 0;
-        if (type === 'insurance') {
-          amount = details.insurancePremium * 12; // הכפלה ב-12 לקבלת פרמיה שנתית
-        } else {
-          amount = details.salary || details.insurancePremium || details.investmentAmount || 0;
-        }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const details: { [key: string]: any } = formData;
 
-        const rates = await calculateCommissions(
-          user.id,
-          type,
-          details.company,
-          amount,
-          details.transactionType || details.insuranceType || details.productType || '',
-          details.totalAccumulated || 0
-        );
-
-        const newClient: CustomerJourneyClient = {
-          type: type,
-          date: new Date().toISOString(),
-          name: clientName,
-          company: details.company || '',
-          insuranceType: details.insuranceType || details.transactionType || '',
-          productType: details.productType || details.serviceType || details.financeType || '',
-          pensionType: details.pensionType,
-          pensionContribution: details.pensionContribution,
-          salary: details.salary,
-          totalAccumulated: details.totalAccumulated,
-          insurancePremium: details.insurancePremium,
-          investmentAmount: details.investmentAmount,
-          scope_commission: rates.scope_commission || 0,
-          monthly_commission: rates.monthly_commission || 0,
-          total_commission: rates.total_commission || 0,
-          clientInfo: null
-        };
-
-        setClients(prev => [...prev, newClient]);
-        toast.success('נוסף בהצלחה');
-      } catch (error) {
-        console.error('Error calculating rates:', error);
-        toast.error('שגיאה בחישוב העמלות');
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        toast.error('משתמש לא מחובר');
+        return;
       }
-    }} className={className}>
-      <div className="flex flex-row gap-4 items-start">
-        {fields.map((field, index) => (
-          <div key={index} className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+
+      // קביעת הסכום לחישוב העמלות בהתאם לסוג המוצר
+      let amount = 0;
+      if (type === 'insurance') {
+        amount = details.insurancePremium * 12; // הכפלה ב-12 לקבלת פרמיה שנתית
+      } else {
+        amount = details.salary || details.insurancePremium || details.investmentAmount || 0;
+      }
+
+      const rates = await calculateCommissions(
+        user.id,
+        type,
+        details.company,
+        amount,
+        details.transactionType || details.insuranceType || details.productType || '',
+        details.totalAccumulated || 0
+      );
+
+      const newClient: CustomerJourneyClient = {
+        type: type,
+        date: new Date().toISOString(),
+        name: clientName,
+        company: details.company || '',
+        agent_number: details.agent_number || '',
+        insuranceType: details.insuranceType || details.transactionType || '',
+        productType: details.productType || details.serviceType || details.financeType || '',
+        pensionType: details.pensionType,
+        pensionContribution: details.pensionContribution,
+        salary: details.salary,
+        totalAccumulated: details.totalAccumulated,
+        insurancePremium: details.insurancePremium,
+        investmentAmount: details.investmentAmount,
+        scope_commission: rates.scope_commission || 0,
+        monthly_commission: rates.monthly_commission || 0,
+        total_commission: rates.total_commission || 0,
+        clientInfo: null
+      };
+
+      setClients(prev => [...prev, newClient]);
+      toast.success('נוסף בהצלחה');
+      setFormData({}); // נקה את הטופס
+    } catch (error) {
+      console.error('Error calculating rates:', error);
+      toast.error('שגיאה בחישוב העמלות');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className={className}>
+      <div className="space-y-4">
+        {fields.map((field) => (
+          <div key={field.name} className="space-y-2">
+            <label className="text-sm font-medium text-right block">
               {field.label}
+              {field.required && <span className="text-red-500">*</span>}
             </label>
             {field.type === 'select' ? (
-              <Select name={field.name} required={field.required}>
-                <SelectTrigger className={cn(
-                  "w-full rounded-md border border-gray-300 bg-white",
-                  "text-gray-900 shadow-sm focus:border-[#4361ee] focus:ring-1 focus:ring-[#4361ee]",
-                  field.className
-                )}>
+              <Select
+                value={formData[field.name] || ''}
+                onValueChange={(value) => {
+                  const newFormData = { ...formData, [field.name]: value };
+                  setFormData(newFormData);
+                }}
+              >
+                <SelectTrigger className={field.className}>
                   <SelectValue placeholder={`בחר ${field.label}`} />
                 </SelectTrigger>
                 <SelectContent className={field.popoverClassName}>
-                  {field.options?.map((option) => (
+                  {getFieldOptions(field).map((option: { value: string; label: string }) => (
                     <SelectItem
                       key={option.value}
                       value={option.value}
@@ -178,8 +182,9 @@ const CalculatorFormComponent: React.FC<CalculatorFormProps> = ({ fields, type, 
             ) : (
               <Input
                 type={field.type}
-                name={field.name}
                 className={field.className}
+                value={formData[field.name] || ''}
+                onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
                 required={field.required}
               />
             )}
@@ -222,6 +227,8 @@ const ProductIcon = ({ type, className }: { type: string; className?: string }) 
 };
 
 export const CustomerJourneyComponent = () => {
+  const { user } = useUser();
+  const [agentNumbers, setAgentNumbers] = useState<{ [company: string]: { number: string; name: string; }[] }>({});
   const [clients, setClients] = useState<CustomerJourneyClient[]>([]);
   const [clientName, setClientName] = useState<string>('');
   const [selectedProducts, setSelectedProducts] = useState<SelectedProducts>({
@@ -266,6 +273,7 @@ export const CustomerJourneyComponent = () => {
     { key: 'date', label: 'תאריך' },
     { key: 'name', label: 'שם לקוח' },
     { key: 'company', label: 'יצרן' },
+    { key: 'agent_number', label: 'מספר סוכן' },
     { key: 'type', label: 'סוג עסקה', format: (type: string) => {
       switch (type) {
         case 'pension': return 'פנסיה';
@@ -411,6 +419,27 @@ export const CustomerJourneyComponent = () => {
                 type === 'insurance' ? getInsuranceCompanies() :
                 type === 'savings_and_study' ? getFinancialCompanies() :
                 getPensionCompanies() // default to pension companies for other types
+      },
+      {
+        name: 'agent_number',
+        label: 'מספר סוכן',
+        type: 'select',
+        required: true,
+        className: 'bg-white !important text-right pr-4',
+        containerClassName: 'relative z-[998] bg-white select-container',
+        popoverClassName: 'z-[998] bg-white text-right',
+        listboxClassName: 'bg-white text-right',
+        optionClassName: 'bg-white hover:bg-gray-100 text-right',
+        options: (formData: any) => {
+          const company = formData?.company;
+          if (!company || !agentNumbers[company]) return [];
+          return agentNumbers[company]
+            .filter(entry => entry.number && entry.number.trim() !== '') // סינון ערכים ריקים
+            .map(entry => ({
+              value: entry.number.trim(),
+              label: entry.name ? `${entry.number.trim()} - ${entry.name}` : entry.number.trim()
+            }));
+        }
       }
     ];
 
@@ -601,16 +630,18 @@ export const CustomerJourneyComponent = () => {
 
   const handleSave = async () => {
     try {
-      const user = await supabase.auth.getUser();
-      const userId = user.data.user?.id || '';
+      const user = await getCurrentUser();
+      if (!user) {
+        toast.error('משתמש לא מחובר');
+        return;
+      }
+
+      const userId = user.id;
       const currentDate = new Date().toISOString();
 
-      const journeyData: CustomerJourney = {
+      const journey: CustomerJourney = {
         user_id: userId,
-        journey_date: currentDate,
         date: currentDate,
-        client_name: clients[0]?.name || '',
-        client_phone: clients[0]?.clientInfo?.phone || '',
         selected_products: clients.map(client => {
           const type = mapClientTypeToJourneyType(client.type);
           const baseProduct = {
@@ -621,7 +652,8 @@ export const CustomerJourneyComponent = () => {
             date: currentDate,
             total_commission: client.total_commission,
             scope_commission: client.scope_commission,
-            monthly_commission: client.monthly_commission
+            monthly_commission: client.monthly_commission,
+            agent_number: client.agent_number
           };
 
           let details;
@@ -633,7 +665,8 @@ export const CustomerJourneyComponent = () => {
                 pensionsalary: client.salary || 0,
                 pensionaccumulation: client.totalAccumulated || 0,
                 pensioncontribution: client.pensionContribution ? parseFloat(client.pensionContribution) : 0,
-                activityType: 'new_policy'
+                activityType: 'new_policy',
+                agent_number: client.agent_number
               };
               break;
             case 'insurance':
@@ -645,9 +678,7 @@ export const CustomerJourneyComponent = () => {
                 insurance_type: client.insuranceType || '',
                 payment_method: 'monthly',
                 nifraim: client.monthly_commission * 12,
-                scope_commission: client.scope_commission,
-                monthly_commission: client.monthly_commission,
-                total_commission: client.total_commission
+                agent_number: client.agent_number
               };
               break;
             case 'investment':
@@ -655,7 +686,8 @@ export const CustomerJourneyComponent = () => {
                 ...baseProduct,
                 investment_amount: client.investmentAmount || 0,
                 investment_type: client.productType || '',
-                nifraim: client.monthly_commission * 12
+                nifraim: client.monthly_commission * 12,
+                agent_number: client.agent_number
               };
               break;
             case 'policy':
@@ -663,7 +695,8 @@ export const CustomerJourneyComponent = () => {
                 ...baseProduct,
                 policy_amount: client.investmentAmount || 0,
                 policy_period: 12,
-                policy_type: client.productType || ''
+                policy_type: client.productType || '',
+                agent_number: client.agent_number
               };
               break;
             default:
@@ -676,16 +709,10 @@ export const CustomerJourneyComponent = () => {
             details
           } as JourneyProduct;
         }),
-        total_commission: clients.reduce((sum, client) => sum + (client.total_commission || 0), 0),
-        commissionDetails: {
-          pension: { companies: {}, total: 0 },
-          insurance: { companies: {}, total: 0 },
-          investment: { companies: {}, total: 0 },
-          policy: { companies: {}, total: 0 }
-        }
+        client_info: null
       };
 
-      await reportService.saveCustomerJourney(journeyData);
+      await reportService.saveCustomerJourney(journey);
       toast.success('הנתונים נשמרו בהצלחה');
     } catch (error) {
       console.error('Error saving customer journey:', error);
@@ -719,6 +746,78 @@ export const CustomerJourneyComponent = () => {
     setClientName(clientInfo.name);
     setStep('journey');
   };
+
+  useEffect(() => {
+    const fetchAgentNumbers = async () => {
+      if (!user) return;
+
+      try {
+        const { data: existingData, error: fetchError } = await supabase
+          .from('agent_settings')
+          .select('agent_numbers')
+          .eq('user_id', user.id)
+          .single();
+
+        console.log('Agent numbers data:', existingData);
+
+        if (fetchError && fetchError.code === 'PGRST116') {
+          // אם אין נתונים, ניצור נתונים ברירת מחדל
+          const defaultAgentNumbers = [
+            {
+              company: 'מגדל',
+              numbers: [{ number: '12345', name: 'סוכן מגדל' }]
+            },
+            {
+              company: 'מנורה',
+              numbers: [{ number: '67890', name: 'סוכן מנורה' }]
+            },
+            {
+              company: 'כלל',
+              numbers: [{ number: '11111', name: 'סוכן כלל' }]
+            },
+            {
+              company: 'הראל',
+              numbers: [{ number: '22222', name: 'סוכן הראל' }]
+            },
+            {
+              company: 'הפניקס',
+              numbers: [{ number: '33333', name: 'סוכן הפניקס' }]
+            }
+          ];
+
+          const { error: insertError } = await supabase
+            .from('agent_settings')
+            .insert([
+              {
+                user_id: user.id,
+                agent_numbers: defaultAgentNumbers
+              }
+            ]);
+
+          if (insertError) throw insertError;
+
+          // עדכון המצב עם הנתונים החדשים
+          const numbersMap = defaultAgentNumbers.reduce((acc: any, curr: any) => {
+            acc[curr.company] = curr.numbers;
+            return acc;
+          }, {});
+          setAgentNumbers(numbersMap);
+        } else if (existingData?.agent_numbers) {
+          // אם יש נתונים קיימים, נשתמש בהם
+          const numbersMap = existingData.agent_numbers.reduce((acc: any, curr: any) => {
+            acc[curr.company] = curr.numbers;
+            return acc;
+          }, {});
+          setAgentNumbers(numbersMap);
+        }
+      } catch (error) {
+        console.error('Error fetching agent numbers:', error);
+        toast.error('שגיאה בטעינת מספרי סוכן');
+      }
+    };
+
+    fetchAgentNumbers();
+  }, [user]);
 
   return (
     <motion.div 

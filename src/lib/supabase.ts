@@ -38,34 +38,12 @@ export const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
 // Helper function to get the current user or return dummy user
 export const getCurrentUser = async () => {
     try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { user }, error } = await supabase.auth.getUser();
         if (error) throw error;
-
-        if (!session) {
-            return {
-                data: {
-                    user: {
-                        id: '00000000-0000-0000-0000-000000000000',
-                        email: 'dummy@example.com'
-                    }
-                }
-            };
-        }
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-
-        return { data: { user } };
+        return user;
     } catch (error) {
         console.error('Error getting current user:', error);
-        return {
-            data: {
-                user: {
-                    id: '00000000-0000-0000-0000-000000000000',
-                    email: 'dummy@example.com'
-                }
-            }
-        };
+        return null;
     }
 };
 
