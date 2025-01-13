@@ -271,9 +271,10 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
         // Fetch performances
         const { data: performancesData, error: performancesError } = await supabase
-          .from('sales_performances')
+          .from('sales_targets')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('year', new Date().getFullYear());
 
         if (performancesError) {
           throw performancesError;
@@ -288,13 +289,11 @@ export const SalesTargetsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             if (!organizedPerformances[record.category]) {
               organizedPerformances[record.category] = Array(12).fill(0);
             }
-            if (record.performance !== null && record.month) {
-              // אם יש כבר ערך, נוסיף אליו את הביצוע החדש
-              const currentValue = organizedPerformances[record.category][record.month - 1];
-              organizedPerformances[record.category][record.month - 1] = currentValue + record.performance;
-            }
+            organizedPerformances[record.category][record.month - 1] = record.performance || 0;
           });
+
           setPerformances(organizedPerformances);
+          console.log('Organized performances:', organizedPerformances);
         }
 
         // Fetch commission agreements

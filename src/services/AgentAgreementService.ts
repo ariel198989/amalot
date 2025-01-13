@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, getCurrentUser } from '@/lib/supabase';
 import { 
   AgentRates, 
   PensionCompanyRates,
@@ -20,15 +20,19 @@ interface CommissionCalculation {
   };
 }
 
-export async function getAgentAgreement(userId: string): Promise<AgentRates | null> {
+export async function getAgentAgreement(userId?: string): Promise<AgentRates | null> {
   try {
-    console.log('מתחיל לחפש הסכם סוכן עבור:', userId);
-    
     if (!userId) {
-      console.error('לא התקבל מזהה משתמש');
-      return null;
+      const { data: { user } } = await getCurrentUser();
+      if (!user) {
+        console.error('לא התקבל מזהה משתמש ואין משתמש מחובר');
+        return null;
+      }
+      userId = user.id;
     }
 
+    console.log('מתחיל לחפש הסכם סוכן עבור:', userId);
+    
     const { data, error } = await supabase
       .from('agent_commission_rates')
       .select('*')
@@ -107,14 +111,14 @@ function getEmptyCalculation(amount: number): CommissionCalculation {
 }
 
 export async function calculateCommissions(
-  userId: string,
+  userId: string | undefined,
   category: string,
   company: string,
   amount: number,
   insuranceType?: string,
   totalAccumulated?: number
 ): Promise<CommissionCalculation> {
-  console.log('מתחיל חישוב עמלות:', { 
+  console.log('חישוב עמלות עבור:', { 
     userId, 
     category, 
     company, 
@@ -122,6 +126,15 @@ export async function calculateCommissions(
     insuranceType, 
     totalAccumulated 
   });
+
+  if (!userId) {
+    const { data: { user } } = await getCurrentUser();
+    if (!user) {
+      console.error('לא התקבל מזהה משתמש ואין משתמש מחובר');
+      return getEmptyCalculation(amount);
+    }
+    userId = user.id;
+  }
 
   const agentRates = await getAgentAgreement(userId);
   if (!agentRates) {

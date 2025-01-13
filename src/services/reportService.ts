@@ -6,6 +6,8 @@ import {
   InvestmentProduct, 
   PolicyProduct 
 } from '@/components/calculators/CustomerJourneyTypes';
+import { getAgentAgreement } from '@/services/AgentAgreementService';
+import { calculateCommissions } from '@/services/AgentAgreementService';
 
 export interface SalesData {
   id: string;
@@ -51,21 +53,39 @@ export interface DashboardStats {
 export const reportService = {
   async saveCustomerJourney(journey: CustomerJourney) {
     try {
-      const user = await getCurrentUser();
-      if (!user) throw new Error('משתמש לא מחובר');
+      const userResponse = await getCurrentUser();
+      if (!userResponse?.data?.user) throw new Error('משתמש לא מחובר');
+      const user = userResponse.data.user;
 
-      // עמירת מסע הלקוח
+      // קבלת הסכם הסוכן פעם אחת בלבד
+      const agentAgreement = await getAgentAgreement(user.id);
+      if (!agentAgreement) {
+        throw new Error('לא נמצא הסכם סוכן');
+      }
+
+      // Extract client info from the first product or client_info
+      const clientName = journey.selected_products[0]?.details?.client_name || 
+                        journey.client_info?.fullName;
+      const clientPhone = journey.selected_products[0]?.details?.client_phone || 
+                         journey.client_info?.phone || '';
+
+      if (!clientName) {
+        throw new Error('חובה להזין שם לקוח');
+      }
+
+      // Create journey data with only the fields that exist in the table
       const journeyData = {
         user_id: user.id,
         date: journey.date,
+        client_name: clientName,
+        client_phone: clientPhone,
         total_commission: journey.selected_products.reduce((sum, product) => {
           const details = product.details as any;
-          return sum + (details.total_commission || 0);
-        }, 0),
-        client_name: journey.selected_products[0]?.details?.client_name || '',
-        client_phone: journey.client_info?.phone || ''
+          return sum + (details.total_commission || details.scope_commission || 0);
+        }, 0)
       };
 
+      // Save journey
       const { data: savedJourney, error: journeyError } = await supabase
         .from('customer_journeys')
         .insert([journeyData])
@@ -81,6 +101,17 @@ export const reportService = {
         switch (product.type) {
           case 'pension': {
             const pensionProduct = product.details as PensionProduct;
+            
+            // קבלת נתוני העמלות מהפונקציה המרכזית
+            const commissionResult = await calculateCommissions(
+              user.id,
+              'pension',
+              product.company,
+              Number(pensionProduct.pensionsalary) || 0,
+              String(pensionProduct.provision_rate),
+              Number(pensionProduct.pensionaccumulation) || 0
+            );
+
             const pensionData = {
               user_id: user.id,
               journey_id,
@@ -91,19 +122,34 @@ export const reportService = {
               pensionsalary: Number(pensionProduct.pensionsalary) || 0,
               pensionaccumulation: Number(pensionProduct.pensionaccumulation) || 0,
               pensioncontribution: Number(pensionProduct.pensioncontribution) || 0,
-              provision_rate: Number(pensionProduct.pensioncontribution) || 0,
-              commission_rate: (Number(pensionProduct.scope_commission) || 0) / (Number(pensionProduct.pensionsalary) || 1) * 100,
-              scope_commission: Number(pensionProduct.scope_commission) || 0,
-              monthly_commission: Number(pensionProduct.monthly_commission) || 0,
+              provision_rate: Number(pensionProduct.provision_rate) || 0,
+              commission_rate: Math.min(
+                Math.round(
+                  (commissionResult.scope_commission / 
+                  (Number(pensionProduct.pensioncontribution) || 1) * 100) * 100
+                ) / 100,
+                99.99
+              ),
+              scope_commission: commissionResult.scope_commission,  // עמלת היקף על ההפקדות
+              monthly_commission: commissionResult.monthly_commission,  // עמלת היקף על הצבירה
               agent_number: pensionProduct.agent_number || '',
               status: 'active'
             };
+
+            console.log('Saving pension data:', {
+              ...pensionData,
+              accumulationCommission: commissionResult.monthly_commission,  // עמלת היקף על הצבירה
+              totalCommission: commissionResult.total_commission
+            });
 
             const { error: pensionError } = await supabase
               .from('pension_sales')
               .insert([pensionData]);
 
-            if (pensionError) throw pensionError;
+            if (pensionError) {
+              console.error('Error saving pension data:', pensionError);
+              throw pensionError;
+            }
 
             await this.updatePerformanceMetrics({
               type: 'pension',
@@ -198,6 +244,68 @@ export const reportService = {
           }
         }
       }
+
+      // After saving the journey, update performance metrics
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // 1-12
+      const currentYear = currentDate.getFullYear();
+
+      // Calculate total commission for each product type
+      const productTypeCommissions = new Map<string, number>();
+      journey.selected_products.forEach(product => {
+        const currentCommission = productTypeCommissions.get(product.type) || 0;
+        const details = product.details as any;
+        const newCommission = Number(details.total_commission || details.scope_commission || 0);
+        productTypeCommissions.set(product.type, currentCommission + newCommission);
+      });
+
+      // Update sales_targets for each product type
+      for (const [productType, commission] of productTypeCommissions) {
+        const roundedCommission = Math.min(
+          Math.round(commission * 100) / 100,
+          9999999999.99
+        );
+
+        // Get current performance
+        const { data: currentPerformance } = await supabase
+          .from('sales_targets')
+          .select('performance')
+          .eq('user_id', user.id)
+          .eq('year', currentYear)
+          .eq('month', currentMonth)
+          .eq('category', productType)
+          .single();
+
+        if (currentPerformance) {
+          // Update existing record
+          const newPerformance = Math.min(
+            Math.round((currentPerformance.performance + roundedCommission) * 100) / 100,
+            9999999999.99
+          );
+
+          await supabase
+            .from('sales_targets')
+            .update({ performance: newPerformance })
+            .eq('user_id', user.id)
+            .eq('year', currentYear)
+            .eq('month', currentMonth)
+            .eq('category', productType);
+        } else {
+          // Insert new record
+          await supabase
+            .from('sales_targets')
+            .insert({
+              user_id: user.id,
+              year: currentYear,
+              month: currentMonth,
+              category: productType,
+              performance: roundedCommission,
+              target: 0 // Default target value
+            });
+        }
+      }
+
+      return { success: true };
     } catch (error) {
       console.error('Error saving customer journey:', error);
       throw error;
@@ -205,36 +313,48 @@ export const reportService = {
   },
 
   async fetchAllSales() {
-    const { data: { user } } = await getCurrentUser();
-    if (!user) throw new Error('משתמש לא מחובר');
+    try {
+      const userResponse = await getCurrentUser();
+      if (!userResponse?.data?.user) throw new Error('משתמש לא מחובר');
+      const user = userResponse.data.user;
 
-    const { data: sales, error } = await supabase
-      .from('sales')
-      .select(`
-        *,
-        agent_number
-      `)
-      .eq('user_id', user.id);
+      // Fetch from all sales tables
+      const [
+        { data: pensionSales = [], error: pensionError },
+        { data: insuranceSales = [], error: insuranceError },
+        { data: investmentSales = [], error: investmentError },
+        { data: policySales = [], error: policyError }
+      ] = await Promise.all([
+        supabase.from('pension_sales').select('*').eq('user_id', user.id),
+        supabase.from('insurance_sales').select('*').eq('user_id', user.id),
+        supabase.from('investment_sales').select('*').eq('user_id', user.id),
+        supabase.from('policy_sales').select('*').eq('user_id', user.id)
+      ]);
 
-    if (error) throw error;
+      // Check for errors
+      if (pensionError) throw pensionError;
+      if (insuranceError) throw insuranceError;
+      if (investmentError) throw investmentError;
+      if (policyError) throw policyError;
 
-    const pensionSales = sales.filter(sale => sale.sale_type === 'pension');
-    const insuranceSales = sales.filter(sale => sale.sale_type === 'insurance');
-    const investmentSales = sales.filter(sale => sale.sale_type === 'investment');
-    const policySales = sales.filter(sale => sale.sale_type === 'policy');
-
-    return {
-      pensionSales,
-      insuranceSales,
-      investmentSales,
-      policySales
-    };
+      // Return separate arrays for each type
+      return {
+        pensionSales: pensionSales || [],
+        insuranceSales: insuranceSales || [],
+        investmentSales: investmentSales || [],
+        policySales: policySales || []
+      };
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+      throw error;
+    }
   },
 
   async fetchDashboardStats(): Promise<DashboardStats> {
     try {
-      const { data: { user } } = await getCurrentUser();
-      if (!user) throw new Error('משתמש לא מחובר');
+      const userResponse = await getCurrentUser();
+      if (!userResponse?.data?.user) throw new Error('משתמש לא מחובר');
+      const user = userResponse.data.user;
 
       // Fetch all sales data
       const [
@@ -351,14 +471,15 @@ export const reportService = {
       let updateData = {
         category: '',
         performance_value: 0,
-        metric_type: ''
+        metric_type: '',
+        user_id: user.id
       };
 
       if (saleData.type === 'pension') {
         // פנסיה - מתייחסים רק לצבירה שעוברת
-        const transferAmount = saleData.pensionaccumulation || 
+        const transferAmount = Number(saleData.pensionaccumulation || 
                              saleData.details?.pensionaccumulation || 
-                             saleData.transfer_amount || 0;
+                             saleData.transfer_amount || 0);
 
         console.log('Processing pension transfer:', {
           originalData: saleData,
@@ -367,14 +488,15 @@ export const reportService = {
 
         updateData = {
           category: 'pension-transfer',
-          performance_value: transferAmount,
-          metric_type: 'transfer_amount'
+          performance_value: Math.min(Math.round(transferAmount * 100) / 100, 9999999999.99),
+          metric_type: 'transfer_amount',
+          user_id: user.id
         };
       } else if (saleData.type === 'finance' || saleData.type === 'savings_and_study') {
         // מיננסים - מתייחסים רק לצבירה שעוברת
-        const transferAmount = saleData.details?.investmentAmount || 
+        const transferAmount = Number(saleData.details?.investmentAmount || 
                              saleData.investmentAmount || 
-                             saleData.investment_amount || 0;
+                             saleData.investment_amount || 0);
         
         console.log('Processing finance transfer:', {
           originalData: saleData,
@@ -383,24 +505,30 @@ export const reportService = {
 
         updateData = {
           category: 'finance-transfer',
-          performance_value: transferAmount,
-          metric_type: 'transfer_amount'
+          performance_value: Math.min(Math.round(transferAmount * 100) / 100, 9999999999.99),
+          metric_type: 'transfer_amount',
+          user_id: user.id
         };
       } else if (saleData.type === 'insurance') {
         // סיכונים - מתייחסים רק לפרמיה החודשית
-        const monthlyPremium = saleData.details?.insurancePremium || 
+        const monthlyPremium = Number(saleData.details?.insurancePremium || 
                              saleData.insurancePremium || 
-                             saleData.premium || 0;
+                             saleData.premium || 0);
 
         console.log('Processing insurance premium:', {
           originalData: saleData,
           monthlyPremium
         });
 
+        // אם זה תשלום חד פעמי, נחלק ב-12 כדי לקבל את הפרמיה החודשית
+        const actualMonthlyPremium = saleData.payment_method === 'one_time' ? 
+          monthlyPremium / 12 : monthlyPremium;
+
         updateData = {
           category: 'risks',
-          performance_value: monthlyPremium,
-          metric_type: 'monthly_premium'
+          performance_value: Math.min(Math.round(actualMonthlyPremium * 100) / 100, 9999999999.99),
+          metric_type: 'monthly_premium',
+          user_id: user.id
         };
       }
 
@@ -416,7 +544,7 @@ export const reportService = {
         .from('sales_targets')
         .select('performance, target_amount')
         .match({
-          user_id: user.id,
+          user_id: updateData.user_id,
           category: updateData.category,
           month: currentMonth,
           year: currentYear,
@@ -432,7 +560,15 @@ export const reportService = {
       console.log('Existing target found:', existingTarget);
 
       // עדכון הביצועים - הוספת הערך החדש לסכום הקיים
-      const newPerformance = (existingTarget?.performance || 0) + updateData.performance_value;
+      const currentPerformance = Number(existingTarget?.performance || 0);
+      
+      // בדיקה שהסכום החדש לא יגרום לגלישה
+      if (currentPerformance + updateData.performance_value > 9999999999.99) {
+        console.warn('Performance value would overflow, skipping update');
+        return { success: false, error: 'Performance value would overflow' };
+      }
+
+      const newPerformance = Math.round((currentPerformance + updateData.performance_value) * 100) / 100;
 
       let updateResult;
       if (existingTarget) {
@@ -444,7 +580,7 @@ export const reportService = {
             updated_at: new Date().toISOString()
           })
           .match({
-            user_id: user.id,
+            user_id: updateData.user_id,
             category: updateData.category,
             month: currentMonth,
             year: currentYear,
@@ -455,7 +591,7 @@ export const reportService = {
         updateResult = await supabase
           .from('sales_targets')
           .insert({
-            user_id: user.id,
+            user_id: updateData.user_id,
             category: updateData.category,
             month: currentMonth,
             year: currentYear,

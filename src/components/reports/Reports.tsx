@@ -566,7 +566,7 @@ const Reports: React.FC = () => {
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
                   <td className="p-3 text-right font-medium w-[150px]">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.scope_commission)}</td>
-                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission * 12)}</td>
+                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission)}</td>
                   <td className="p-3 text-right w-[100px]">{sale.pensioncontribution}%</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.pensionaccumulation)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.pensionsalary)}</td>
@@ -618,7 +618,7 @@ const Reports: React.FC = () => {
                 <tr key={sale.id} className="border-b hover:bg-muted/30 transition-colors">
                   <td className="p-3 text-right font-medium w-[150px]">{formatCurrency(sale.total_commission)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.scope_commission)}</td>
-                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission * 12)}</td>
+                  <td className="p-3 text-right w-[150px]">{formatCurrency(sale.monthly_commission)}</td>
                   <td className="p-3 text-right w-[150px]">{formatCurrency(sale.premium)}</td>
                   <td className="p-3 text-right w-[120px]">{sale.insurance_type}</td>
                   <td className="p-3 text-right w-[120px]">{sale.payment_method}</td>

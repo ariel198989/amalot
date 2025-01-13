@@ -33,11 +33,14 @@ export interface PensionProduct {
   id?: string;
   user_id: string;
   client_name: string;
+  client_phone?: string;
   company: string;
   date: string;
   pensionsalary: number;
   pensionaccumulation: number;
   pensioncontribution: number;
+  provision_rate: number;
+  commission_rate: number;
   activityType: string;
   total_commission: number;
   scope_commission: number;
@@ -56,6 +59,7 @@ export interface InsuranceProduct {
   id?: string;
   user_id: string;
   client_name: string;
+  client_phone?: string;
   company: string;
   date: string;
   premium: number;
@@ -81,6 +85,7 @@ export interface InvestmentProduct {
   id?: string;
   user_id: string;
   client_name: string;
+  client_phone?: string;
   company: string;
   date: string;
   investment_amount: number;
@@ -110,6 +115,7 @@ export interface PolicyProduct {
   id?: string;
   user_id: string;
   client_name: string;
+  client_phone?: string;
   company: string;
   date: string;
   policy_amount: number;
@@ -134,6 +140,7 @@ export interface CustomerJourney {
   date: string;
   client_name: string;
   client_phone?: string;
+  client_info?: ClientInfo;
   selected_products: Array<JourneyProduct>;
   total_commission: number;
   commissionDetails: CommissionDetails;
@@ -144,6 +151,7 @@ export interface CustomerJourney {
 export type JourneyProduct = {
   type: 'pension' | 'insurance' | 'investment' | 'policy';
   company: string;
+  total_commission?: number;
   details: PensionProduct | InsuranceProduct | InvestmentProduct | PolicyProduct;
 };
 
